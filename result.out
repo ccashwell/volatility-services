@@ -1,0 +1,46 @@
+
+> mfiv-index@1.0.0 test:focus
+> AWS_PROFILE=vg AWS_REGION=us-east-1 jest --runInBand --detectOpenHandles -t 'instrumentInfo()'
+
+PASS test/unit/services/instrument.spec.ts
+  ● Console
+
+    console.log
+      {
+        id: 'ETH-20DEC20-710-P',
+        exchange: 'deribit',
+        baseCurrency: 'ETH',
+        quoteCurrency: 'ETH',
+        type: 'option',
+        active: false,
+        availableSince: '2020-12-18T00:00:00.000Z',
+        expiry: '2020-12-20T08:00:00.000Z',
+        priceIncrement: 0.0005,
+        amountIncrement: 1,
+        minTradeAmount: 1,
+        makerFee: 0.0003,
+        takerFee: 0.0003,
+        inverse: true,
+        contractMultiplier: 1,
+        strikePrice: 710,
+        optionType: 'put',
+        listing: '2020-12-18T08:00:02.000Z',
+        contractType: 'put_option',
+        datasetId: 'ETH-20DEC20-710-P'
+      }
+
+      at Object.<anonymous> (test/unit/services/instrument.spec.ts:18:15)
+          at runMicrotasks (<anonymous>)
+
+    console.log
+      **** SHOULD HAVE CACHED
+
+      at Object.<anonymous> (test/unit/services/instrument.spec.ts:21:15)
+          at runMicrotasks (<anonymous>)
+
+
+Test Suites: 6 skipped, 1 passed, 1 of 7 total
+Tests:       24 skipped, 1 passed, 25 total
+Snapshots:   0 total
+Time:        5.82s, estimated 8s
+Ran all test suites with tests matching "instrumentInfo()".
