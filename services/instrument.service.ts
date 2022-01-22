@@ -8,7 +8,7 @@ import { tardisOptionInstrumentDataSource } from "../datasources/tardis_instrume
 interface InstrumentInfoParams {
   exchange: Exchange
   baseCurrency: string
-  interval: "7d"
+  interval: "14d"
   methodology: "mfiv"
   type: "option"
   expiryType: "FridayT08:00:00"
@@ -37,12 +37,12 @@ export default class InstrumentService extends Service {
       actions: {
         instrumentInfo: {
           params: {
-            exchange: { type: "string", enum: ["deribit"] },
-            baseCurrency: { type: "string", enum: ["ETH"] },
-            interval: { type: "string", enum: ["7d"] },
-            methodology: { type: "string", enum: ["mfiv"] },
-            timestamp: { type: "string" },
-            contractType: { type: "string", enum: ["option"] }
+            // exchange: { type: "string", enum: ["deribit"] },
+            // baseCurrency: { type: "string", enum: ["ETH"] },
+            // interval: { type: "string", enum: ["14d"] },
+            // methodology: { type: "string", enum: ["mfiv"] },
+            timestamp: { type: "string" }
+            //            contractType: { type: "string", enum: ["option"] }
           },
           rest: "/instruments",
           // Enable caching to this action

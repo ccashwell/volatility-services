@@ -18,9 +18,9 @@ export type FleekUploadable = Bufferable | Bufferable[]
  *
  * @throws {@link Failure<VGError.FleekUploadFailure>}
  */
-export const upload = async <T extends FleekUploadable>(key: string, data: T) => {
-  const payload = await fleekConfig
-  return await ResultAsync.fromPromise(fleekStorage.upload({ ...payload, data, key }), err =>
+const upload = async <T extends FleekUploadable>(key: string, data: T) => {
+  const cfg = await fleekConfig
+  return await ResultAsync.fromPromise(fleekStorage.upload({ ...cfg, data, key }), err =>
     fleekUploadFailure(err as Error)
   )
 }

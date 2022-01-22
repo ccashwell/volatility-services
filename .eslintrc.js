@@ -23,9 +23,10 @@ module.exports = {
     "plugin:import/warnings",
     "plugin:import/typescript",
     "plugin:promise/recommended",
+		"plugin:security/recommended",
     "prettier",
 	],
-	plugins: ["prettier", "import", "@typescript-eslint", "promise"],
+	plugins: ["prettier", "import", "@typescript-eslint", "promise", "security"],
 	rules: {
 		// "semi": "off",
 		// "@typescript-eslint/semi": ["error", "never"],
@@ -36,7 +37,7 @@ module.exports = {
 		"@typescript-eslint/consistent-type-assertions": "error",
 		"@typescript-eslint/consistent-type-definitions": "error",
 		"@typescript-eslint/explicit-member-accessibility": [
-			"error",
+			"off",
 			{
 				accessibility: "explicit",
 			},

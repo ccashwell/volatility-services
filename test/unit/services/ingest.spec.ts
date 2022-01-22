@@ -1,6 +1,5 @@
 "use strict"
 import { ServiceBroker } from "moleculer"
-import { InstrumentInfo } from "tardis-dev"
 import TestService from "../../../services/ingest.service"
 import DependentService from "../../../services/instrument.service"
 
@@ -15,7 +14,8 @@ describe("Test 'ingest' service", () => {
   describe("ingest()", () => {
     it("processes messages", async () => {
       console.log("ingest processing()")
-      await broker.call("ingest.process")
+      //broker.emit("ingest.start")
+      // await broker.call("ingest.process")
       //jest.useFakeTimers();
     }, 30000)
   })

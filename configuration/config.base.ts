@@ -1,12 +1,13 @@
+import { Dialect } from "sequelize"
 import { Exchange } from "tardis-dev"
-
+import sequelizeConnection from "../datasources/database"
 interface AwsConfig {
   region: string
   smName: string
 }
 
 interface TardisConfig {
-  exchange: Exchange
+  exchange: string
   waitWhenDataNotYetAvailable: boolean
 }
 
@@ -14,10 +15,29 @@ export interface EnvConfig {
   aws: AwsConfig
   tardis: TardisConfig
   mfiv: {
-    dbConnection: string
     exchange: Exchange
     baseCurrency: "ETH"
     interval: "14d"
+    methodology: "mfiv"
+    symbolType: "option"
+  }
+  db?: {
+    username: string
+    password: string
+    database: string
+    host: string
+    port: number
+    dialect: Dialect
+    dialectOptions: {
+      useUTC: true
+    }
+    timezone: "+00:00"
+    pool: {
+      max: number
+      min: number
+      idle: number
+    }
+    logging?: (message: any, ...optionalParams: any[]) => void
   }
 }
 
@@ -27,18 +47,14 @@ export const config: EnvConfig = {
     smName: "API_Keys"
   },
   tardis: {
-    exchange: (process.env.EXCHANGE ?? "deribit") as Exchange,
+    exchange: process.env.EXCHANGE ?? "deribit",
     waitWhenDataNotYetAvailable: true
   },
   mfiv: {
-    dbConnection: "",
     exchange: (process.env.EXCHANGE ?? "deribit") as Exchange,
-    baseCurrency: (process.env.BASE_CURRENCY ?? "deribit") as "ETH",
-    interval: "14d"
-    // dbConnection: `postgres://${process.env.POSTGRES_USER ?? "postgres"}:${
-    //   process.env.POSTGRES_PASSWORD ?? "postgres"
-    // }@${process.env.POSTGRES_HOST ?? "localhost"}:${process.env.POSTGRES_PORT ?? 5432}/${
-    //   process.env.DB_NAME ?? "methodology"
-    // }`
+    baseCurrency: (process.env.BASE_CURRENCY ?? "ETH") as "ETH",
+    interval: "14d",
+    methodology: "mfiv",
+    symbolType: "option"
   }
 }

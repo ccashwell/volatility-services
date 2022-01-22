@@ -2,7 +2,10 @@ SHELL=/bin/bash
 HOST_NAME := localhost
 
 bootstrap:
-	psql -f postgres/init.sql
+	psql --file postgres/init.sql --port 6432 --username postgres
+
+reset:
+	psql --file postgres/reset.sql --port 6432 --username postgres
 
 dbash:
 	docker-compose exec ${SVC} bash
