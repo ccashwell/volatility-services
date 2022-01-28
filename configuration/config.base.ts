@@ -75,7 +75,7 @@ export const config: EnvConfig = {
           app: { type: "file", filename: "./logs/application.log" }
         },
         categories: {
-          default: { appenders: ["app"], level: "debug" }
+          default: { appenders: ["app"], level: "info" }
         }
       }
     }

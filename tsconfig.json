@@ -47,8 +47,8 @@
       "@lib/*": ["lib/*"]
     }
   },
-  "include": ["./src/**/*.ts", "./services/**/*.ts", "./test/**/*.ts"],
-  "exclude": ["node_modules", "postgres"]
+  "include": ["./src/**/*.ts", "./services/**/*.ts", "moleculer.config.ts"],
+  "exclude": ["node_modules", "postgres", "./test/**/*.ts"]
   // "include": ["./**/*", "./typings/moleculer-cron.d.ts"],
   // "exclude": ["node_modules/**/*", "test", "database/migrations", "postgres"]
 }

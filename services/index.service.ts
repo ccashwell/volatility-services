@@ -110,11 +110,11 @@ export default class IndexService extends Service {
           handler(this: IndexService, ctx: Context<IIndex.EstimateParams>): Promise<IIndex.EstimateResponse> {
             return this.indexOperation(ctx, ctx.params)
               .then(evidence => {
-                this.logger.info(evidence)
+                this.logger.info(JSON.stringify(evidence))
                 return evidence
               })
               .catch(reason => {
-                this.logger.error(reason)
+                this.logger.error(JSON.stringify(reason))
                 throw reason
               })
           }
@@ -169,7 +169,6 @@ export default class IndexService extends Service {
       .flat()
 
     const mostRecent = findMostRecent(options)
-    const oldest = findOldest(options)
     const underlyingPrice = mostRecent?.underlyingPrice ?? 0
     const mfivParams: MfivParams = {
       at: indexAtDate.toISOString(),
@@ -220,11 +219,11 @@ export default class IndexService extends Service {
     const { intermediates, ...valObj } = mfivResult
     this.logger.debug("estimate - intermediates", intermediates)
     this.logger.info("estimate", { valObj, mfivContext })
-    this.logger.info("estimate.metrics", {
-      input: { length: mfivParams.options.length, oldest: hud(oldest), newest: hud(mostRecent) },
-      near: { final: mfivResult.intermediates?.finalNearBook.length },
-      next: { final: mfivResult.intermediates?.finalNextBook.length }
-    })
+    // this.logger.info("estimate.metrics", {
+    //   input: { length: mfivParams.options.length, oldest: hud(oldest), newest: hud(mostRecent) },
+    //   near: { final: mfivResult.intermediates?.finalNearBook.length },
+    //   next: { final: mfivResult.intermediates?.finalNextBook.length }
+    // })
 
     return evidence
   }
