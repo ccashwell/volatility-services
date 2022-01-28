@@ -3,13 +3,17 @@
 module.exports = {
   apps : [{
     name: "volatility-services",
-    script: "ts-node -r tsconfig-paths/register --project tsconfig.json ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts services/**/*.service.ts NODE_ENV=production",
+    script: "SERVICEDIR=dist/services TS_NODE_BASEURL=./dist node -r tsconfig-paths/register node_modules/.bin/moleculer-runner --config dist/moleculer.config.js",
     watch: ".",
     env: {
       NODE_ENV: "development",
+      AWS_PROFILE: "vg",
+      AWS_REGION: "us-east-1"
     },
     env_production: {
       NODE_ENV: "production",
+      AWS_PROFILE: "vg",
+      AWS_REGION: "us-east-1"
     }
   }],
 

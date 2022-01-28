@@ -18,5 +18,5 @@ export const config: EnvConfig = {
       port: 6432
     }
   },
-  logLevel: "trace"
+  logLevel: "info"
 }
