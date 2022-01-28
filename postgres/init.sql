@@ -15,6 +15,10 @@ SELECT 'CREATE DATABASE volatility_mfiv_test'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'volatility_mfiv_test')\gexec
 SELECT 'CREATE DATABASE volatility_mfiv_development'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'volatility_mfiv_development')\gexec
+SELECT 'CREATE DATABASE volatility_development'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'volatility_development')\gexec
+SELECT 'CREATE DATABASE volatility_test'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'volatility_test')\gexec
 
 -- volatility_mfiv_development
 CREATE ROLE r_mfiv_ro NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;

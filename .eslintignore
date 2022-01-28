@@ -1,3 +1,4 @@
 postgres/init.sql
 database/models/index.js
 database/migrations/
+newrelic.js

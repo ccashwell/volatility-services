@@ -1,7 +1,6 @@
 "use strict"
 import { ServiceBroker } from "moleculer"
-import { InstrumentInfo } from "tardis-dev"
-import TestService from "../../../services/instrument.service"
+import TestService from "../../../services/instrument_info.service"
 
 describe("Test 'instrument' service", () => {
   const broker = new ServiceBroker({ logger: false })
@@ -13,7 +12,7 @@ describe("Test 'instrument' service", () => {
   describe("instrumentInfo()", () => {
     it("should return with 'InstrumentInfo[]'", async () => {
       //jest.useFakeTimers();
-      const res = (await broker.call("v1.instruments.instrumentInfo", {
+      const res = (await broker.call("instruments.instrumentInfo", {
         expirationDates: ["2022-01-21T08:00:00.000Z"]
       })) as { id: string; expiry: string }[]
       expect(res).toHaveLength(31792)

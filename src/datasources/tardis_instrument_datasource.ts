@@ -13,12 +13,14 @@ export const tardisOptionInstrumentDataSource = async ({
   exchange,
   baseCurrency,
   quoteCurrency = undefined,
-  active = true
+  active = true,
+  contractType,
+  type
 }: TardisInstrumentInfoFilter) =>
   await getInstrumentInfo(exchange, {
     baseCurrency,
     quoteCurrency,
     active,
-    type: "option",
-    contractType: ["call_option", "put_option"]
+    contractType,
+    type
   })

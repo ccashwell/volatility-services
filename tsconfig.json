@@ -1,8 +1,12 @@
 {
   "compilerOptions": {
+    // "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    // "resolveJsonModule": true,
     "skipLibCheck": true,
     "module": "commonjs",
-    "esModuleInterop": true,
+    // "allowJs": true,
+    "types": ["node", "jest"],
     "noImplicitAny": true,
     "noImplicitReturns": false,
     "noImplicitThis": true,
@@ -11,19 +15,40 @@
     "preserveConstEnums": true,
     "sourceMap": true,
     "pretty": true,
-    "target": "es2020",
+    "target": "es6",
     "outDir": "dist",
     "moduleResolution": "node",
-    "lib": ["es2020"],
+    "lib": ["es6"],
     "importHelpers": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
-      "*": ["node_modules/*", "types/*"]
-    },
-    "types": ["node", "jest"]
+      "*": ["node_modules/*", "types/*"],
+      "moleculer-cron": ["typings/moleculer-cron/index.d.ts"],
+      "@configuration": ["configuration"],
+      "@datasources/*": ["src/datasources/*"],
+      "@datasources": ["src/datasources"],
+      "@interfaces/*": ["src/interfaces/*"],
+      "@interfaces": ["src/interfaces"],
+      "@repositories/*": ["src/repositories/*"],
+      "@repositories": ["src/repositories"],
+      "@services/*": ["services/*"],
+      "@services": ["services"],
+      "@service_helpers/*": ["src/service_helpers/*"],
+      "@service_helpers": ["src/service_helpers"],
+      "@Meta/*": ["src/meta/*"],
+      "@Meta": ["src/meta"],
+      "@entities/*": ["src/entities/*"],
+      "@entities": ["src/entities"],
+      "@Test/*": ["test/*"],
+      "@Test": ["test"],
+      "@lib": ["lib"],
+      "@lib/*": ["lib/*"]
+    }
   },
-  "include": ["./**/*", "./typings/moleculer-cron.d.ts"],
-  "exclude": ["node_modules/**/*", "test", "database/migrations", "postgres"]
+  "include": ["./src/**/*.ts", "./services/**/*.ts", "./test/**/*.ts"],
+  "exclude": ["node_modules", "postgres"]
+  // "include": ["./**/*", "./typings/moleculer-cron.d.ts"],
+  // "exclude": ["node_modules/**/*", "test", "database/migrations", "postgres"]
 }

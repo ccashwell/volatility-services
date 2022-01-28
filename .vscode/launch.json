@@ -22,6 +22,45 @@
       "args": ["services/**/*.service.ts"]
     },
     {
+      "name": "Launch TypeScript",
+      "type": "node",
+      "request": "launch",
+      // "program": "${workspaceRoot}/node_modules/moleculer/bin/moleculer-runner.js",
+      "sourceMaps": true,
+      "runtimeArgs": [
+        "--inspect-brk",
+        "--trace-warnings",
+        "--unhandled-rejections=strict",
+        "--nolazy",
+        "-r",
+        "ts-node/register",
+        "-r",
+        "tsconfig-paths/register"
+      ],
+      "args": [
+        "${workspaceRoot}/node_modules/moleculer/bin/moleculer-runner.js",
+        "--config",
+        "moleculer.config.ts",
+        "services/**/*.service.ts"
+      ],
+      "cwd": "${workspaceRoot}",
+      "internalConsoleOptions": "openOnSessionStart",
+      "skipFiles": ["<node_internals>/**", "node_modules/**"],
+      "outputCapture": "console",
+      "env": {
+        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json",
+        "NODE_OPTIONS": "-r tsconfig-paths/register",
+        "AWS_PROFILE": "vg",
+        "AWS_REGION": "us-east-1",
+        "NODE_ENV": "development",
+        "PG_USER": "mfiv_user",
+        "PG_PASSWORD": "At5DHGHgG$dQlCwN6q1#e*5a",
+        "PG_DATABASE": "volatility_development",
+        "PG_HOST": "127.0.0.1",
+        "PG_PORT": "6432"
+      }
+    },
+    {
       "type": "node",
       "request": "launch",
       "name": "Jest",

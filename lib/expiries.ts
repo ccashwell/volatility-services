@@ -1,6 +1,7 @@
 import C from "./constants"
+import { MethodologyExpiryEnum } from "@entities/methodology_index"
 
-export const mfivDates = (now: Date, interval: string, expiryType = "FridayT08:00:00") => {
+export const mfivDates = (now: Date, interval: string, expiryType = MethodologyExpiryEnum.FridayT08) => {
   // TODO: Remove guard once we need to support other time ranges.
   if (interval !== "14d") {
     throw Error(`An interval of ${interval} is not allowed. Only '14d' is currently supported.`)

@@ -1,5 +1,9 @@
 "use strict"
-import Moleculer, { BrokerOptions, Errors, MetricRegistry, ServiceBroker } from "moleculer"
+import "reflect-metadata"
+
+import { BrokerOptions, MetricRegistry } from "moleculer"
+import * as Moleculer from "moleculer"
+import config from "./configuration"
 
 /**
  * Moleculer ServiceBroker configuration file
@@ -36,24 +40,11 @@ const brokerConfig: BrokerOptions = {
 
   // Enable/disable logging or use custom logger. More info: https://moleculer.services/docs/0.14/logging.html
   // Available logger types: "Console", "File", "Pino", "Winston", "Bunyan", "debug", "Log4js", "Datadog"
-  logger: {
-    type: "Console",
-    options: {
-      // Using colors on the output
-      colors: true,
-      // Print module names with different colors (like docker-compose for containers)
-      moduleColors: false,
-      // Line formatter. It can be "json", "short", "simple", "full", a `Function` or a template string like "{timestamp} {level} {nodeID}/{mod}: {msg}"
-      formatter: "full",
-      // Custom object printer. If not defined, it uses the `util.inspect` method.
-      objectPrinter: null,
-      // Auto-padding the module name in order to messages begin at the same column.
-      autoPadding: false
-    }
-  },
+  logger: config.logger,
+
   // Default log level for built-in console logger. It can be overwritten in logger options above.
   // Available values: trace, debug, info, warn, error, fatal
-  logLevel: "info",
+  logLevel: config.logLevel,
 
   // Define transporter.
   // More info: https://moleculer.services/docs/0.14/networking.html
@@ -71,23 +62,10 @@ const brokerConfig: BrokerOptions = {
   serializer: "JSON",
 
   // Number of milliseconds to wait before reject a request with a RequestTimeout error. Disabled: 0
-  requestTimeout: 10 * 1000,
+  requestTimeout: config.requestTimeout,
 
   // Retry policy settings. More info: https://moleculer.services/docs/0.14/fault-tolerance.html#Retry
-  retryPolicy: {
-    // Enable feature
-    enabled: false,
-    // Count of retries
-    retries: 5,
-    // First delay in milliseconds.
-    delay: 100,
-    // Maximum delay in milliseconds.
-    maxDelay: 1000,
-    // Backoff factor for delay. 2 means exponential backoff.
-    factor: 2
-    // A function to check failed requests.
-    // check: (err: Errors.MoleculerError) => err && !!err.retryable
-  },
+  retryPolicy: config.retryPolicy,
 
   // Limit of calling level. If it reaches the limit, broker will throw an MaxCallLevelError error. (Infinite loop protection)
   maxCallLevel: 100,
@@ -149,7 +127,10 @@ const brokerConfig: BrokerOptions = {
   // Enable action & event parameter validation. More info: https://moleculer.services/docs/0.14/validating.html
   validator: true,
 
-  errorHandler: undefined,
+  errorHandler: (err: Error, info: unknown) => {
+    console.error(err, err.stack)
+    console.info(info)
+  }, //moleculerErrorHandler(this.logger),
 
   // Enable/disable built-in metrics function. More info: https://moleculer.services/docs/0.14/metrics.html
   metrics: {
@@ -204,13 +185,15 @@ const brokerConfig: BrokerOptions = {
 
   // Register custom REPL commands.
   replCommands: undefined
-  /*
-	// Called after broker created.
-	created : (broker: ServiceBroker): void => {},
-	// Called after broker started.
-	started: async (broker: ServiceBroker): Promise<void> => {},
-	stopped: async (broker: ServiceBroker): Promise<void> => {},
-	 */
+  // Called after broker created.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+  // created: (broker: Moleculer.ServiceBroker): void => {},
+  // Called after broker started.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+  // started: async (broker: Moleculer.ServiceBroker): Promise<void> => {},
+  // Called after broker stopped.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+  // stopped: async (broker: Moleculer.ServiceBroker): Promise<void> => {}
 }
 
 export = brokerConfig

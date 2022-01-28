@@ -1,14 +1,27 @@
 /* eslint-disable max-len */
 "use strict"
 import { Context, Service, ServiceBroker } from "moleculer"
-// import { DbService } from "moleculer-db"
-// import Sequelize from "sequelize"
+import { getConnection, getCustomRepository } from "typeorm"
+// import * as DbService from "moleculer-db"
 import { OptionSummary } from "tardis-dev"
-import { compute, MfivContext, MfivParams as MethodologyMfivParams, MfivResult } from "node-volatility-mfiv"
+import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
 import { chainFrom } from "transducist"
-// import { dbAdapter } from "../datasources/database"
-import { mfivDates } from "../lib/expiries"
-// const AuthorModel = db.import('project', require('./path/to/models/project'));
+import { Result } from "neverthrow"
+import configuration from "../configuration"
+import { mfivDates } from "@lib/expiries"
+import {
+  BaseCurrencyEnum,
+  MethodologyEnum,
+  MethodologyExchangeEnum,
+  MethodologyWindowEnum,
+  SymbolTypeEnum
+} from "@entities/methodology_index"
+
+//#region Local Imports
+import { MethodologyIndexRepository } from "@repositories"
+import connectionInstance from "@entities/connection"
+import { IIndex } from "@interfaces"
+//#endregion Local Imports
 
 // at: { type: "string" },
 // exchange: { type: "string", default: "deribit" },
@@ -42,6 +55,7 @@ export default class IndexService extends Service {
     super(broker)
     this.parseServiceSchema({
       name: "index",
+
       // mixins: [DbService],
       // adapter: dbAdapter,
       // model: {
@@ -62,6 +76,8 @@ export default class IndexService extends Service {
       // },
       settings: {
         $dependencyTimeout: 30000
+        // fields: ["timestamp", "value", "methodology", "symbolType", "exchange", "baseCurrency", "interval", "extra"]
+        // idField: 'id'
       },
       dependencies: [
         {
@@ -72,20 +88,35 @@ export default class IndexService extends Service {
         scalable: true
       },
 
+      //      mixins: [DbService],
+
+      // model: MethodologyIndex,
+
+      //    adapter: provideTypeOrmAdapter("index"),
+
       // Actions
       actions: {
         estimate: {
-          rest: "/estimate",
           params: {
             at: { type: "string" },
-            exchange: { type: "string", default: "deribit" },
-            methodology: { type: "string", default: "mfiv" },
-            currency: { type: "string", default: "ETH" },
-            interval: { type: "string", default: "14d" },
-            expiryType: { type: "string", default: "FridayT08:00:00" }
+            exchange: { type: "enum", values: ["deribit"], default: "deribit" },
+            methodology: { type: "enum", values: ["mfiv"], default: "mfiv" },
+            baseCurrency: { type: "enum", values: ["ETH"], default: "ETH" },
+            interval: { type: "enum", values: ["14d"], default: "14d" },
+            symbolType: { type: "enum", values: ["option"], default: "option" },
+            expiryType: { type: "string", default: "FridayT08:00:00Z" },
+            contractType: { type: "array", items: "string", enum: ["call_option", "put_option"] }
           },
-          async handler(this: IndexService, ctx: Context<IndexParams>): Promise<void> {
-            return await this.indexOperation(ctx.params)
+          handler(this: IndexService, ctx: Context<IIndex.EstimateParams>): Promise<IIndex.EstimateResponse> {
+            return this.indexOperation(ctx, ctx.params)
+              .then(evidence => {
+                this.logger.info(evidence)
+                return evidence
+              })
+              .catch(reason => {
+                this.logger.error(reason)
+                throw reason
+              })
           }
         }
       },
@@ -93,33 +124,54 @@ export default class IndexService extends Service {
       // Service methods
       async started(this: IndexService) {
         this.logger.info("Start ingest service")
+        await connectionInstance()
+        return Promise.resolve()
+      },
+
+      async stopped() {
+        //return await getConnection().close()
         return Promise.resolve()
       }
+
+      // afterConnected(this: IndexService) {
+      //   this.logger.info("Connected successfully")
+      //   return this.adapter.clear()
+      // }
     })
   }
 
-  private async indexOperation(params: IndexParams) {
+  // public afterConnected(this: IndexService) {
+  //   this.logger.info("Connected successfully")
+  //   return this.adapter.clear()
+  // }
+
+  private async indexOperation(context: Context<IIndex.EstimateParams>, params: IIndex.EstimateParams) {
     const indexAtDate = new Date(params.at)
     const methodologyDates = mfivDates(indexAtDate, params.interval, params.expiryType)
-    const nearOptions: Promise<OptionSummary[]> = this.broker.call("ingest.summaries", {
-      expiry: methodologyDates.nearExpiration
-    })
-    const nextOptions: Promise<OptionSummary[]> = this.broker.call("ingest.summaries", {
-      expiry: methodologyDates.nextExpiration
-    })
-    const [nearExpiries, nextExpiries] = await Promise.all([nearOptions, nextOptions])
+    const expiries: { status: "fulfilled" | "rejected"; value: OptionSummary[] }[] = await this.broker.mcall(
+      [
+        { action: "ingest.summaries", params: { expiry: methodologyDates.nearExpiration } },
+        { action: "ingest.summaries", params: { expiry: methodologyDates.nextExpiration } }
+      ],
+      { settled: true }
+    )
+
     const mfivContext: MfivContext = {
-      windowInterval: params.interval as "14d",
-      risklessRate: 0.0055,
-      risklessRateAt: indexAtDate.toISOString(),
-      risklessRateSource: "aave",
-      methodology: params.methodology,
-      exchange: params.exchange as "deribit",
-      currency: params.currency
+      ...params,
+      windowInterval: params.interval,
+      currency: params.baseCurrency,
+      ...configuration.indexSettings
     }
-    const options = nearExpiries.concat(nextExpiries)
-    const underlyingPrice = findLastUnderlyingPrice(options) ?? 0
-    const mfivParams: MethodologyMfivParams = {
+
+    const options = expiries
+      .filter(e => e.status === "fulfilled")
+      .map(e => e.value)
+      .flat()
+
+    const mostRecent = findMostRecent(options)
+    const oldest = findOldest(options)
+    const underlyingPrice = mostRecent?.underlyingPrice ?? 0
+    const mfivParams: MfivParams = {
       at: indexAtDate.toISOString(),
       nearDate: methodologyDates.nearExpiration,
       nextDate: methodologyDates.nextExpiration,
@@ -127,8 +179,8 @@ export default class IndexService extends Service {
         expirationDate: Date
         strikePrice: number
         underlyingPrice: number
-        bestBidPrice: number | undefined
-        bestAskPrice: number | undefined
+        bestBidPrice: number
+        bestAskPrice: number
         markPrice: number
         timestamp: Date
         symbol: string
@@ -137,38 +189,107 @@ export default class IndexService extends Service {
       underlyingPrice
     }
 
-    // TODO: use Result.fromThrowable
-    const mfivResult = compute(mfivContext, mfivParams)
-    const evidence = { version: "2022-01-01", context: mfivContext, params: mfivParams, result: mfivResult }
+    const maybeMfivResult = Result.fromThrowable(
+      () => compute(mfivContext, mfivParams),
+      err => {
+        console.error("compute failed", err)
+        return new Error("No index")
+      }
+    )()
+
+    if (maybeMfivResult.isErr()) {
+      return maybeMfivResult.error
+    }
+
+    const mfivResult = maybeMfivResult.value
+
+    const evidence: MfivEvidence = {
+      version: "2022-01-01",
+      type: "mfiv.estimate.evidence",
+      context: mfivContext,
+      params: mfivParams,
+      result: mfivResult
+    }
     await this.announce(evidence)
+    // await this.persist(evidence, {
+    //   requestId: context.requestID ?? this.broker.generateUid(),
+    //   near: mfivParams.nearDate,
+    //   next: mfivParams.nextDate,
+    //   iVal: mfivResult.invdVol?.toString() || "undefined"
+    // })
+    const { intermediates, ...valObj } = mfivResult
+    this.logger.debug("estimate - intermediates", intermediates)
+    this.logger.info("estimate", { valObj, mfivContext })
+    this.logger.info("estimate.metrics", {
+      input: { length: mfivParams.options.length, oldest: hud(oldest), newest: hud(mostRecent) },
+      near: { final: mfivResult.intermediates?.finalNearBook.length },
+      next: { final: mfivResult.intermediates?.finalNextBook.length }
+    })
+
+    return evidence
   }
 
-  private async announce(evidence: {
-    version: string
-    context: MfivContext
-    params: MethodologyMfivParams
-    result: MfivResult
-  }) {
+  private async persist(
+    this: IndexService,
+    evidence: {
+      version: string
+      context: MfivContext
+      params: MfivParams
+      result: MfivResult
+    },
+    extra: { requestId: string; iVal: string; near: string; next: string }
+  ) {
+    // const repository = getConnection().getRepository<MethodologyIndex>(MethodologyIndex)
+    const repository = getCustomRepository(MethodologyIndexRepository)
+    const ctx = evidence.context
+    const index = repository.create()
+    index.timestamp = new Date(evidence.params.at)
+    index.value = evidence.result.dVol?.toString() ?? "undefined"
+    index.baseCurrency = ctx.currency as BaseCurrencyEnum
+    index.exchange = ctx.exchange as MethodologyExchangeEnum
+    index.methodology = ctx.methodology as MethodologyEnum
+    index.interval = ctx.windowInterval as MethodologyWindowEnum
+    index.symbolType = SymbolTypeEnum.Option
+    index.extra = extra
+    await repository.save(index)
+    // return await repository.commit({
+    //   timestamp: new Date(evidence.params.at),
+    //   value: evidence.result.dVol?.toString() ?? "undefined",
+    //   baseCurrency: ctx.currency as BaseCurrencyEnum,
+    //   exchange: ctx.exchange as MethodologyExchangeEnum,
+    //   methodology: ctx.methodology as MethodologyEnum,
+    //   interval: ctx.windowInterval,
+    //   symbolType,
+    //   extra
+    // })
+
+    // const model = new MethodologyIndex()
+    // model.timestamp = new Date(evidence.params.at)
+    // model.value = evidence.result.dVol?.toString() ?? "undefined"
+    // model.baseCurrency = evidence.context.currency as BaseCurrencyEnum
+    // model.exchange = evidence.context.exchange as MethodologyExchangeEnum
+    // model.methodology = evidence.context.methodology as MethodologyEnum
+    // model.interval = evidence.context.windowInterval as MethodologyWindowEnum
+    // model.symbolType = (this.settings as IndexServiceSettings).mfiv.symbolType as SymbolTypeEnum
+    // model.extra = extra
+
+    // return await this.adapter.repository.save(model).catch((err: unknown) => {
+    //   this.logger.error(err)
+    //   throw err
+    // })
+    // return await getRepository(MethodologyIndex).save(model)
+    // return await this.adapter.repository(MethodologyIndex).save(model)
+  }
+
+  private async announce(evidence: { version: string; context: MfivContext; params: MfivParams; result: MfivResult }) {
     this.logger.debug("compute(mfiv)", JSON.stringify(evidence))
     const ctx = evidence.context
-    const event = `${ctx.exchange}.${ctx.methodology}.${ctx.currency}.${ctx.windowInterval}.estimate`
+    const event = `${ctx.methodology}.${ctx.windowInterval}.${ctx.currency}.index.created`
     await this.broker.emit(event, evidence)
   }
 }
 
-// function cmpFunc(a: OptionSummary, b: OptionSummary): OptionSummary {
-//   return a.timestamp > b.timestamp
-//     ? a
-//     : a.timestamp < b.timestamp
-//     ? b
-//     : a.localTimestamp > b.localTimestamp
-//     ? a
-//     : a.localTimestamp < b.localTimestamp
-//     ? b
-//     : a
-// }
-
-function cmpFuncOrd(a: OptionSummary, b: OptionSummary): number {
+function cmpMostRecent(a: OptionSummary, b: OptionSummary): number {
   return a.timestamp > b.timestamp
     ? 1
     : a.timestamp < b.timestamp
@@ -180,15 +301,23 @@ function cmpFuncOrd(a: OptionSummary, b: OptionSummary): number {
     : 0
 }
 
+function cmpOldest(a: OptionSummary, b: OptionSummary): number {
+  return a.timestamp < b.timestamp
+    ? 1
+    : a.timestamp > b.timestamp
+    ? -1
+    : a.localTimestamp < b.localTimestamp
+    ? 1
+    : a.localTimestamp > b.localTimestamp
+    ? -1
+    : 0
+}
+
 // TOOO: Expire values that haven't changed in a long time.
 //       If we always return the last value of something then we will
 //       emit repetitive values rather than 'undefined'
-const findLastUnderlyingPrice = (options: OptionSummary[]) => chainFrom(options).max(cmpFuncOrd)?.underlyingPrice
-interface IndexParams {
-  at: string
-  exchange: string
-  methodology: "mfiv"
-  currency: "ETH"
-  interval: string
-  expiryType: string
-}
+// const findLastUnderlyingPrice = (options: OptionSummary[]) => chainFrom(options).max(cmpFuncOrd)?.underlyingPrice
+const findMostRecent = (options: OptionSummary[]) => chainFrom(options).max(cmpMostRecent)
+const findOldest = (options: OptionSummary[]) => chainFrom(options).max(cmpOldest)
+const hud = (o: OptionSummary | null) =>
+  o ? [o.timestamp, o.bestBidPrice, o.symbol, o.bestAskPrice, o.localTimestamp] : []

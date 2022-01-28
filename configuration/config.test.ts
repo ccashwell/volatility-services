@@ -1,4 +1,4 @@
-import { Dialect } from "sequelize/types"
+import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
 import { config as _config, EnvConfig } from "./config.base"
 
 export const config: EnvConfig = {
@@ -10,16 +10,6 @@ export const config: EnvConfig = {
       database: "volatility_mfiv_test",
       host: "127.0.0.1",
       port: 6432,
-      dialect: "postgres" as Dialect,
-      dialectOptions: {
-        useUTC: true
-      },
-      timezone: "+00:00",
-      pool: {
-        max: 10,
-        min: 0,
-        idle: 10_000
-      },
       logging: console.log
     }
   }

@@ -1,25 +1,28 @@
-import aws from "aws-sdk"
 import config from "../../configuration"
+import client from "../../clients/secrets"
+import { ISecretsManager } from "../../clients/types"
 
-// secret,
-// decodedBinarySecret;
-interface Secrets {
+export interface Secrets {
   [key: string]: string
 }
-
-// Create a Secrets Manager client
-const client = new aws.SecretsManager({
-  region: config.aws.region
-})
 
 // In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
 // See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
 // We rethrow the exception by default.
 export default async function secrets(): Promise<Secrets> {
+  let secretsClient!: ISecretsManager
+  const clientConfig = config.clients?.secretsManager
+
+  if (clientConfig !== undefined) {
+    secretsClient = client(clientConfig)
+  } else {
+    throw Error("secrets client config was undefined")
+  }
+
   return new Promise(function (resolve, reject) {
     let secret: Secrets
 
-    client.getSecretValue({ SecretId: config.aws.smName }, function (err, data) {
+    secretsClient.getSecretValue({ SecretId: config.aws.smName }, function (err, data) {
       if (err) {
         if (err.code === "DecryptionFailureException") {
           // Secrets Manager can't decrypt the protected secret text using the provided KMS key.
@@ -59,3 +62,7 @@ export default async function secrets(): Promise<Secrets> {
     })
   })
 }
+
+// export default {
+//   secrets
+// }

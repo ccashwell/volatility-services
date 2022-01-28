@@ -17,6 +17,27 @@ services:
     networks:
       - internal
 
+  ingest:
+    build: .
+    image: ingest
+    env_file: docker-compose.env
+    environment:
+      SERVICES: ingest
+
+  instrument_info:
+    build: .
+    image: instrument_info
+    env_file: docker-compose.env
+    environment:
+      SERVICES: instrument-info
+
+  ipfs:
+    build: .
+    image: ipfs
+    env_file: docker-compose.env
+    environment:
+      SERVICES: ipfs
+
   traefik:
     image: traefik:v2.1
     command:
