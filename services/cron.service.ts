@@ -24,7 +24,7 @@ export default class CronService extends Service {
       crons: [
         {
           name: "mfiv.14d.ETH.estimate",
-          cronTime: "* * * * *",
+          cronTime: "*/5 * * * *",
           onTick: () => {
             this.logger.info("Cron Job", "MFIV.14d.ETH")
             const provider = paramsProvider({ requestId: this.broker.generateUid() })

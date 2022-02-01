@@ -4,16 +4,21 @@ module.exports = {
   apps : [{
     name: "volatility-services",
     script: "SERVICEDIR=dist/services TS_NODE_BASEURL=./dist node -r tsconfig-paths/register node_modules/.bin/moleculer-runner --config dist/moleculer.config.js",
-    watch: ".",
     env: {
       NODE_ENV: "development",
       AWS_PROFILE: "vg",
-      AWS_REGION: "us-east-1"
+      AWS_REGION: "us-east-1",
+      LOG_LEVEL: "debug"
     },
     env_production: {
       NODE_ENV: "production",
+      APP_NAME: "volatility-services",
       AWS_PROFILE: "vg",
-      AWS_REGION: "us-east-1"
+      AWS_REGION: "us-east-1",
+      NEW_RELIC_LICENSE_KEY: "ba2e72fd105fd15c4f15fa19c8c86370FFFFNRAL",
+      NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: "true",
+      NEW_RELIC_APP_NAME: "${APP_NAME}",
+      NEW_RELIC_LOG_LEVEL: "info"
     }
   }],
 

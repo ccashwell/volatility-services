@@ -134,13 +134,13 @@ const brokerConfig: BrokerOptions = {
 
   // Enable/disable built-in metrics function. More info: https://moleculer.services/docs/0.14/metrics.html
   metrics: {
-    enabled: true,
+    enabled: false,
     // Available built-in reporters: "Console", "CSV", "Event", "Prometheus", "Datadog", "StatsD"
     reporter: {
       type: "Prometheus",
       options: {
         // HTTP port
-        port: 3030,
+        port: 3090,
         // HTTP URL path
         path: "/metrics",
         // Default labels which are appended to all metrics labels

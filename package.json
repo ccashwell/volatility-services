@@ -66,7 +66,7 @@
     "moleculer-web-uws": "^0.1.1",
     "neverthrow": "^4.3.1",
     "newrelic": "^8.7.1",
-    "node-volatility-mfiv": "github:volatilitygroup/node-volatility-mfiv#release/initial",
+    "node-volatility-mfiv": "file:../node-volatility-mfiv",
     "npm-check": "^5.9.2",
     "pg": "^8.7.1",
     "pg-hstore": "^2.3.4",
