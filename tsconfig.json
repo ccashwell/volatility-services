@@ -26,6 +26,7 @@
     "paths": {
       "*": ["node_modules/*", "types/*"],
       "moleculer-cron": ["typings/moleculer-cron/index.d.ts"],
+      "moleculer-web-uws": ["typings/moleculer-web-uws/index.d.ts"],
       "@configuration": ["configuration"],
       "@datasources/*": ["src/datasources/*"],
       "@datasources": ["src/datasources"],
