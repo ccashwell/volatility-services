@@ -1,3 +1,4 @@
+import { ContractType } from "tardis-dev"
 import {
   MethodologyEnum,
   MethodologyWindowEnum,
@@ -5,7 +6,7 @@ import {
   MethodologyExchangeEnum,
   SymbolTypeEnum,
   MethodologyExpiryEnum
-} from "@entities/methodology_index"
+} from "@entities"
 
 export interface EstimateParams {
   at: string

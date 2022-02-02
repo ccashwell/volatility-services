@@ -112,7 +112,7 @@ const provideAaveLiquidityRate = defaultWeb3.map(provideContract(etherscan)).map
   throw result.error
 })
 
-async function provideRateResponse() {
+export async function provideRateResponse() {
   return {
     risklessRate: await provideAaveLiquidityRate.unwrapOr(0), // TODO: Return 'undefined' and let upstream handle it
     risklessRateAt: new Date().toISOString(),

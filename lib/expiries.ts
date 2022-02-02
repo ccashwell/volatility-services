@@ -1,5 +1,5 @@
 import C from "./constants"
-import { MethodologyExpiryEnum } from "@entities/methodology_index"
+import { MethodologyExpiryEnum } from "@entities"
 
 export const mfivDates = (now: Date, interval: string, expiryType = MethodologyExpiryEnum.FridayT08) => {
   // TODO: Remove guard once we need to support other time ranges.
