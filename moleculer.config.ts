@@ -1,6 +1,5 @@
 "use strict"
 import "reflect-metadata"
-
 import { BrokerOptions, MetricRegistry } from "moleculer"
 import * as Moleculer from "moleculer"
 import config from "./configuration"
