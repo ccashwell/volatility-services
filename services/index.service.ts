@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 "use strict"
 import { Context, Service, ServiceBroker } from "moleculer"
-import { getConnection, getCustomRepository } from "typeorm"
+import { getConnection, getCustomRepository, getRepository } from "typeorm"
 // import * as DbService from "moleculer-db"
 import { OptionSummary } from "tardis-dev"
 import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
@@ -13,9 +13,10 @@ import {
   BaseCurrencyEnum,
   MethodologyEnum,
   MethodologyExchangeEnum,
+  MethodologyIndex,
   MethodologyWindowEnum,
   SymbolTypeEnum
-} from "@entities/methodology_index"
+} from "@entities"
 
 //#region Local Imports
 import { MethodologyIndexRepository } from "@repositories"
@@ -125,7 +126,6 @@ export default class IndexService extends Service {
       async started(this: IndexService) {
         this.logger.info("Start ingest service")
         await connectionInstance()
-        return Promise.resolve()
       },
 
       async stopped() {
@@ -210,12 +210,12 @@ export default class IndexService extends Service {
       result: mfivResult
     }
     await this.announce(evidence)
-    // await this.persist(evidence, {
-    //   requestId: context.requestID ?? this.broker.generateUid(),
-    //   near: mfivParams.nearDate,
-    //   next: mfivParams.nextDate,
-    //   iVal: mfivResult.invdVol?.toString() || "undefined"
-    // })
+    await this.persist(evidence, {
+      requestId: context.requestID ?? this.broker.generateUid(),
+      near: mfivParams.nearDate,
+      next: mfivParams.nextDate,
+      iVal: mfivResult.invdVol?.toString() || "undefined"
+    })
     const { intermediates, ...valObj } = mfivResult
     this.logger.debug("estimate - intermediates", intermediates)
     this.logger.info("estimate", { valObj, mfivContext })
@@ -239,7 +239,7 @@ export default class IndexService extends Service {
     extra: { requestId: string; iVal: string; near: string; next: string }
   ) {
     // const repository = getConnection().getRepository<MethodologyIndex>(MethodologyIndex)
-    const repository = getCustomRepository(MethodologyIndexRepository)
+    const repository = getRepository(MethodologyIndex)
     const ctx = evidence.context
     const index = repository.create()
     index.timestamp = new Date(evidence.params.at)

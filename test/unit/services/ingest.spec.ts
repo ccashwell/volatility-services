@@ -1,11 +1,9 @@
 "use strict"
 import { ServiceBroker } from "moleculer"
 import TestService from "../../../services/ingest.service"
-import DependentService from "../../../services/instrument.service"
 
 describe("Test 'ingest' service", () => {
   const broker = new ServiceBroker({ logger: true })
-  broker.createService(DependentService)
   broker.createService(TestService)
 
   beforeAll(() => broker.start())

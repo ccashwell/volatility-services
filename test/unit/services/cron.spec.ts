@@ -26,10 +26,6 @@ describe("Test 'cron' service", () => {
       expect(service.$crons[0].runOnStarted).toBeDefined()
       expect(service.$crons[0].manualStart).toBe(false)
       done()
-      //expect(service.getCronTime(1111)).toEqual({})
-      //expect(service.actions.ipfs).toHaveBeenCalledTimes(1)
-      // expect(service.CronJob).toHaveBeenCalledTimes(1)
-      //jest.useFakeTimers();
     }, 7000)
   })
 })

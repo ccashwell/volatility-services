@@ -1,8 +1,5 @@
 "use strict"
 import { ServiceBroker } from "moleculer"
-import { ok } from "neverthrow"
-import mfivEvent from "../../fixtures/mfiv_event"
-import defaultExport from "../../../lib/utils/secrets"
 import IndexService from "../../../services/index.service"
 import { IIndex } from "../../../src/interfaces/services/index"
 import {
@@ -90,30 +87,5 @@ describe("index.service api", () => {
           expect(err).toBeInstanceOf(Error("No index"))
         })
     })
-    // test("calls upload() handler", async () => {
-    //   service.upload = jest.fn()
-    //   await service.emitLocalEventHandler(eventName, data)
-    //   expect(service.upload).toBeCalledTimes(1)
-    //   expect(service.upload).toBeCalledWith({ params: data, requestId: "no-ackID" })
-    // })
-
-    // test("writes data to IPFS", async () => {
-    //   const key =
-    //     "/indices/methodology=mfiv/interval=14d/currency=ETH/exchange=deribit/instrument=option/ts=2021-10-01T07:02:00.000Z/evidence.json"
-    //   service.writeIPFS = jest.fn(async (key: string, data: Buffer) => {
-    //     const response: FleekResponse = {
-    //       hash: `${key}-hash`,
-    //       hashV0: "",
-    //       key: key,
-    //       bucket: "volatilitycom-bucket",
-    //       publicUrl: `https://fleek.co/${key}`
-    //     } as FleekResponse
-    //     return ok(response)
-    //   })
-
-    //   await service.emitLocalEventHandler(eventName, data)
-    //   expect(service.writeIPFS).toBeCalledTimes(1)
-    //   expect(service.writeIPFS).toBeCalledWith(key, Buffer.from(JSON.stringify(data)))
-    // })
   })
 })

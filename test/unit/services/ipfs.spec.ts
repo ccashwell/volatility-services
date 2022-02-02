@@ -1,39 +1,41 @@
 "use strict"
-import { ServiceBroker } from "moleculer"
+import Moleculer, { ServiceBroker } from "moleculer"
 import { ok } from "neverthrow"
-import { FleekResponse } from "../../../datasources/fleek"
-import TestService from "../../../services/ipfs.service"
 import mfivEvent from "../../fixtures/mfiv_event"
-import defaultExport from "../../../lib/utils/secrets"
 import IPFSService from "../../../services/ipfs.service"
+import { IIPFS } from "../../../src/interfaces/services/ipfs"
+import { FleekResponse } from "../../../src/datasources"
+import { IIPFSServiceMeta } from "../../../src/interfaces/meta"
 
-jest.mock("../../../lib/utils/secrets", () => {
-  const originalModule = jest.requireActual("../../../lib/utils/secrets")
-
-  //Mock the default export and named export 'foo'
-  return {
-    __esModule: true,
-    ...originalModule,
-    default: jest.fn(() => {
-      return Promise.resolve({
-        FLEEK_ID: "mock-fleek-id",
-        FLEEK_SECRET: "mock-fleek-secret"
-      })
-    })
-  }
-})
-
-describe("Test 'ipfs' service", () => {
+describe("ipfs.service", () => {
   const broker = new ServiceBroker({ logger: true })
   const service = broker.createService(IPFSService)
-  const eventName = "ipfs.mfiv.estimate"
+  const ipfsKey = "/some-random/ipfs/key.json"
+  // const eventName = "ipfs.mfiv.estimate"
+
+  service.operation = jest.fn(() => {
+    return {
+      store: (context: Moleculer.Context<IIPFS.StoreParams, IIPFSServiceMeta>) => {
+        const key = context.params.key
+        const response: FleekResponse = {
+          hash: `${key}-hash`,
+          hashV0: "",
+          key: key,
+          bucket: "volatilitycom-bucket",
+          publicUrl: `https://fleek.co/${key}`
+        } as FleekResponse
+        return ok(response)
+      }
+    }
+  })
 
   // Create a mock insert function
-  const mockUpload = jest.fn(({ params, requestId }) => Promise.resolve({ hash: "mfiv-ipfs-hash" }))
+  // const mockUpload = jest.fn(({ params, requestId }) => Promise.resolve({ hash: "mfiv-ipfs-hash" }))
   beforeAll(() => broker.start())
   afterAll(() => broker.stop())
 
-  describe(`Event "${eventName}"`, () => {
+  // describe(`Event "${eventName}"`, () => {
+  describe("store(params: IIPFS.StoreParams)", () => {
     const data = mfivEvent
 
     // test("calls upload() handler", async () => {
@@ -44,22 +46,18 @@ describe("Test 'ipfs' service", () => {
     // })
 
     test("writes data to IPFS", async () => {
-      const key =
-        "/indices/methodology=mfiv/interval=14d/currency=ETH/exchange=deribit/instrument=option/ts=2021-10-01T07:02:00.000Z/evidence.json"
-      service.writeIPFS = jest.fn(async (key: string, data: Buffer) => {
-        const response: FleekResponse = {
-          hash: `${key}-hash`,
-          hashV0: "",
-          key: key,
-          bucket: "volatilitycom-bucket",
-          publicUrl: `https://fleek.co/${key}`
-        } as FleekResponse
-        return ok(response)
-      })
-
-      await service.emitLocalEventHandler(eventName, data)
-      expect(service.writeIPFS).toBeCalledTimes(1)
-      expect(service.writeIPFS).toBeCalledWith(key, Buffer.from(JSON.stringify(data)))
+      const params = {
+        key: ipfsKey,
+        data: Buffer.from("payload"),
+        metadata: { fileSize: 7, mimeType: "application/json", requestId: "some-transaction-id" }
+      } as IIPFS.StoreParams
+      const response = await service.broker.call("ipfs.store", params)
+      expect(response).toEqual(
+        expect.objectContaining({
+          key: "/some-random/ipfs/key.json",
+          hash: "/some-random/ipfs/key.json-hash"
+        })
+      )
     })
   })
 })

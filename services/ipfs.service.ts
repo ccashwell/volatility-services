@@ -1,7 +1,6 @@
 "use strict"
 
 import { ActionParams, Context, Service, ServiceBroker } from "moleculer"
-import * as DbService from "moleculer-db"
 import { Repository, getConnection } from "typeorm"
 import { ResultAsync } from "neverthrow"
 import fleek, { FleekResponse } from "@datasources/fleek"
@@ -58,6 +57,7 @@ export default class IPFSService extends Service {
             this: IPFSService,
             context: Context<IIPFS.StoreParams, IIPFSServiceMeta>
           ): Promise<IIPFS.StoreResponse> {
+            // return Promise.resolve({ key: "", hash: "" })
             const result = await this.operation.store(context)
 
             if (result.isOk()) {

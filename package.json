@@ -106,6 +106,7 @@
       "^@lib/utils/secrets$": "<rootDir>/lib/utils/secrets",
       "^@entities/connection$": "<rootDir>/test/config/connection",
       "^@entities": "<rootDir>/src/entities",
+      "^@fleekhq/fleek-storage-js$": "<rootDir>/node_modules/@fleekhq/fleek-storage-js",
       "^@([a-z].*)$": "<rootDir>/src/$1"
     },
     "moduleDirectories": [
