@@ -24,6 +24,13 @@ interface TardisConfig {
 }
 
 export interface EnvConfig {
+  adapter: {
+    type: "postgres"
+    name: string
+    database: string
+    port: number
+    synchronize: boolean
+  }
   aws: AwsConfig
   clients?: {
     secretsManager: ISecretsManager
@@ -52,6 +59,13 @@ export interface EnvConfig {
 }
 
 export const config: EnvConfig = {
+  adapter: {
+    type: "postgres",
+    name: "default",
+    database: `volatility_${process.env.NODE_ENV ?? "development"}`,
+    port: parseInt(process.env.DB_PORT ?? "6432", 10),
+    synchronize: true
+  },
   aws: {
     region: process.env.AWS_REGION ?? "us-east-2",
     smName: "API_Keys"

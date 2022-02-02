@@ -7,7 +7,7 @@ export const config: EnvConfig = {
     db: {
       username: "mfiv_user",
       password: "At5DHGHgG$dQlCwN6q1#e*5a",
-      database: "volatility_mfiv_test",
+      database: "volatility_test",
       host: "127.0.0.1",
       port: 6432,
       logging: console.log

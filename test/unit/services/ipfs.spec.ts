@@ -1,63 +1,97 @@
 "use strict"
-import Moleculer, { ServiceBroker } from "moleculer"
-import { ok } from "neverthrow"
+import Moleculer, { Errors, ServiceBroker } from "moleculer"
 import mfivEvent from "../../fixtures/mfiv_event"
 import IPFSService from "../../../services/ipfs.service"
 import { IIPFS } from "../../../src/interfaces/services/ipfs"
 import { FleekResponse } from "../../../src/datasources"
-import { IIPFSServiceMeta } from "../../../src/interfaces/meta"
+
+jest.mock("../../../src/datasources/fleek", () => {
+  const originalModule = jest.requireActual("../../../src/datasources/fleek")
+  return {
+    __esModule: true,
+    ...originalModule,
+    default: jest.fn((params: IIPFS.StoreParams) => {
+      const key = params.key
+      const response: FleekResponse = {
+        hash: `${key}-hash`,
+        hashV0: "",
+        key: key,
+        bucket: "volatilitycom-bucket",
+        publicUrl: `https://fleek.co/${key}`
+      } as FleekResponse
+
+      if (key.includes("throw")) {
+        return Promise.reject(new Error("Test threw an error"))
+      }
+
+      return Promise.resolve(response)
+    })
+  }
+})
 
 describe("ipfs.service", () => {
-  const broker = new ServiceBroker({ logger: true })
+  const broker = new ServiceBroker({ logger: false })
   const service = broker.createService(IPFSService)
   const ipfsKey = "/some-random/ipfs/key.json"
-  // const eventName = "ipfs.mfiv.estimate"
 
-  service.operation = jest.fn(() => {
-    return {
-      store: (context: Moleculer.Context<IIPFS.StoreParams, IIPFSServiceMeta>) => {
-        const key = context.params.key
-        const response: FleekResponse = {
-          hash: `${key}-hash`,
-          hashV0: "",
-          key: key,
-          bucket: "volatilitycom-bucket",
-          publicUrl: `https://fleek.co/${key}`
-        } as FleekResponse
-        return ok(response)
-      }
-    }
-  })
+  // service.store = jest.fn((context: Moleculer.Context<IIPFS.StoreParams, IIPFSServiceMeta>) => {
+  //   const key = context.params.key
+  //   const response: FleekResponse = {
+  //     hash: `${key}-hash`,
+  //     hashV0: "",
+  //     key: key,
+  //     bucket: "volatilitycom-bucket",
+  //     publicUrl: `https://fleek.co/${key}`
+  //   } as FleekResponse
+  //   return ok(response)
+  // })
 
   // Create a mock insert function
   // const mockUpload = jest.fn(({ params, requestId }) => Promise.resolve({ hash: "mfiv-ipfs-hash" }))
   beforeAll(() => broker.start())
   afterAll(() => broker.stop())
 
-  // describe(`Event "${eventName}"`, () => {
   describe("store(params: IIPFS.StoreParams)", () => {
     const data = mfivEvent
 
-    // test("calls upload() handler", async () => {
-    //   service.upload = jest.fn()
-    //   await service.emitLocalEventHandler(eventName, data)
-    //   expect(service.upload).toBeCalledTimes(1)
-    //   expect(service.upload).toBeCalledWith({ params: data, requestId: "no-ackID" })
-    // })
-
-    test("writes data to IPFS", async () => {
+    describe("with valid params", () => {
       const params = {
-        key: ipfsKey,
+        key: "some-random/ipfs/filename.json",
         data: Buffer.from("payload"),
         metadata: { fileSize: 7, mimeType: "application/json", requestId: "some-transaction-id" }
       } as IIPFS.StoreParams
-      const response = await service.broker.call("ipfs.store", params)
-      expect(response).toEqual(
-        expect.objectContaining({
-          key: "/some-random/ipfs/key.json",
-          hash: "/some-random/ipfs/key.json-hash"
+
+      test("responds with IIPFS.StoreResponse", () => {
+        return service.broker.call("ipfs.store", params).then(response => {
+          expect(response).toEqual(
+            expect.objectContaining({
+              key: "https://fleek.co/some-random/ipfs/filename.json",
+              hash: "some-random/ipfs/filename.json-hash",
+              metadata: {
+                fileSize: 7,
+                mimeType: "application/json",
+                requestId: "some-transaction-id"
+              }
+            })
+          )
         })
-      )
+      })
+    })
+
+    describe("when fleek throws an error", () => {
+      test("responds with IIPFS.StoreResponse", () => {
+        const params = {
+          key: "key-that-throws",
+          data: Buffer.from("payload"),
+          metadata: { fileSize: 7, mimeType: "application/json", requestId: "some-transaction-id" }
+        } as IIPFS.StoreParams
+
+        expect.assertions(1)
+
+        return service.broker.call("ipfs.store", params).catch(error => {
+          expect(error).toBeInstanceOf(Errors.MoleculerError)
+        })
+      })
     })
   })
 })

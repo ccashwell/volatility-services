@@ -1,7 +1,8 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm"
+import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from "typeorm"
 
 @Entity("fleek_transactions")
 export class FleekTransaction {
+  @Index("hash-idx")
   @PrimaryColumn({ nullable: false })
   hash!: string
 

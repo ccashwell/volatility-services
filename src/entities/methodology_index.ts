@@ -1,5 +1,11 @@
 import { Entity, Column, CreateDateColumn, Index, PrimaryColumn, Unique } from "typeorm"
-import { MethodologyEnum, MethodologyWindowEnum, BaseCurrencyEnum, MethodologyExchangeEnum, SymbolTypeEnum } from "."
+import {
+  MethodologyEnum,
+  MethodologyWindowEnum,
+  BaseCurrencyEnum,
+  MethodologyExchangeEnum,
+  SymbolTypeEnum
+} from "./types"
 
 @Entity("methodology_indices")
 @Index(["methodology", "interval", "baseCurrency", "exchange", "symbolType"])
