@@ -2,17 +2,18 @@
 import { createConnection, Connection } from "typeorm"
 //#region Global Imports
 
-export default async (): Promise<Connection | undefined> => {
+export default async (): Promise<Connection> => {
   try {
     return await createConnection({
-      type: "sqlite",
+      type: "postgres",
       name: "default",
-      database: ":memory:",
-      entities: ["./src/entities/*.ts"],
+      database: "volatility_test",
+      entities: ["./src/entities/fleek_transaction.ts", "./src/entities/methodology_index.ts"],
       synchronize: true,
       dropSchema: true
     })
   } catch (error) {
-    return undefined
+    console.error(error)
+    throw error
   }
 }
