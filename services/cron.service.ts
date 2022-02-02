@@ -148,7 +148,6 @@ const paramsProvider = ({ requestId }: { requestId: string }) => {
     },
     ipfs: {
       params: (jsonStr: string) => {
-        debugger
         const buffer = Buffer.from(jsonStr)
         return {
           key: fleekUri,

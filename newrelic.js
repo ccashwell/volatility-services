@@ -13,14 +13,14 @@ exports.config = {
   /**
    * Your New Relic license key.
    */
-  license_key: process.env.NEW_RELIC_LICENSE_KEY,
+  license_key: "f7caa4e25366a524103f6d4b87a30a488258NRAL",
   /**
    * This setting controls distributed tracing.
    * Distributed tracing lets you see the path that a request takes through your
    * distributed system. Enabling distributed tracing changes the behavior of some
    * New Relic features, so carefully consult the transition guide before you enable
    * this feature: https://docs.newrelic.com/docs/transition-guide-distributed-tracing
-   * Default is false.
+   * Default is true.
    */
   distributed_tracing: {
     /**

@@ -7,7 +7,8 @@ export enum VGError {
   CreateStreamFailure = "CreateStreamFailure",
   ConfigurationFailure = "ConfigurationFailure",
   FetchInstrumentsFailure = "FetchInstrumentsFailure",
-  InsufficientDataFailure = "InsufficientDataFailure"
+  InsufficientDataFailure = "InsufficientDataFailure",
+  RateServiceFailure = "RateServiceFailure"
 }
 
 export const fleekUploadFailure = (err: Error): Failure<VGError.FleekUploadFailure> => ({
@@ -67,4 +68,13 @@ export const insufficientDataError = (reason: string, details: string[]): Failur
   type: VGError.InsufficientDataFailure,
   details,
   reason
+})
+
+export const risklessRateError = (
+  error: Errors.MoleculerServerError | Errors.MoleculerClientError
+): Failure<VGError.RateServiceFailure> => ({
+  type: VGError.RateServiceFailure,
+  reason: error.message ?? "Rate Service Error",
+  wrappedError: error,
+  retryable: error.retryable
 })

@@ -1,3 +1,7 @@
+import { Errors } from "moleculer"
+import { VGError } from "./errors"
+import { Failure } from "./failure"
+
 export type NormalizedExchange = "deribit" | "obex-options" | "binance-options" | "huobi-dm-options"
 
 export type Methodology = "mfiv"
@@ -373,3 +377,5 @@ export type MfivWindow =
   | "362d"
   | "363d"
   | "364d"
+
+export type ErrorType = typeof Errors.MoleculerError | Failure<VGError> | Error

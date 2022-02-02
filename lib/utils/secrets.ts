@@ -9,21 +9,14 @@ export interface Secrets {
 // In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
 // See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
 // We rethrow the exception by default.
-export default async function secrets(): Promise<Secrets> {
-  let secretsClient!: ISecretsManager
-  const clientConfig = config.clients?.secretsManager
-
-  if (clientConfig !== undefined) {
-    secretsClient = client(clientConfig)
-  } else {
-    throw Error("secrets client config was undefined")
-  }
-
+async function secrets(secretsManager: ISecretsManager): Promise<Secrets> {
   return new Promise(function (resolve, reject) {
     let secret: Secrets
 
-    secretsClient.getSecretValue({ SecretId: config.aws.smName }, function (err, data) {
+    secretsManager.getSecretValue({ SecretId: config.aws.smName }, function (err, data) {
       if (err) {
+        console.error(err)
+
         if (err.code === "DecryptionFailureException") {
           // Secrets Manager can't decrypt the protected secret text using the provided KMS key.
           // Deal with the exception here, and/or rethrow at your discretion.
@@ -46,6 +39,8 @@ export default async function secrets(): Promise<Secrets> {
           reject(err)
         }
       } else {
+        console.info(data)
+
         // Decrypts secret using the associated KMS CMK.
         // Depending on whether the secret is a string or binary, one of these fields will be populated.
         if ("SecretString" in data) {
@@ -63,6 +58,10 @@ export default async function secrets(): Promise<Secrets> {
   })
 }
 
-// export default {
-//   secrets
-// }
+const awsSecretsManager = config.clients?.secretsManager
+
+if (awsSecretsManager === undefined) {
+  throw new Error("Secrets Manager Client not part of configuration")
+}
+
+export default () => secrets(awsSecretsManager)

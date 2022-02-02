@@ -9,4 +9,5 @@ export interface Failure<FailureType extends string> {
   configVars?: string[]
   issues?: string[]
   urls?: string[]
+  retryable?: boolean
 }
