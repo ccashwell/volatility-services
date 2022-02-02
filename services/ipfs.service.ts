@@ -85,7 +85,7 @@ export default class IPFSService extends Service {
   }
 
   private get repository(): Repository<FleekTransaction> {
-    return this.adapter.repository
+    return (this.adapter as TypeOrmDbAdapter<FleekTransaction>).repository
   }
 
   private get operation() {

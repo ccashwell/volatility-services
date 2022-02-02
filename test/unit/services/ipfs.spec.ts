@@ -20,7 +20,11 @@ jest.mock("../../../src/datasources/fleek", () => {
         publicUrl: `https://fleek.co/${key}`
       } as FleekResponse
 
-      if (key.includes("throw")) {
+      if (key.includes("retryable")) {
+        return Promise.reject(
+          new Errors.MoleculerRetryableError("a retryable error", 500, "SOME_ERROR", { details: ["Some details"] })
+        )
+      } else if (key.includes("throw")) {
         return Promise.reject(new Error("Test threw an error"))
       }
 
@@ -90,6 +94,22 @@ describe("ipfs.service", () => {
 
         return service.broker.call("ipfs.store", params).catch(error => {
           expect(error).toBeInstanceOf(Errors.MoleculerError)
+        })
+      })
+    })
+
+    describe("when fleek throws a retryable error", () => {
+      it("returns a MoleculerRetryableError", () => {
+        const params = {
+          key: "key-that-throws-retryable",
+          data: Buffer.from("payload"),
+          metadata: { fileSize: 7, mimeType: "application/json", requestId: "some-transaction-id" }
+        } as IIPFS.StoreParams
+
+        expect.assertions(1)
+
+        return service.broker.call("ipfs.store", params).catch(error => {
+          expect(error).toBeInstanceOf(Errors.MoleculerRetryableError)
         })
       })
     })
