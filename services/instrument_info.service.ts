@@ -2,7 +2,7 @@
 import { Context, Service, ServiceBroker } from "moleculer"
 import { Exchange, InstrumentInfo } from "tardis-dev"
 import { chainFrom } from "transducist"
-import { BaseCurrency, MfivWindow } from "@lib/types"
+import { BaseCurrency, MfivWindow } from "src/lib/types"
 import { IInstrumentInfo } from "@interfaces/services/instrument_info"
 import { initTardis } from "@datasources/tardis"
 import { tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"

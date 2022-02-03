@@ -1,6 +1,6 @@
 import * as aws from "aws-sdk"
-import { ISecretsManager } from "../clients/types"
 import { config as _config, EnvConfig } from "./config.base"
+import { ISecretsManager } from "@clients/types"
 
 export const config: EnvConfig = {
   ..._config,

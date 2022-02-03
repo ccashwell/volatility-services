@@ -83,44 +83,5 @@
   "engines": {
     "node": ">= 16.13.x",
     "npm": "8.1.2"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "coverageDirectory": "<rootDir>/coverage",
-    "testEnvironment": "node",
-    "moduleFileExtensions": [
-      "ts",
-      "js"
-    ],
-    "moduleNameMapper": {
-      "^@(jest)/(.*)$": "<rootDir>/node_modules/@jest/$2",
-      "^@(babel)/(.*)$": "<rootDir>/node_modules/@babel/$2",
-      "^@(test)(.*)$": "<rootDir>/test/$2",
-      "^@lib/handlers/errors$": "<rootDir>/lib/handlers/errors",
-      "^@lib/errors$": "<rootDir>/lib/errors",
-      "^@lib/expiries$": "<rootDir>/lib/expiries",
-      "^@lib/utils/secrets$": "<rootDir>/lib/utils/secrets",
-      "^@entities/connection$": "<rootDir>/test/config/connection",
-      "^@entities": "<rootDir>/src/entities",
-      "^@fleekhq/fleek-storage-js$": "<rootDir>/node_modules/@fleekhq/fleek-storage-js",
-      "^@seald-io/([a-z].*)$": "<rootDir>/node_modules/@seald-io/$1",
-      "^@([a-z].*)$": "<rootDir>/src/$1"
-    },
-    "moduleDirectories": [
-      "node_modules",
-      "src"
-    ],
-    "transform": {
-      "^.+\\.(ts)$": "ts-jest",
-      "^.+\\.(js|jsx)$": "babel-jest"
-    },
-    "testMatch": [
-      "**/*.spec.ts"
-    ],
-    "globals": {
-      "ts-jest": {
-        "tsconfig": "<rootDir>/tsconfig.json"
-      }
-    }
   }
 }

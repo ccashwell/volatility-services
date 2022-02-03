@@ -21,3 +21,7 @@ export enum MethodologyWindowEnum {
 export enum MethodologyExpiryEnum {
   FridayT08 = "FridayT08:00:00Z"
 }
+
+export enum RateSourceEnum {
+  Aave = "aave"
+}

@@ -1,5 +1,5 @@
 "use strict"
-import { ServiceBroker } from "moleculer"
+import Moleculer, { ServiceBroker } from "moleculer"
 import IndexService from "../../../services/index.service"
 import { IIndex } from "../../../src/interfaces/services/index"
 import {
@@ -10,10 +10,9 @@ import {
   MethodologyWindowEnum,
   SymbolTypeEnum
 } from "../../../src/entities"
-import { EstimateParams } from "../../../src/interfaces/services/index/iindex"
-
-jest.mock("../../../lib/utils/secrets", () => {
-  const originalModule = jest.requireActual("../../../lib/utils/secrets")
+import * as IndexHelper from "../../../src/service_helpers/index_helper"
+jest.mock("../../../src/lib/utils/secrets", () => {
+  const originalModule = jest.requireActual("../../../src/lib/utils/secrets")
 
   //Mock the default export and named export 'foo'
   return {
@@ -31,6 +30,10 @@ jest.mock("../../../lib/utils/secrets", () => {
 describe("index.service api", () => {
   const broker = new ServiceBroker({ logger: true })
   const service = broker.createService(IndexService) as IndexService
+  // service.merged = (schema: { dependencies: any[] }) => {
+  //   debugger
+  //   schema.dependencies = []
+  // }
 
   // Create a mock insert function
   // const mockUpload = jest.fn(({ params, requestId }) => Promise.resolve({ hash: "mfiv-ipfs-hash" }))
@@ -40,7 +43,7 @@ describe("index.service api", () => {
   describe(`estimate(params: MfivParams)`, () => {
     test("with valid parameters", () => {
       // service.actions.estimate = jest.fn()
-      const params: EstimateParams = {
+      const params: IIndex.EstimateParams = {
         at: "2022-01-29T12:34:56Z",
         methodology: MethodologyEnum.MFIV,
         exchange: MethodologyExchangeEnum.Deribit,
@@ -51,19 +54,24 @@ describe("index.service api", () => {
         expiryType: MethodologyExpiryEnum.FridayT08
       }
 
+      // IndexHelper.estimate
+      expect.assertions(2)
       return broker
-        .call<never, IIndex.EstimateParams>("index.estimate", params)
+        .call("index.estimate", params)
         .then(result => {
           console.log("result", result)
+          expect(result).toBeInstanceOf(Error)
+          expect((result as Error).message).toContain("No index")
         })
         .catch(err => {
-          expect(err).toBeInstanceOf(Error("No index"))
+          console.error(err)
+          expect(err).toBeInstanceOf(Error)
         })
     })
 
     test("with valid parameters and burn-in in progress", () => {
       // service.actions.estimate = jest.fn()
-      const params: EstimateParams = {
+      const params: IIndex.EstimateParams = {
         at: "2022-01-29T12:34:56Z",
         methodology: MethodologyEnum.MFIV,
         exchange: MethodologyExchangeEnum.Deribit,
@@ -74,18 +82,20 @@ describe("index.service api", () => {
         expiryType: MethodologyExpiryEnum.FridayT08
       }
 
-      expect.assertions(1)
-
-      return broker
-        .call<never, IIndex.EstimateParams>("index.estimate", params)
-        .then(result => {
-          debugger
-          expect(result).toBeInstanceOf(new Error("No index"))
-          console.log("result", result)
-        })
-        .catch(err => {
-          expect(err).toBeInstanceOf(Error("No index"))
-        })
+      expect.assertions(2)
+      return service.waitForServices("index").then(v => {
+        return broker
+          .call<never, IIndex.EstimateParams>("index.estimate", params)
+          .then(result => {
+            console.log("result", result)
+            expect(result).toBeInstanceOf(Error)
+            expect((result as Error).message).toContain("No index")
+          })
+          .catch(err => {
+            console.error(err)
+            expect(err).toBeInstanceOf(Error)
+          })
+      })
     })
   })
 })

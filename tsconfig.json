@@ -28,6 +28,8 @@
       "*": ["node_modules/*", "types/*"],
       "moleculer-cron": ["typings/moleculer-cron/index.d.ts"],
       "moleculer-web-uws": ["typings/moleculer-web-uws/index.d.ts"],
+      "@clients/*": ["src/clients/*"],
+      "@clients": ["src/clients"],
       "@configuration": ["configuration"],
       "@datasources/*": ["src/datasources/*"],
       "@datasources": ["src/datasources"],
@@ -43,10 +45,8 @@
       "@service_helpers": ["src/service_helpers"],
       "@Meta/*": ["src/meta/*"],
       "@Meta": ["src/meta"],
-      "@Test/*": ["test/*"],
-      "@Test": ["test"],
-      "@lib": ["lib"],
-      "@lib/*": ["lib/*"]
+      "@lib/*": ["src/lib/*"],
+      "@lib": ["src/lib"]
     }
   },
   "include": ["./src/**/*.ts", "./services/**/*.ts", "moleculer.config.ts"],

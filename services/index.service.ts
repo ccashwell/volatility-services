@@ -1,8 +1,9 @@
 /* eslint-disable max-len */
 "use strict"
 import { Context, Service, ServiceBroker } from "moleculer"
-import { getConnection, getCustomRepository, getRepository } from "typeorm"
-// import * as DbService from "moleculer-db"
+import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
+import { DeepPartial, Repository } from "typeorm"
+import * as DbService from "moleculer-db"
 import { OptionSummary } from "tardis-dev"
 import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
 import { chainFrom } from "transducist"
@@ -17,20 +18,9 @@ import {
   MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities"
-
-//#region Local Imports
-import { MethodologyIndexRepository } from "@repositories"
-import connectionInstance from "@entities/connection"
 import { IIndex } from "@interfaces"
-//#endregion Local Imports
+import { optionSummariesLists } from "@service_helpers/ingest_helper"
 
-// at: { type: "string" },
-// exchange: { type: "string", default: "deribit" },
-// methodology: { type: "string", default: "mfiv" },
-// currency: { type: "string", default: "ETH" },
-// interval: { type: "string", default: "14d" },
-// expiryType: { type: "string", default: "FridayT08:00:00" }
-// call "index.estimate" --at "2022-01-22T05:33:00.000Z"
 /**
  * VG.MethodologyParams = { exchange: 'deribit', baseCurrency: 'eth', type: 'option', methodology: 'mfiv', timestamp: Date }}
  * VG.MfivParams = MethodologyParams & { interval: '14d', methodology: 'mfiv', nearExpiration: Date, nextExpiration: Date }
@@ -57,43 +47,29 @@ export default class IndexService extends Service {
     this.parseServiceSchema({
       name: "index",
 
-      // mixins: [DbService],
-      // adapter: dbAdapter,
-      // model: {
-      //   name: "methodology_indices",
-      //   define: {
-      //     timestamp: Sequelize.DATE,
-      //     value: Sequelize.DECIMAL,
-      //     symbolType: Sequelize.ENUM(""),
-      //     methodology: Sequelize.ENUM("mfiv"),
-      //     baseCurrency: Sequelize.ENUM(""),
-      //     interval: Sequelize.ENUM(""),
-      //     extra: Sequelize.JSONB,
-      //     createdAt: Sequelize.DATE
-      //   },
-      //   options: {
-      //     // Options from http://docs.sequelizejs.com/manual/tutorial/models-definition.html
-      //   }
-      // },
+      adapter: new TypeOrmDbAdapter(configuration.adapter),
+
+      model: MethodologyIndex,
+
+      mixins: [DbService],
+
       settings: {
         $dependencyTimeout: 30000
-        // fields: ["timestamp", "value", "methodology", "symbolType", "exchange", "baseCurrency", "interval", "extra"]
-        // idField: 'id'
+
+        // fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"]
+
+        // idField: 'timestamp'
       },
+
       dependencies: [
-        {
-          name: "ingest"
-        }
+        // {
+        //   name: "ingest"
+        // }
       ],
+
       metadata: {
         scalable: true
       },
-
-      //      mixins: [DbService],
-
-      // model: MethodologyIndex,
-
-      //    adapter: provideTypeOrmAdapter("index"),
 
       // Actions
       actions: {
@@ -120,41 +96,29 @@ export default class IndexService extends Service {
               })
           }
         }
-      },
-
-      // Service methods
-      async started(this: IndexService) {
-        this.logger.info("Start ingest service")
-        await connectionInstance()
-      },
-
-      async stopped() {
-        //return await getConnection().close()
-        return Promise.resolve()
       }
-
-      // afterConnected(this: IndexService) {
-      //   this.logger.info("Connected successfully")
-      //   return this.adapter.clear()
-      // }
     })
   }
 
-  // public afterConnected(this: IndexService) {
-  //   this.logger.info("Connected successfully")
-  //   return this.adapter.clear()
-  // }
+  private get repository(): Repository<MethodologyIndex> {
+    return (this.adapter as TypeOrmDbAdapter<MethodologyIndex>).repository
+  }
 
   private async indexOperation(context: Context<IIndex.EstimateParams>, params: IIndex.EstimateParams) {
+    // const indexAtDate = new Date(params.at)
+    // const methodologyDates = mfivDates(indexAtDate, params.interval, params.expiryType)
+    // const _expiries: { status: "fulfilled" | "rejected"; value: OptionSummary[] }[] = await this.broker.mcall(
+    //   [
+    //     { action: "ingest.summaries", params: { expiry: methodologyDates.nearExpiration } },
+    //     { action: "ingest.summaries", params: { expiry: methodologyDates.nextExpiration } }
+    //   ],
+    //   { settled: true }
+    // )
     const indexAtDate = new Date(params.at)
-    const methodologyDates = mfivDates(indexAtDate, params.interval, params.expiryType)
-    const expiries: { status: "fulfilled" | "rejected"; value: OptionSummary[] }[] = await this.broker.mcall(
-      [
-        { action: "ingest.summaries", params: { expiry: methodologyDates.nearExpiration } },
-        { action: "ingest.summaries", params: { expiry: methodologyDates.nextExpiration } }
-      ],
-      { settled: true }
-    )
+
+    const methodologyDates = mfivDates(new Date(params.at), params.interval, params.expiryType)
+
+    const options = await optionSummariesLists(context, methodologyDates)
 
     const mfivContext: MfivContext = {
       ...params,
@@ -162,11 +126,6 @@ export default class IndexService extends Service {
       currency: params.baseCurrency,
       ...configuration.indexSettings
     }
-
-    const options = expiries
-      .filter(e => e.status === "fulfilled")
-      .map(e => e.value)
-      .flat()
 
     const mostRecent = findMostRecent(options)
     const underlyingPrice = mostRecent?.underlyingPrice ?? 0
@@ -239,9 +198,13 @@ export default class IndexService extends Service {
     extra: { requestId: string; iVal: string; near: string; next: string }
   ) {
     // const repository = getConnection().getRepository<MethodologyIndex>(MethodologyIndex)
-    const repository = getRepository(MethodologyIndex)
+    debugger
+
     const ctx = evidence.context
-    const index = repository.create()
+    const index = this.repository.create()
+    const partial: MethodologyIndex = this.repository.create(ctx as DeepPartial<MethodologyIndex>)
+
+    console.log(partial)
     index.timestamp = new Date(evidence.params.at)
     index.value = evidence.result.dVol?.toString() ?? "undefined"
     index.baseCurrency = ctx.currency as BaseCurrencyEnum
@@ -250,34 +213,7 @@ export default class IndexService extends Service {
     index.interval = ctx.windowInterval as MethodologyWindowEnum
     index.symbolType = SymbolTypeEnum.Option
     index.extra = extra
-    await repository.save(index)
-    // return await repository.commit({
-    //   timestamp: new Date(evidence.params.at),
-    //   value: evidence.result.dVol?.toString() ?? "undefined",
-    //   baseCurrency: ctx.currency as BaseCurrencyEnum,
-    //   exchange: ctx.exchange as MethodologyExchangeEnum,
-    //   methodology: ctx.methodology as MethodologyEnum,
-    //   interval: ctx.windowInterval,
-    //   symbolType,
-    //   extra
-    // })
-
-    // const model = new MethodologyIndex()
-    // model.timestamp = new Date(evidence.params.at)
-    // model.value = evidence.result.dVol?.toString() ?? "undefined"
-    // model.baseCurrency = evidence.context.currency as BaseCurrencyEnum
-    // model.exchange = evidence.context.exchange as MethodologyExchangeEnum
-    // model.methodology = evidence.context.methodology as MethodologyEnum
-    // model.interval = evidence.context.windowInterval as MethodologyWindowEnum
-    // model.symbolType = (this.settings as IndexServiceSettings).mfiv.symbolType as SymbolTypeEnum
-    // model.extra = extra
-
-    // return await this.adapter.repository.save(model).catch((err: unknown) => {
-    //   this.logger.error(err)
-    //   throw err
-    // })
-    // return await getRepository(MethodologyIndex).save(model)
-    // return await this.adapter.repository(MethodologyIndex).save(model)
+    await this.repository.save(index)
   }
 
   private async announce(evidence: { version: string; context: MfivContext; params: MfivParams; result: MfivResult }) {

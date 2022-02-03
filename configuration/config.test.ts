@@ -1,5 +1,5 @@
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
 import { config as _config, EnvConfig } from "./config.base"
+import { ISecretsManager } from "@clients/types"
 
 export const config: EnvConfig = {
   ..._config,

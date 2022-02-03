@@ -6,7 +6,7 @@ import { Exchange, OptionSummary, StreamNormalizedOptions } from "tardis-dev"
 import { chainFrom } from "transducist"
 //#endregion Global Imports
 
-import configuration from "../configuration"
+import configuration from "@configuration"
 import { initTardis, stream } from "@datasources"
 import { insufficientDataError } from "@lib/errors"
 import { handleError } from "@lib/handlers/errors"
@@ -16,7 +16,7 @@ import { handleError } from "@lib/handlers/errors"
 
 //#region Interface Imports
 import { IIngest, IInstrumentInfo } from "@interfaces"
-import { mfivDates } from "@lib/expiries"
+import { mfivDates } from "src/lib/expiries"
 import { MethodologyExpiryEnum } from "@entities"
 //#endregion Interface Imports
 

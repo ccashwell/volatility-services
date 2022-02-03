@@ -1,11 +1,18 @@
 /* eslint-disable max-len */
 "use strict"
-import Moleculer, { Context, Service, ServiceBroker, Errors } from "moleculer"
+import { Context, Service, ServiceBroker, Errors } from "moleculer"
+import * as DbAdapter from "moleculer-db"
+import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
+import { DeepPartial, Repository } from "typeorm"
 
 //#region Local Imports
-import connectionInstance from "@entities/connection"
+import { ResultAsync } from "neverthrow"
+import configuration from "@configuration"
+import { provideRateResponse } from "@datasources/aave"
 import { IRate } from "@interfaces/services/rate"
-import provideRateResponse from "@datasources/aave"
+import { Rate } from "@entities"
+import { handleAsMoleculerError } from "@lib/handlers/errors"
+import { Mappers } from "@lib/utils/mappers"
 //#endregion Local Imports
 
 export default class RateService extends Service {
@@ -15,7 +22,11 @@ export default class RateService extends Service {
       name: "rate",
 
       settings: {
-        $dependencyTimeout: 30000
+        $dependencyTimeout: 30000,
+
+        fields: ["id", "value", "sourceValue", "source", "rateAt"],
+
+        idField: ["id"]
       },
 
       dependencies: [],
@@ -24,41 +35,53 @@ export default class RateService extends Service {
         scalable: true
       },
 
+      adapter: new TypeOrmDbAdapter(configuration.adapter),
+
+      model: Rate,
+
+      mixins: [DbAdapter],
+
       // Actions
       actions: {
         risklessRate: {
           params: {
             source: { type: "enum", values: ["aave"], default: "aave" }
           },
-          handler(
+          async handler(
             this: RateService,
             ctx: Context<IRate.RisklessRateParams>
           ): Promise<IRate.RisklessRateResponse | Errors.MoleculerError> {
-            return this.fetchRisklessRate(ctx.params)
+            const result = await ResultAsync.fromPromise(
+              this.fetchRisklessRate(ctx.params),
+              handleAsMoleculerError
+            ).map(async response => {
+              await this.persist(response)
+              return response
+            })
+
+            if (result.isOk()) {
+              return result.value
+            } else {
+              throw result.error
+            }
           }
         }
-      },
-      // Service methods
-      async started(this: RateService) {
-        this.logger.info("Start rate service")
-        await connectionInstance()
-      },
-
-      async stopped() {
-        //return await getConnection().close()
-        return Promise.resolve()
       }
-
-      // afterConnected(this: IndexService) {
-      //   this.logger.info("Connected successfully")
-      //   return this.adapter.clear()
-      // }
     })
+  }
+
+  private get repository(): Repository<Rate> {
+    return (this.adapter as TypeOrmDbAdapter<Rate>).repository
   }
 
   async fetchRisklessRate(params: IRate.RisklessRateParams) {
     // TODO: This should be a look-up to a provider
     // const provideRateResponse = providers.find(params.risklessRateSource)
     return await provideRateResponse()
+  }
+
+  private persist(response: IRate.RisklessRateResponse & { contractValue: number }) {
+    const entity = this.repository.create(Mappers.Rate.from(response) as DeepPartial<Rate>)
+    return this.repository.save(entity)
   }
 }

@@ -1,6 +1,6 @@
 import Moleculer, { LogLevels } from "moleculer"
 import { Exchange } from "tardis-dev"
-import { ISecretsManager } from "../clients/types"
+import { ISecretsManager } from "@clients/types"
 import { NormalizedExchange } from "@lib/types"
 import { IIndex } from "@interfaces"
 import MoleculerRetryableError = Moleculer.Errors.MoleculerRetryableError

@@ -1,6 +1,5 @@
-import config from "../../configuration"
-import client from "../../clients/secrets"
-import { ISecretsManager } from "../../clients/types"
+import config from "@configuration"
+import { ISecretsManager } from "@clients/types"
 
 export interface Secrets {
   [key: string]: string

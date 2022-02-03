@@ -2,29 +2,48 @@
 import { ServiceBroker, Errors } from "moleculer"
 import RateService from "../../../services/rate.service"
 import { IRate } from "../../../src/interfaces/services/rate"
-import { risklessRateError } from "../../../lib/errors"
-import { risklessRate } from "../../../src/service_helpers/rate_helper"
+import { risklessRateError } from "../../../src/lib/errors"
+
+// const mockAave = (response: IRate.RisklessRateParams) => {
+//   jest.mock("@datasources/aave", () => {
+//     const originalModule = jest.requireActual("@datasources/aave")
+//     let defaultMock = jest.fn(() => response)
+//     return {
+//       __esModule: true,
+//       ...originalModule,
+//       provideRateResponse: defaultMock,
+//       default: defaultMock,
+//       secrets: defaultMock
+//     }
+//   })
+// }
 
 describe("rate.service api", () => {
   const broker = new ServiceBroker({ logger: true })
-  const service = broker.createService(RateService) as RateService
+  const service = broker.createService(RateService)
   const risklessRate = (params: IRate.RisklessRateParams) =>
     broker.call<never, IRate.RisklessRateParams>("rate.risklessRate", params)
+  const params: IRate.RisklessRateParams = {
+    risklessRateSource: "aave"
+  }
 
-  // Create a mock insert function
-  // const mockUpload = jest.fn(({ params, requestId }) => Promise.resolve({ hash: "mfiv-ipfs-hash" }))
   beforeAll(() => broker.start())
   afterAll(() => broker.stop())
 
   describe(`risklessRate(params: IRate.RisklessRateParams)`, () => {
     test("with valid parameters", () => {
-      // service.actions.estimate = jest.fn()
-      const params: IRate.RisklessRateParams = {
+      const response: IRate.RisklessRateResponse & { contractValue: number } = {
+        contractValue: 85583973859841772736137,
+        risklessRate: 100.0 * (85583973859841772736137 / 10 ** 27), // 0.008558397385984177
+        risklessRateAt: new Date().toISOString(),
         risklessRateSource: "aave"
       }
 
+      service.fetchRisklessRate = jest.fn((params: IRate.RisklessRateParams) => Promise.resolve(response))
+
+      expect.assertions(1)
       return risklessRate(params).then(result => {
-        return expect(result).toEqual(
+        expect(result).toEqual(
           expect.objectContaining({
             risklessRate: expect.any(Number),
             risklessRateAt: expect.any(String),
@@ -35,29 +54,19 @@ describe("rate.service api", () => {
     })
 
     test("when there's a recoverable server error it returns a retryable error response", () => {
-      // service.actions.estimate = jest.fn()
-      const params: IRate.RisklessRateParams = {
-        risklessRateSource: "aave"
-      }
       const retryableError = new Errors.MoleculerRetryableError("A retryable error occurred", 500, "RETRYABLE")
-      const error = risklessRateError(retryableError)
       service.fetchRisklessRate = jest.fn((params: IRate.RisklessRateParams) => {
-        return Promise.reject(error)
+        return Promise.reject(retryableError)
       })
 
       expect.assertions(1)
-
       return risklessRate(params).catch(error => {
-        return expect(error).toBeInstanceOf(Errors.MoleculerRetryableError)
+        expect(error).toBeInstanceOf(Errors.MoleculerRetryableError)
       })
     })
   })
 
   test("when there's a client error it returns a non-retryable error response", () => {
-    // service.actions.estimate = jest.fn()
-    const params: IRate.RisklessRateParams = {
-      risklessRateSource: "aave"
-    }
     const nonRetryableError = new Errors.MoleculerClientError("A non-retryable error occurred", 500, "NONRETRYABLE")
     const error = risklessRateError(nonRetryableError)
     service.fetchRisklessRate = jest.fn((params: IRate.RisklessRateParams) => {

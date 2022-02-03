@@ -17,7 +17,7 @@ const clientConfig = (secretsJson: Secrets) => () => {
   }
 
   return {
-    etherscanKey: secretsJson.ETHERSCAN_API_KEY
+    etherscanKey: secretsJson.ETHERSCAN_API_KEY || ""
   }
 }
 
@@ -27,7 +27,7 @@ const provideAddressUrl = (apiKey: string) => (address: string) =>
   `https://api.etherscan.io/api?module=contract&action=getabi&address=${address}&apikey=${apiKey}`
 type UrlProvider = typeof provideAddressUrl
 
-const newClient = (secretsFn: LoadSecretsFn, urlProvider: UrlProvider) => async (address: string) => {
+export const newClient = (secretsFn: LoadSecretsFn, urlProvider: UrlProvider) => async (address: string) => {
   const secretsJson = await secretsFn()
   const env = clientConfig(secretsJson)()
   const addressUrlProvider = urlProvider(env.etherscanKey)

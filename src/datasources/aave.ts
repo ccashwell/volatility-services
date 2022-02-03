@@ -1,8 +1,8 @@
 import Web3 from "web3"
 import { HttpProvider } from "web3-core"
 import { AbiItem } from "web3-utils"
-import { Result, ok, ResultAsync } from "neverthrow"
-import etherscan from "./etherscan"
+import { Result, ResultAsync } from "neverthrow"
+import etherscan from "@datasources/etherscan"
 import secrets, { Secrets } from "@lib/utils/secrets"
 import { configurationError } from "@lib/errors"
 import { ErrorType } from "@lib/types"
@@ -83,10 +83,11 @@ const provideContract = (abiClient: AbiClient) => {
 /**
  * This is a web3 client capable of instantiating contracts
  */
-const defaultWeb3 = ResultAsync.fromPromise(secrets(), handleAsMoleculerError)
-  .map(clientConfig)
-  .map(cfg => provideInfuraClient(cfg().infuraProjId))
-  .map(provideWeb3)
+const defaultWeb3 = () =>
+  ResultAsync.fromPromise(secrets(), handleAsMoleculerError)
+    .map(clientConfig)
+    .map(cfg => provideInfuraClient(cfg().infuraProjId))
+    .map(provideWeb3)
 
 /**
  * Read AAVE's Lending pool contract and get the liquidity rate
@@ -100,24 +101,51 @@ const defaultWeb3 = ResultAsync.fromPromise(secrets(), handleAsMoleculerError)
  * @param abiClient
  * @returns AAVE liquidation rate as a %
  */
-const provideAaveLiquidityRate = defaultWeb3.map(provideContract(etherscan)).map(async result => {
-  if (result.isOk()) {
-    const contract = result.value
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const exchangeData: number[] = await contract.methods.getReserveData(aaveReserve).call()
-    const RAY = 10 ** 27
-    const rate = exchangeData[3] // currentLiquidityRate expressed in RAY
-    return 100.0 * (rate / RAY)
-  }
-  throw result.error
-})
+const provideAaveLiquidityValue = () =>
+  defaultWeb3()
+    .map(provideContract(etherscan))
+    .map(async result => {
+      if (result.isOk()) {
+        const contract = result.value
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        const contractValues = (await contract.methods.getReserveData(aaveReserve).call()) as number[]
+        return contractValues[3] // currentLiquidityRate expressed in RAY
+        // const RAY = 10 ** 27
+        // const rate = exchangeData[3] // currentLiquidityRate expressed in RAY
+        // return 100.0 * (rate / RAY)
+      }
+      throw result.error
+    })
+
+const toLiquidityRate = (value: number) => {
+  const RAY = 10 ** 27
+  return 100.0 * (value / RAY) // currentLiquidityRate expressed in RAY
+}
+
+// const provideAaveLiquidityRate = () =>
+//   defaultWeb3()
+//     .map(provideContract(etherscan))
+//     .map(async result => {
+//       if (result.isOk()) {
+//         const contract = result.value
+//         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+//         // const exchangeData: number[] = await contract.methods.getReserveData(aaveReserve).call()
+//         // const RAY = 10 ** 27
+//         // const rate = exchangeData[3] // currentLiquidityRate expressed in RAY
+//         // return 100.0 * (rate / RAY)
+//       }
+//       throw result.error
+//     })
 
 export async function provideRateResponse() {
+  const contractValue = await provideAaveLiquidityValue().unwrapOr(0)
+
   return {
-    risklessRate: await provideAaveLiquidityRate.unwrapOr(0), // TODO: Return 'undefined' and let upstream handle it
+    contractValue,
+    risklessRate: toLiquidityRate(contractValue), // TODO: Return 'undefined' and let upstream handle it
     risklessRateAt: new Date().toISOString(),
     risklessRateSource: "aave"
-  } as IRate.RisklessRateResponse
+  } as IRate.RisklessRateResponse & { contractValue: number }
 }
 
 export default provideRateResponse

@@ -8,7 +8,7 @@ import {
   ReplayNormalizedOptions
 } from "tardis-dev"
 import configuration from "../../configuration"
-import { NormalizedExchange } from "@lib/types"
+import { NormalizedExchange } from "src/lib/types"
 
 /**
  * Realtime stream of OptionSummary data.

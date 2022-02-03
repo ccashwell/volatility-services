@@ -1,5 +1,5 @@
 import { init } from "tardis-dev"
-import secrets from "@lib/utils/secrets"
+import secrets from "src/lib/utils/secrets"
 
 /**
  * Bootstrap the tardis api with credentials

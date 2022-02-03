@@ -4,6 +4,7 @@ import { Failure } from "../failure"
 import { VGError } from "../errors"
 
 export const handleError = (err: unknown) => {
+  debugger
   switch (err) {
     case Errors.MoleculerClientError:
       return err as Errors.MoleculerClientError
@@ -33,28 +34,24 @@ const errorFromFailure = (error: Failure<VGError>) => {
   return new errorKlass(reason, 500, type, errorData(error))
 }
 
-export function handleAsMoleculerError(err: unknown): Errors.MoleculerError {
-  let errObj
+export function handleAsMoleculerError(err: unknown) {
+  console.error(err)
 
-  switch (err) {
-    case Errors.MoleculerServerError:
-      return err as Errors.MoleculerServerError
-    case Errors.MoleculerRetryableError:
-      return err as Errors.MoleculerRetryableError
-    case Errors.MoleculerClientError:
-      return err as Errors.MoleculerClientError
-    case Errors.MoleculerError:
-      return err as Errors.MoleculerError
-    case err as Failure<VGError>:
-      return errorFromFailure(err as Failure<VGError>)
-    case err as Error:
-      errObj = err as Error
-      return new Errors.MoleculerError(errObj.message, 500, "UNCATEGORIZED_ERROR", {
-        stack: errObj.stack,
-        name: errObj.name
-      })
-    default:
-      throw err
+  if (err instanceof Errors.MoleculerServerError) {
+    return err
+  } else if (err instanceof Errors.MoleculerRetryableError) {
+    return err
+  } else if (err instanceof Errors.MoleculerClientError) {
+    return err
+  } else if (err instanceof Errors.MoleculerError) {
+    return err
+  } else if (err instanceof Error) {
+    return new Errors.MoleculerError(err.message, 500, "UNCATEGORIZED_ERROR", {
+      stack: err.stack,
+      name: err.name
+    })
+  } else {
+    throw err
   }
 }
 
