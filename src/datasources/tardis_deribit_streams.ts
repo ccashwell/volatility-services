@@ -7,8 +7,8 @@ import {
   MapperFactory,
   ReplayNormalizedOptions
 } from "tardis-dev"
-import configuration from "../../configuration"
-import { NormalizedExchange } from "src/lib/types"
+import configuration from "@configuration"
+import { NormalizedExchange } from "@lib/types"
 
 /**
  * Realtime stream of OptionSummary data.

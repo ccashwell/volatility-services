@@ -2,13 +2,13 @@
 import { createConnection, Connection } from "typeorm"
 //#endregion Global Imports
 
-import config from "../../configuration"
+import configuration from "@configuration"
 
 export default async (): Promise<Connection> =>
   await createConnection({
     type: "postgres",
     name: "default",
-    database: config.db?.database,
+    database: configuration.db?.database,
     entities: [__dirname + "/*"],
     synchronize: true
   })
