@@ -1,59 +1,49 @@
 "use strict"
+import { getRepository, Connection, DeepPartial, QueryFailedError } from "typeorm"
+
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
   MethodologyExchangeEnum,
   MethodologyWindowEnum,
   SymbolTypeEnum
-} from "../../../src/entities"
-
-//#region Local Imports
-import { getRepository } from "typeorm"
-import { MethodologyIndex } from "../../../src/entities/methodology_index"
-
-import Connector from "../../config/connection"
+} from "@entities"
+import connectionInstance from "@entities/connection"
+import { MethodologyIndex } from "@entities/methodology_index"
 
 describe("Test 'MethodologyIndex' model", () => {
-  beforeAll(async () => await Connector())
-  describe("save()", () => {
-    // const repository = getCustomRepository(MethodologyIndexRepository)
-    // const ctx = evidence.context
-    // const index = repository.create()
-    // index.timestamp = new Date(evidence.params.at)
-    // index.value = evidence.result.dVol?.toString() ?? "undefined"
-    // index.baseCurrency = ctx.currency as BaseCurrencyEnum
-    // index.exchange = ctx.exchange as MethodologyExchangeEnum
-    // index.methodology = ctx.methodology as MethodologyEnum
-    // index.interval = ctx.windowInterval as MethodologyWindowEnum
-    // index.symbolType = SymbolTypeEnum.Option
-    // index.extra = extra
-    // await repository.save(index)
+  let connection: Connection
+  beforeAll(async () => (connection = await connectionInstance()))
+  afterAll(() => connection.close())
 
-    test("saves a new model", async () => {
-      const indexRepository = getRepository(MethodologyIndex) // you can also get it via getConnection().getRepository() or getManager().getRepository()
-      const index = indexRepository.create()
+  describe("when creating with valid params", () => {
+    const params = {
+      timestamp: new Date(),
+      value: "42",
+      baseCurrency: BaseCurrencyEnum.ETH,
+      exchange: MethodologyExchangeEnum.Deribit,
+      methodology: MethodologyEnum.MFIV,
+      interval: MethodologyWindowEnum.Day14,
+      symbolType: SymbolTypeEnum.Option,
+      extra: { requestId: "1234" }
+    }
 
-      index.timestamp = new Date()
-      index.value = "42"
-      index.baseCurrency = BaseCurrencyEnum.ETH
-      index.exchange = MethodologyExchangeEnum.Deribit
-      index.methodology = MethodologyEnum.MFIV
-      index.interval = MethodologyWindowEnum.Day14
-      index.symbolType = SymbolTypeEnum.Option
-      index.extra = { requestId: "1234" }
-
-      await indexRepository.save(index)
+    it("saves successfully", () => {
+      const indexRepository = getRepository<MethodologyIndex>(MethodologyIndex) // you can also get it via getConnection().getRepository() or getManager().getRepository()
+      const index = indexRepository.create(params as DeepPartial<MethodologyIndex>)
+      return expect(indexRepository.save(index)).resolves.toBeInstanceOf(MethodologyIndex)
     })
+  })
 
-    // const model = MethodologyIndexInput.build({
-    //   baseCurrency: "ETH",
-    //   exchange: "deribit",
-    //   value: "0.123456789",
-    //   methodology: "mfiv",
-    //   symbolType: "option",
-    //   timestamp: new Date(),
-    //   interval: "14d",
-    //   extra: {}
-    // })
+  describe("when creating with invalid params", () => {
+    const params = {
+      exchange: MethodologyExchangeEnum.Deribit
+    }
+
+    it("returns a rejected promise", () => {
+      const indexRepository = getRepository<MethodologyIndex>(MethodologyIndex) // you can also get it via getConnection().getRepository() or getManager().getRepository()
+      const index = indexRepository.create(params as DeepPartial<MethodologyIndex>)
+      return expect(indexRepository.save(index)).rejects.toBeInstanceOf(QueryFailedError)
+    })
   })
 })
