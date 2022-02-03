@@ -1,6 +1,6 @@
 "use strict"
 
-import secrets from "../../../../lib/utils/secrets"
+import secrets from "@lib/utils/secrets"
 
 describe("Test 'secrets' client", () => {
   it("reads the secrets blob", async () => {
