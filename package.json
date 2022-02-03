@@ -12,7 +12,7 @@
     "deps": "npm-check -u",
     "cli": "moleculer connect",
     "ci": "jest --watch",
-    "test": "jest --coverage",
+    "test": "jest --coverage --verbose=true",
     "test:focus": "NODE_ENV=test jest --verbose=true --runInBand --detectOpenHandles -i test/unit/services/ingest.spec.ts -t 'calls the ipfs job'",
     "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --detectOpenHandles -i test/unit/services/cron.spec.ts -t 'calls the ipfs job'",
     "lint": "eslint --ext .js,.ts .",
