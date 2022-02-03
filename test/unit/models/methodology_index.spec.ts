@@ -5,18 +5,11 @@ import {
   MethodologyExchangeEnum,
   MethodologyWindowEnum,
   SymbolTypeEnum
-} from "../../../src/entities/methodology_index"
+} from "../../../src/entities"
 
 //#region Local Imports
-import { MethodologyIndexRepository } from "../../../src/repositories"
-// import connectionInstance from "../../../src/entities/connection"
-import { IIndex } from "../../../src/interfaces/services/index"
 import { getRepository } from "typeorm"
 import { MethodologyIndex } from "../../../src/entities/methodology_index"
-
-import { createConnection, Connection } from "typeorm"
-
-// import MethodologyIndexInput from "../../../database/models/methodology_index"
 
 import Connector from "../../config/connection"
 
