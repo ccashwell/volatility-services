@@ -1,6 +1,6 @@
 "use strict"
 import { ServiceBroker } from "moleculer"
-import TestService from "../../../services/ingest.service"
+import TestService from "@services/ingest.service"
 
 describe("Test 'ingest' service", () => {
   const broker = new ServiceBroker({ logger: true })
