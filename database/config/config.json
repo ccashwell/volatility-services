@@ -1,26 +1,26 @@
 {
   "development": {
     "username": "mfiv_user",
-    "password": "At5DHGHgG$dQlCwN6q1#e*5a",
-    "database": "volatility_mfiv_development",
-    "host": "127.0.0.1",
-    "port": 6432,
+    "password": "postgres",
+    "database": "volatility_development",
+    "host": "postgresd",
+    "port": 5432,
     "dialect": "postgres"
   },
   "test": {
     "username": "mfiv_user",
-    "password": "At5DHGHgG$dQlCwN6q1#e*5a",
-    "database": "volatility_mfiv_test",
-    "host": "127.0.0.1",
-    "port": 6432,
+    "password": "postgres",
+    "database": "volatility_test",
+    "host": "postgresd",
+    "port": 5432,
     "dialect": "postgres"
   },
   "production": {
     "username": "mfiv_user",
-    "password": null,
-    "database": "volatility_mfiv_production",
-    "host": "127.0.0.1",
-    "port": 6432,
+    "password": "",
+    "database": "volatility_production",
+    "host": "postgresd",
+    "port": 5432,
     "dialect": "postgres"
   }
 }

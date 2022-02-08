@@ -11,21 +11,11 @@ export const config: EnvConfig = {
       }) as ISecretsManager
     },
     db: {
-      username: process.env.PG_USERNAME as string,
-      password: process.env.PG_PASSWORD as string,
-      database: process.env.PG_DATABASE as string,
-      host: process.env.PG_HOST as string,
-      port: parseInt(process.env.PG_PORT as string, 10),
-      // dialect: "postgres" as Dialect,
-      // dialectOptions: {
-      //   useUTC: true
-      // },
-      // timezone: "+00:00",
-      // pool: {
-      //   max: parseInt(process.env.PG_POOL_MAX as string, 10) ?? 10,
-      //   min: parseInt(process.env.PG_POOL_MIN as string, 10) ?? 0,
-      //   idle: parseInt(process.env.PG_POOL_IDLE as string, 10) ?? 10_000
-      // },
+      username: process.env.POSTGRES_USER as string,
+      password: process.env.POSTGRES_PASSWORD as string,
+      database: process.env.POSTGRES_DB as string,
+      host: process.env.POSTGRES_HOST as string,
+      port: parseInt(process.env.POSTGRES_PORT as string, 10),
       logging: undefined
     }
   }

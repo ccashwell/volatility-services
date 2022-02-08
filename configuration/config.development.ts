@@ -11,11 +11,11 @@ export const config: EnvConfig = {
       }) as ISecretsManager
     },
     db: {
-      username: "mfiv_user",
-      password: "At5DHGHgG$dQlCwN6q1#e*5a",
-      database: "volatility_mfiv_development",
-      host: "127.0.0.1",
-      port: 6432
+      username: process.env.POSTGRES_USER as string,
+      password: process.env.POSTGRES_PASSWORD as string,
+      database: process.env.POSTGRES_DB as string,
+      host: process.env.POSTGRES_HOST as string,
+      port: +(process.env.POSTGRES_PORT as string)
     }
   },
   logLevel: "info"

@@ -1,8 +1,8 @@
 "use strict"
 import "reflect-metadata"
 import { BrokerOptions, MetricRegistry } from "moleculer"
-import * as Moleculer from "moleculer"
-import config from "./configuration"
+import { Connection, createConnection } from "typeorm"
+import config from "@configuration"
 
 /**
  * Moleculer ServiceBroker configuration file
@@ -29,13 +29,15 @@ import config from "./configuration"
  *    }
  *  }
  */
-const brokerConfig: BrokerOptions = {
+const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   // Namespace of nodes to segment your nodes on the same network.
   namespace: "",
   // Unique node identifier. Must be unique in a namespace.
   nodeID: undefined,
   // Custom metadata store. Store here what you want. Accessing: `this.broker.metadata`
   metadata: {},
+
+  connection: undefined,
 
   // Enable/disable logging or use custom logger. More info: https://moleculer.services/docs/0.14/logging.html
   // Available logger types: "Console", "File", "Pino", "Winston", "Bunyan", "debug", "Log4js", "Datadog"
@@ -129,6 +131,7 @@ const brokerConfig: BrokerOptions = {
   errorHandler: (err: Error, info: unknown) => {
     console.error(err, err.stack)
     console.info(info)
+    throw err
   }, //moleculerErrorHandler(this.logger),
 
   // Enable/disable built-in metrics function. More info: https://moleculer.services/docs/0.14/metrics.html
@@ -161,7 +164,7 @@ const brokerConfig: BrokerOptions = {
         // Base URL for NewRelic server
         baseURL: "https://trace-api.newrelic.com",
         // NewRelic Insert Key
-        insertKey: "my-secret-key",
+        insertKey: "ba2e72fd105fd15c4f15fa19c8c86370FFFFNRAL",
         // Sending time interval in seconds.
         interval: 5,
         // Additional payload options.
@@ -178,17 +181,27 @@ const brokerConfig: BrokerOptions = {
   },
 
   internalServices: true,
+  // Register internal middlewares. More info: https://moleculer.services/docs/0.14/middlewares.html#Internal-middlewares
+  internalMiddlewares: true,
 
   // Register custom middlewares
   middlewares: [],
 
   // Register custom REPL commands.
-  replCommands: undefined
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  replCommands: undefined, // require("./repl-commands")
   // Called after broker created.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // created: (broker: Moleculer.ServiceBroker): void => {},
   // Called after broker started.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+  async started(broker) {
+    // createConnection method will automatically read connection options
+    // from your ormconfig file or environment variables
+    const connection = await createConnection()
+    this.connection = connection
+  }
   // started: async (broker: Moleculer.ServiceBroker): Promise<void> => {},
   // Called after broker stopped.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function

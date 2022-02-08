@@ -1,26 +1,12 @@
 import "reflect-metadata"
 import { EnvConfig } from "./config.base"
-// export * as testConfig from "./config.test"
-// export * as devConfig from "./config.development"
-// export * as prodConfig from "./config.production"
-
 import { config as testConfig } from "./config.test"
 import { config as devConfig } from "./config.development"
 import { config as prodConfig } from "./config.production"
-// import { BaseCurrency, ContractType, Methodology, MfivWindow, SymbolType } from "@lib/types"
 
-const env = process.env.NODE_ENV ?? "development"
+const env = process.env.NODE_ENV as string
 
 let envConfig: EnvConfig
-
-// export interface MfivConfig {
-//   exchange: Exchange
-//   baseCurrency: BaseCurrency
-//   interval: MfivWindow
-//   methodology: Methodology
-//   symbolType: SymbolType & "option"
-//   contractType: ContractType[]
-// }
 
 if (env === "test") {
   envConfig = testConfig

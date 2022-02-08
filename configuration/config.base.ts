@@ -27,8 +27,12 @@ export interface EnvConfig {
   adapter: {
     type: "postgres"
     name: string
+    host: string
+    username: string
+    password: string
     database: string
     port: number
+    entities: string[]
     synchronize: boolean
   }
   aws: AwsConfig
@@ -62,8 +66,13 @@ export const config: EnvConfig = {
   adapter: {
     type: "postgres",
     name: "default",
-    database: `volatility_${process.env.NODE_ENV ?? "development"}`,
-    port: parseInt(process.env.DB_PORT ?? "6432", 10),
+    database: process.env.POSTGRES_DB as string,
+    entities: ["./src/entities/fleek_transaction.ts", "./src/entities/methodology_index.ts", "./src/entities/rate.ts"],
+    // entities: [__dirname + "/*"],
+    port: parseInt(process.env.POSTGRES_PORT ?? "5432", 10),
+    host: process.env.POSTGRES_HOST as string,
+    username: process.env.POSTGRES_USER as string,
+    password: process.env.POSTGRES_PASSWORD as string,
     synchronize: true
   },
   aws: {
@@ -71,7 +80,7 @@ export const config: EnvConfig = {
     smName: "API_Keys"
   },
   logger: {
-    type: "Log4js",
+    type: "Console",
     options: {
       // Using colors on the output
       colors: true,
@@ -113,9 +122,9 @@ export const config: EnvConfig = {
   },
   retryPolicy: {
     // Enable feature
-    enabled: false,
+    enabled: true,
     // Count of retries
-    retries: 5,
+    retries: 3,
     // First delay in milliseconds.
     delay: 100,
     // Maximum delay in milliseconds.
