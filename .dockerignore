@@ -6,3 +6,5 @@ test
 .vscode
 dist
 docs
+*.log
+
