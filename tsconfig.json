@@ -6,7 +6,7 @@
     // "resolveJsonModule": true,
     "skipLibCheck": true,
     "module": "commonjs",
-    // "allowJs": true,
+    "allowJs": true,
     "types": ["node", "jest"],
     "noImplicitAny": true,
     "noImplicitReturns": false,
@@ -26,6 +26,7 @@
     "baseUrl": ".",
     "paths": {
       "*": ["node_modules/*", "types/*"],
+      "blessed": ["typings/blessed/index.d.ts"],
       "moleculer-cron": ["typings/moleculer-cron/index.d.ts"],
       "moleculer-web-uws": ["typings/moleculer-web-uws/index.d.ts"],
       "@clients/*": ["src/clients/*"],
@@ -50,7 +51,7 @@
     }
   },
   "include": ["./src/**/*.ts", "./services/**/*.ts", "moleculer.config.ts"],
-  "exclude": ["node_modules", "postgres", "./test/**/*.ts"]
+  "exclude": ["node_modules", "postgres", "./test/**/*.ts", "ormconfig.js"]
   // "include": ["./**/*", "./typings/moleculer-cron.d.ts"],
   // "exclude": ["node_modules/**/*", "test", "database/migrations", "postgres"]
 }

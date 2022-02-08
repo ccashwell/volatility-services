@@ -8,7 +8,7 @@ module.exports = {
       NODE_ENV: "development",
       AWS_PROFILE: "vg",
       AWS_REGION: "us-east-1",
-      LOG_LEVEL: "debug"
+      LOG_LEVEL: "info"
     },
     env_production: {
       NODE_ENV: "production",

@@ -31,7 +31,7 @@ import config from "@configuration"
  */
 const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   // Namespace of nodes to segment your nodes on the same network.
-  namespace: "",
+  namespace: "volatility-services",
   // Unique node identifier. Must be unique in a namespace.
   nodeID: undefined,
   // Custom metadata store. Store here what you want. Accessing: `this.broker.metadata`
