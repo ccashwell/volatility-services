@@ -103,6 +103,7 @@ module.exports = {
 		"dot-notation": "error",
 		"eol-last": "error",
 		"eqeqeq": ["error", "smart"],
+		"promise/no-return-wrap": ["error", { allowReject: true }],
 		"guard-for-in": "error",
 		"id-blacklist": ["error", "any", "Number", "number", "String", "string", "Boolean", "boolean", "Undefined", "undefined"],
 		"id-match": "error",

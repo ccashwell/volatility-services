@@ -17,99 +17,132 @@ services:
   #     - internal
 
   cron:
-    build:
-      context: .
-    image: cron
+    build: .
+    image: volatiliy-services
+    container_name: cron
     env_file: docker-compose.env
-    volumes:
-      - ${SSH_AUTH_SOCK}:${SSH_AUTH_SOCK}
     environment:
       - SSH_AUTH_SOCK="${SSH_AUTH_SOCK}"
-      - SERVICES=cron
+      - SERVICES=services/cron
     depends_on:
       - nats
       - index
-    networks:
-      - internal
-
+    volumes:
+      - ${SSH_AUTH_SOCK}:${SSH_AUTH_SOCK}
+      - ./:/app
+    # networks:
+    #   - internal
 
   index:
     build: .
-    image: index
+    image: volatiliy-services
+    container_name: index
     env_file: docker-compose.env
     environment:
-      SERVICES: index
+      SERVICES: services/index
     depends_on:
       - postgresd
       - nats
       - ingest
       - ipfs
-    networks:
-      - internal
+    volumes:
+      - ./:/app
+    # networks:
+    #   - internal
 
   ingest:
     build: .
-    image: ingest
+    image: volatiliy-services
+    container_name: ingest
     env_file: docker-compose.env
     environment:
-      SERVICES: ingest
+      SERVICES: services/ingest
     depends_on:
       - nats
       - instrument_info
-    networks:
-      - internal
+    volumes:
+      - ./:/app
+    # networks:
+    #   - internal
+
   instrument_info:
     build: .
-    image: instrument_info
+    image: volatiliy-services
+    container_name: instrument_info
     env_file: docker-compose.env
     environment:
-      SERVICES: instrument_info
+      SERVICES: services/instrument_info
     depends_on:
       - nats
-    networks:
-      - internal
+    volumes:
+      - ./:/app
+    # networks:
+    #   - internal
 
   ipfs:
     build: .
-    image: ipfs
+    image: volatiliy-services
+    container_name: ipfs
     env_file: docker-compose.env
     environment:
-      SERVICES: ipfs
+      SERVICES: services/ipfs
     depends_on:
       - postgresd
       - nats
-    networks:
-      - internal
+    volumes:
+      - ./:/app
+    # networks:
+    #   - internal
 
   rate:
     build: .
-    image: rate
+    image: volatiliy-services
+    container_name: rate
     env_file: docker-compose.env
     environment:
-      SERVICES: rate
+      SERVICES: services/rate
     depends_on:
       - nats
       - postgresd
-    networks:
-      - internal
+    volumes:
+      - ./:/app
+    # networks:
+    #   - internal
 
-  ws-gw:
-    build: .
-    image: ws
+  ws:
+    build:
+      context: .
+    image: volatiliy-services
+    container_name: ws
     env_file: docker-compose.env
     environment:
-      SERVICES: ws
+      SERVICES: dist/services/ws.service.js
+      PORT: 3000
     labels:
       # - "traefik.backend=ws-gw"
       - "traefik.enable=true"
+      - "traefik.docker.network=web"
       - "traefik.port=80"
-      - "traefik.http.routers.ws-gw.rule=PathPrefix(`/ws`)"
-      - "traefik.http.routers.ws-gw.rule=Host(`ws-gw.volatility.com`)"
-      - "traefik.http.routers.ws-gw.entrypoints=websocket"
-      - traefik.http.routers.ws-gw.tls=true
-      - traefik.http.routers.ws-gw.tls.certresolver=lets-encrypt
+      # - "traefik.port=3000"
+      # - "traefik.http.routers.ws.rule=PathPrefix(`/`)"
+      # - "traefik.http.routers.ws.entrypoints=websocket"
+      # - "traefik.http.routers.ws.rule=Host(`ws.localhost`)"
+      - "traefik.web.frontend.rule=Host:vault.domain.com"
+      - "traefik.web.port=80"
+      - "traefik.ws.frontend.rule=Host:vault.domain.com;Path:/notifications/hub"
+      - "traefik.ws.port=3000"
+      - "traefik.ws.protocol=ws"
+      - "traefik.http.routers.ws.rule=Host(`ws.localhost`) && Path(`/ws`)"
+      - "traefik.http.routers.ws.service=ws"
+      - "traefik.http.services.ws.loadbalancer.server.port=3000"
+      # - traefik.http.routers.ws-gw.tls=true
+      # - traefik.http.routers.ws-gw.tls.certresolver=lets-encrypt
       # - "traefik.http.services.ws-gw.loadbalancer.server.url=http://ws-gw/"
-      # - "traefik.webservice.frontend.entryPoints=http,ws"
+      - "traefik.webservice.frontend.entryPoints=http"
+      # - "traefik.wss.protocol=ws"
+      - "traefik.backend.loadbalancer.sticky=true"
+    volumes:
+      - ./:/app
     networks:
       - internal
       - web
@@ -118,6 +151,7 @@ services:
 
   nats:
     image: nats:2
+    container_name: nats
     ports:
       - '4222:4222'
     restart: unless-stopped
@@ -128,13 +162,15 @@ services:
       - "traefik.enable=false"
     networks:
       - internal
+
   nats_exporter:
     image: natsio/prometheus-nats-exporter:latest
+    container_name: nats_exporter
     command:
       - '-varz'
       - http://nats:8222
-    networks:
-      - internal
+    # networks:
+    #   - internal
 
   postgresd:
     container_name: postgresd
@@ -149,29 +185,36 @@ services:
       - POSTGRES_postgres=volatility_development
     volumes:
       - pgdata1:/var/lib/postgresql/data
-    networks:
-      - internal
-      - web
+    # networks:
+    #   - internal
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379"
+
   traefik:
-    image: traefik:v2.4
+    image: traefik:v2.6
+    container_name: traefik
     command:
       - "--log.level=DEBUG"
       - "--api=true"
       - "--api.insecure=true" # Don't do that in production!
       - "--api.debug=true"
-      - "--docker"
-      - "--docker.domain=volatility.com"
       # - "--entryPoints.http.address=:80"
       - "--entrypoints.websocket.address=:80"
       - "--entryPoints.metrics.address=:8082"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.watch=true"
+      # - "--providers.docker.domain=volatility.localhost"
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entryPoint=metrics"
       - "--accessLog"
     ports:
-      - "80:80"
-      - "443:443"
+      - "3000:80"
+      - "3001:8080"
       # - "80:80"
       # - "8080:8080"
       # - 3000:80
@@ -179,8 +222,9 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/acme.json:/acme.json
-      - ./traefik/traefik.toml:/traefik.toml
+      # - /dev/null:/traefik.toml
+      # # - ./traefik/acme.json:/acme.json
+      # - ./traefik/traefik.toml:/traefik.toml
       # - /dev/null:/traefik.toml
     networks:
       - web
@@ -195,4 +239,3 @@ networks:
 
 volumes:
   pgdata1: {}
-  data:

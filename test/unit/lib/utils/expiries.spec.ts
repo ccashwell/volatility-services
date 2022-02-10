@@ -1,6 +1,6 @@
 "use strict"
 
-import { mfivDates } from "../../../../lib/expiries"
+import { mfivDates } from "@lib/expiries"
 
 describe("Test mfivDates()", () => {
   describe("interval = 14d", () => {

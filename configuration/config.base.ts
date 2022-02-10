@@ -1,6 +1,5 @@
 import Moleculer, { LogLevels } from "moleculer"
 import { Exchange } from "tardis-dev"
-import { ISecretsManager } from "@clients/types"
 import { NormalizedExchange } from "@lib/types"
 import { IIndex } from "@interfaces"
 import MoleculerRetryableError = Moleculer.Errors.MoleculerRetryableError
@@ -36,19 +35,19 @@ export interface EnvConfig {
     synchronize: boolean
   }
   aws: AwsConfig
-  clients?: {
-    secretsManager: ISecretsManager
-  }
+  // clients?: {
+  //   secretsManager: ISecretsManager
+  // }
   logLevel: Moleculer.LogLevels
   logger: Moleculer.LoggerConfig
-  db?: {
-    username: string
-    password: string
-    database: string
-    host: string
-    port: number
-    logging?: (message: any, ...optionalParams: any[]) => void
-  }
+  // db?: {
+  //   username: string
+  //   password: string
+  //   database: string
+  //   host: string
+  //   port: number
+  //   logging?: (message: any, ...optionalParams: any[]) => void
+  // }
   cronSettings: {
     estimate: Omit<IIndex.EstimateParams, "at">
   }

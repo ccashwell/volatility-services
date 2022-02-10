@@ -1,37 +1,62 @@
-"use strict"
-
+/* eslint-disable max-classes-per-file */
 import * as DbAdapter from "moleculer-db"
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
-
-import { ActionParams, Context, Service, ServiceBroker } from "moleculer"
-import { Repository } from "typeorm"
+import Moleculer, { ActionParams, Context, ServiceBroker, ServiceSchema, ServiceSettingSchema } from "moleculer"
+import { getConnection } from "typeorm"
 import { ResultAsync } from "neverthrow"
-import configuration from "../configuration"
-import fleek, { FleekResponse } from "@datasources/fleek"
+import { UploadResponse } from "@datasources/types"
+import IpfsClient from "@clients/ipfs_client"
 import { FleekTransaction } from "@entities"
+import connectionInstance from "@entities/connection"
 import { IIPFS } from "@interfaces/services/ipfs"
 import { IIPFSServiceMeta } from "@interfaces/meta"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
+import IpfsRepository from "@repositories/ipfs_repository"
 
-export default class IPFSService extends Service {
+interface IpfsSettingsSchema extends ServiceSchema {
+  bucket: string
+  // settings: {
+  //   bucket: string
+  // }
+}
+
+// class NewIPFSService extends Moleculer.Service<IpfsSettingsSchema> {}
+// interface ServiceSchema<S = ServiceSettingSchema> {
+
+// export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
+
+export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
+  public IpfsUpload!: ReturnType<typeof IpfsClient.AsyncDefaultClient>
+  private bucket!: string
+
   public constructor(public broker: ServiceBroker) {
     super(broker)
+
+    // this.ipfsClient = DefaultClient()
+
     this.parseServiceSchema({
       // Name
       name: "ipfs",
 
       // Settings
       settings: {
+        name: "ipfs_schema",
+
         fields: ["hash", "key", "metadata", "createdAt", "updatedAt"],
 
-        idField: ["hash"]
+        idField: ["hash"],
+
+        ipfsEnabled: false,
+
+        bucket: process.env.FLEEK_BUCKET ?? "volatilitycom-bucket"
+        // secrets: SecretsClient()
       },
       // Metadata
       metadata: {},
       // Dependencies
       dependencies: [],
 
-      adapter: new TypeOrmDbAdapter(configuration.adapter),
+      // adapter: new TypeOrmDbAdapter(configuration.adapter),
+      // adapter: connectionInstance("ipfs"),
 
       model: FleekTransaction,
 
@@ -57,6 +82,10 @@ export default class IPFSService extends Service {
             this: IPFSService,
             context: Context<IIPFS.StoreParams, IIPFSServiceMeta>
           ): Promise<IIPFS.StoreResponse> {
+            if (!this.settings.ipfsEnabled) {
+              return { hash: "", key: "" }
+            }
+
             const result = await this.operation.store(context)
 
             if (result.isOk()) {
@@ -68,10 +97,40 @@ export default class IPFSService extends Service {
         }
       },
 
+      created() {
+        // this.secrets = SecretsClient()
+        this.repository = IpfsRepository
+      },
+
+      async started() {
+        // const promiseFun = (): Promise<{ FLEEK_ID: string; FLEEK_SECRET: string }> => {
+        //   const settings: IpfsSettingsSchema = this.settings as IpfsSettingsSchema
+
+        //   return settings.secrets.requireRead("FLEEK_ID", "FLEEK_SECRET").then(result => result)
+        // }
+
+        // eslint-disable-next-line no-debugger
+        debugger
+
+        this.IpfsUpload = IpfsClient.AsyncDefaultClient(this.settings?.bucket as string)
+
+        return Promise.resolve()
+        // return void (await ResultAsync.fromPromise(promiseFun(), handleAsMoleculerError).map(credentials =>
+        //   AsyncDefaultClient()
+        // ))
+        // DefaultClient()
+        // return void (await ResultAsync.fromPromise(promiseFun(), handleAsMoleculerError)).map(secrets =>
+        //   _.map(this, "settings.settings.$secureSettings").push()
+        // )
+      },
+
+      async stopped() {
+        return await getConnection().close()
+      },
+
       // Service methods
       // async started(this: IPFSService) {
       //   this.logger.info("Start ipfs service")
-      //   // this.connection = await connectionInstance()
       // },
 
       // async stopped() {
@@ -84,9 +143,10 @@ export default class IPFSService extends Service {
     })
   }
 
-  private get repository(): Repository<FleekTransaction> {
-    return (this.adapter as TypeOrmDbAdapter<FleekTransaction>).repository
-  }
+  // private get repository(): Repository<FleekTransaction> {
+  //   return getRepository(FleekTransaction)
+  //   // return (this.adapter as TypeOrmDbAdapter<FleekTransaction>).repository
+  // }
 
   private get operation() {
     return {
@@ -96,22 +156,20 @@ export default class IPFSService extends Service {
   }
 
   private async store(this: IPFSService, context: Context<IIPFS.StoreParams, IIPFSServiceMeta>) {
-    return ResultAsync.fromPromise(fleek(context.params), handleAsMoleculerError)
+    return ResultAsync.fromPromise(this.IpfsUpload(context.params), handleAsMoleculerError)
+      .map(upload => upload(context.params.key, context.params.data))
       .map(this.buildResource(context).bind(this))
+      .map(ipfsResponse => ipfsResponse)
       .map(resource => {
         this.logger.info("fleek resource", resource)
         return resource
       })
       .map(this.persist.bind(this))
-      .map(result => {
-        console.log(result)
-        return result
-      })
   }
 
   private buildResource(context: Context<IIPFS.StoreParams, IIPFSServiceMeta>) {
-    const resource = new FleekTransaction()
-    return (output: FleekResponse) => {
+    const resource = IpfsRepository.create()
+    return (output: UploadResponse) => {
       resource.hash = output.hash
       resource.key = output.publicUrl
       resource.metadata = context.params.metadata
@@ -120,7 +178,7 @@ export default class IPFSService extends Service {
   }
 
   private persist(this: IPFSService, resource: FleekTransaction) {
-    return this.repository.save(resource)
+    return IpfsRepository.save(resource)
   }
 }
 

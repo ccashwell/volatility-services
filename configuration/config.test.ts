@@ -1,16 +1,5 @@
 import { config as _config, EnvConfig } from "./config.base"
-import { ISecretsManager } from "@clients/types"
 
 export const config: EnvConfig = {
-  ..._config,
-  ...{
-    db: {
-      username: "mfiv_user",
-      password: "At5DHGHgG$dQlCwN6q1#e*5a",
-      database: "volatility_test",
-      host: "127.0.0.1",
-      port: 6432,
-      logging: console.log
-    }
-  }
+  ..._config
 }

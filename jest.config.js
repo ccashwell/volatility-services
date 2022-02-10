@@ -2,30 +2,30 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  verbose: true,
   globals: {
     "ts-jest": {
       // ts-jest configuration goes here
+      tsconfig: "./test/tsconfig.test.json",
     },
   },
+  testPathIgnorePatterns: [
+    "<rootDir>/configuration/config.test.ts"
+  ],
   moduleNameMapper: {
     "^@configuration$": "<rootDir>/configuration",
+    "^@clients/(.*)$": "<rootDir>/src/clients/$1",
+    "^@clients$": "<rootDir>/src/clients",
+    "^@datasources$": "<rootDir>/src/datasources",
     "^@datasources/(.*)$": "<rootDir>/src/datasources/$1",
     "^@entities$": "<rootDir>/src/entities",
+    "^@secrets^": "<rootDir>/test/config/secrets",
     "^@entities/connection$": "<rootDir>/test/config/connection",
     "^@entities/(.*)$": "<rootDir>/src/entities/$1",
+    "^@repositories/(.*)$": "<rootDir>/src/repositories/$1",
+    "^@service_helpers$": "<rootDir>/src/service_helpers",
     "^@service_helpers/(.*)$": "<rootDir>/src/service_helpers/$1",
+    "^@services/(.*)$": "<rootDir>/services",
     "^@lib/(.*)$": "<rootDir>/src/lib/$1"
-    // "^@(jest)/(.*)$": "<rootDir>/node_modules/@jest/$2",
-    // "^@(babel)/(.*)$": "<rootDir>/node_modules/@babel/$2",
-    // "^@(test)(.*)$": "<rootDir>/test/$2",
-    // "^@lib/handlers/errors$": "<rootDir>/lib/handlers/errors",
-    // "^@lib/errors$": "<rootDir>/lib/errors",
-    // "^@lib/expiries$": "<rootDir>/lib/expiries",
-    // "^@lib/utils/secrets$": "<rootDir>/lib/utils/secrets",
-    // "^@entities/connection$": "<rootDir>/test/config/connection",
-    // "^@entities": "<rootDir>/src/entities",
-    // "^@fleekhq/fleek-storage-js$": "<rootDir>/node_modules/@fleekhq/fleek-storage-js",
-    // "^@seald-io/([a-z].*)$": "<rootDir>/node_modules/@seald-io/$1",
-    // "^@([a-z].*)$": "<rootDir>/src/$1"
   }
 }

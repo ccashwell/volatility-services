@@ -1,19 +1,23 @@
-"use strict"
 import { ServiceBroker } from "moleculer"
-import TestService from "../../../services/cron.service"
-//import cron from "cron"
+import TestService from "@services/cron.service"
 
 describe("Test 'cron' service", () => {
-  const broker = new ServiceBroker({ logger: true })
-  const service = broker.createService(TestService)
+  let broker: ServiceBroker
+  let service: TestService
+  try {
+    broker = new ServiceBroker({ logger: true })
+    service = broker.createService(TestService)
+    service.ipfs = jest.fn()
+  } catch (err) {
+    console.error(err)
+  }
 
   beforeAll(() => broker.start())
   afterAll(() => broker.stop())
 
   describe("cron()", () => {
-    service.actions.ipfs = jest.fn()
+    // service.actions.ipfs = jest.fn()
     //jest.runOnlyPendingTimers()
-
     beforeEach(() => jest.useFakeTimers())
 
     it("calls the ipfs job", done => {

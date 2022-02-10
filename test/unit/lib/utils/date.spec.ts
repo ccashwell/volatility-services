@@ -1,6 +1,6 @@
 "use strict"
 
-import { toIsoNoMs } from "../../../../lib/utils/date"
+import { toIsoNoMs } from "@lib/utils/date"
 
 describe("Test 'toIsoNoMs'", () => {
   const str = "2021-01-25T10:15:45.145Z"
@@ -18,7 +18,7 @@ describe("Test 'toIsoNoMs'", () => {
     describe(`when the string is '${str}'`, () => {
       test("new Date(str) is successful", () => {
         const subject = new Date(str)
-        expect(str).toBeISODate()
+        expect(str).toMatch(new RegExp(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/))
       })
     })
   })

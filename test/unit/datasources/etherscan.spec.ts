@@ -1,18 +1,22 @@
-"use strict"
-
 import { ok } from "neverthrow"
-import etherscan from "@datasources/etherscan"
+import { provideEtherscan as etherscan } from "@datasources/etherscan"
 
-jest.mock("@datasources/etherscan", () => {
-  const originalModule = jest.requireActual("@datasources/etherscan")
-  const defaultMock = jest.fn((address: string) =>
+jest.mock("@datasources/etherscan", () => ({
+  provideEtherscan: jest.fn((address: string) =>
     Promise.resolve(ok({ status: "1", message: "OK", result: "abi-contract" }))
   )
-  return {
-    __esModule: true,
-    default: defaultMock
-  }
-})
+}))
+
+// jest.mock("@datasources/etherscan", () => {
+//   const originalModule = jest.requireActual("@datasources/etherscan")
+//   const defaultMock = jest.fn((address: string) =>
+//     Promise.resolve(ok({ status: "1", message: "OK", result: "abi-contract" }))
+//   )
+//   return {
+//     __esModule: true,
+//     default: defaultMock
+//   }
+// })
 
 describe("etherscan client", () => {
   describe("abi(address: string)", () => {

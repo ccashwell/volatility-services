@@ -1,10 +1,8 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "incremental": true,
-    // "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    // "resolveJsonModule": true,
-    "skipLibCheck": true,
     "module": "commonjs",
     "allowJs": true,
     "types": ["node", "jest"],
@@ -36,8 +34,6 @@
       "@datasources": ["src/datasources"],
       "@entities/*": ["src/entities/*"],
       "@entities": ["src/entities"],
-      "@events/*": ["src/events/*"],
-      "@events": ["src/events"],
       "@interfaces/*": ["src/interfaces/*"],
       "@interfaces": ["src/interfaces"],
       "@mixins/*": ["src/mixins/*"],
@@ -54,11 +50,12 @@
       "@lib": ["src/lib"]
     }
   },
-  "include": ["./src/**/*.ts", "./services/**/*.ts", "./test/**/*.spec.ts", "moleculer.config.ts"],
+  "include": ["./src/**/*.ts", "./services/**/*.ts", "moleculer.config.ts"],
   "exclude": [
     "node_modules",
     "dist",
     "**/node_modules/*",
+    "test",
     "postgres",
     "ormconfig.js",
     "coverage",
@@ -69,6 +66,4 @@
     "tmp",
     "traefik"
   ]
-  // "include": ["./**/*", "./typings/moleculer-cron.d.ts"],
-  // "exclude": ["node_modules/**/*", "test", "database/migrations", "postgres"]
 }

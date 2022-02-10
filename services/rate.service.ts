@@ -2,18 +2,14 @@
 "use strict"
 import { Context, Service, ServiceBroker, Errors } from "moleculer"
 import * as DbAdapter from "moleculer-db"
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
-import { DeepPartial, Repository } from "typeorm"
-
-//#region Local Imports
+import { DeepPartial, Repository, getConnection, getRepository } from "typeorm"
 import { ResultAsync } from "neverthrow"
-import configuration from "@configuration"
 import { provideRateResponse } from "@datasources/aave"
 import { IRate } from "@interfaces/services/rate"
 import { Rate } from "@entities"
+import connectionInstance from "@entities/connection"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
 import { Mappers } from "@lib/utils/mappers"
-//#endregion Local Imports
 
 export default class RateService extends Service {
   public constructor(public broker: ServiceBroker) {
@@ -35,7 +31,8 @@ export default class RateService extends Service {
         scalable: true
       },
 
-      adapter: new TypeOrmDbAdapter(configuration.adapter),
+      // adapter: connectionInstance("rate"),
+      // adapter: new TypeOrmDbAdapter(configuration.adapter),
 
       model: Rate,
 
@@ -66,12 +63,21 @@ export default class RateService extends Service {
             }
           }
         }
+      },
+
+      async started() {
+        // return void (await connectionInstance())
+      },
+
+      async stopped() {
+        return await getConnection().close()
       }
     })
   }
 
   private get repository(): Repository<Rate> {
-    return (this.adapter as TypeOrmDbAdapter<Rate>).repository
+    return getRepository(Rate)
+    //return (this.adapter as TypeOrmDbAdapter<Rate>).repository
   }
 
   async fetchRisklessRate(params: IRate.RisklessRateParams) {

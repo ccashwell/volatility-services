@@ -2,9 +2,8 @@ import Web3 from "web3"
 import { HttpProvider } from "web3-core"
 import { AbiItem } from "web3-utils"
 import { Result, ResultAsync } from "neverthrow"
-import etherscan from "@datasources/etherscan"
-import secrets, { Secrets } from "@lib/utils/secrets"
-import { configurationError } from "@lib/errors"
+import { provideEtherscan as etherscan } from "@datasources/etherscan"
+import { DefaultClient as SecretsClient } from "@clients/secrets_client"
 import { ErrorType } from "@lib/types"
 import { IRate } from "@interfaces"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
@@ -17,15 +16,6 @@ const aaveReserve = Web3.utils.toChecksumAddress("0xc02aaa39b223fe8d0a0e5c4f27ea
  * @param secretsJson - config object that provides credentials to the underlying clients
  * @returns client object with an upload method
  */
-const clientConfig = (secretsJson: Secrets) => () => {
-  if (!secretsJson.INFURA_PROJ_ID) {
-    throw configurationError("INFURA_PROJ_ID", undefined)
-  }
-
-  return {
-    infuraProjId: secretsJson.INFURA_PROJ_ID
-  }
-}
 
 type AbiClient = (
   address: string
@@ -84,9 +74,9 @@ const provideContract = (abiClient: AbiClient) => {
  * This is a web3 client capable of instantiating contracts
  */
 const defaultWeb3 = () =>
-  ResultAsync.fromPromise(secrets(), handleAsMoleculerError)
-    .map(clientConfig)
-    .map(cfg => provideInfuraClient(cfg().infuraProjId))
+  ResultAsync.fromPromise(SecretsClient().requireRead("INFURA_PROJ_ID"), handleAsMoleculerError)
+    .map(hash => hash.INFURA_PROJ_ID)
+    .map(provideInfuraClient)
     .map(provideWeb3)
 
 /**
@@ -122,21 +112,6 @@ const toLiquidityRate = (value: number) => {
   return 100.0 * (value / RAY) // currentLiquidityRate expressed in RAY
 }
 
-// const provideAaveLiquidityRate = () =>
-//   defaultWeb3()
-//     .map(provideContract(etherscan))
-//     .map(async result => {
-//       if (result.isOk()) {
-//         const contract = result.value
-//         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-//         // const exchangeData: number[] = await contract.methods.getReserveData(aaveReserve).call()
-//         // const RAY = 10 ** 27
-//         // const rate = exchangeData[3] // currentLiquidityRate expressed in RAY
-//         // return 100.0 * (rate / RAY)
-//       }
-//       throw result.error
-//     })
-
 export async function provideRateResponse() {
   const contractValue = await provideAaveLiquidityValue().unwrapOr(0)
 
@@ -147,5 +122,3 @@ export async function provideRateResponse() {
     risklessRateSource: "aave"
   } as IRate.RisklessRateResponse & { contractValue: number }
 }
-
-export default provideRateResponse

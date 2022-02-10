@@ -1,5 +1,5 @@
 "use strict"
-import { getRepository, Connection, DeepPartial, QueryFailedError } from "typeorm"
+import { getRepository, DeepPartial, QueryFailedError, getConnection } from "typeorm"
 
 import {
   BaseCurrencyEnum,
@@ -12,9 +12,8 @@ import connectionInstance from "@entities/connection"
 import { MethodologyIndex } from "@entities/methodology_index"
 
 describe("Test 'MethodologyIndex' model", () => {
-  let connection: Connection
-  beforeAll(async () => (connection = await connectionInstance()))
-  afterAll(() => connection.close())
+  beforeAll(async () => await connectionInstance())
+  afterAll(() => getConnection().close())
 
   describe("when creating with valid params", () => {
     const params = {

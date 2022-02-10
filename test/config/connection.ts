@@ -5,10 +5,16 @@ import { createConnection, Connection } from "typeorm"
 export default async (): Promise<Connection> => {
   try {
     return await createConnection({
-      type: "postgres",
       name: "default",
+      type: "postgres",
+      username: "postgres",
+      password: "postgres",
       database: "volatility_test",
-      entities: ["./src/entities/fleek_transaction.ts", "./src/entities/methodology_index.ts"],
+      entities: [
+        "./src/entities/fleek_transaction.ts",
+        "./src/entities/methodology_index.ts",
+        "./src/entities/rate.ts"
+      ],
       synchronize: true,
       dropSchema: true
     })

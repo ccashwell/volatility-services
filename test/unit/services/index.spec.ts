@@ -1,7 +1,7 @@
 "use strict"
-import Moleculer, { ServiceBroker } from "moleculer"
-import IndexService from "../../../services/index.service"
-import { IIndex } from "../../../src/interfaces/services/index"
+import { ServiceBroker } from "moleculer"
+import IndexService from "@services/index.service"
+import { IIndex } from "@interfaces/services/index"
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -9,23 +9,23 @@ import {
   MethodologyExpiryEnum,
   MethodologyWindowEnum,
   SymbolTypeEnum
-} from "../../../src/entities"
-import * as IndexHelper from "../../../src/service_helpers/index_helper"
-jest.mock("../../../src/lib/utils/secrets", () => {
-  const originalModule = jest.requireActual("../../../src/lib/utils/secrets")
+} from "@entities"
 
-  //Mock the default export and named export 'foo'
-  return {
-    __esModule: true,
-    ...originalModule,
-    default: jest.fn(() => {
-      return Promise.resolve({
-        FLEEK_ID: "mock-fleek-id",
-        FLEEK_SECRET: "mock-fleek-secret"
-      })
-    })
-  }
-})
+// jest.mock("@secrets", () => {
+//   const originalModule = jest.requireActual("@secrets")
+
+//   //Mock the default export and named export 'foo'
+//   return {
+//     __esModule: true,
+//     ...originalModule,
+//     default: jest.fn(() => {
+//       return Promise.resolve({
+//         FLEEK_ID: "mock-fleek-id",
+//         FLEEK_SECRET: "mock-fleek-secret"
+//       })
+//     })
+//   }
+// })
 
 describe("index.service api", () => {
   const broker = new ServiceBroker({ logger: true })

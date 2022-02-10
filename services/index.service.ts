@@ -1,14 +1,13 @@
 /* eslint-disable max-len */
 "use strict"
 import { Context, Service, ServiceBroker } from "moleculer"
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
-import { DeepPartial, Repository } from "typeorm"
+import { getConnection, getRepository, Repository } from "typeorm"
 import * as DbService from "moleculer-db"
 import { OptionSummary } from "tardis-dev"
 import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
 import { chainFrom } from "transducist"
 import { Result } from "neverthrow"
-import configuration from "../configuration"
+import configuration from "@configuration"
 import { mfivDates } from "@lib/expiries"
 import {
   BaseCurrencyEnum,
@@ -19,6 +18,7 @@ import {
   SymbolTypeEnum
 } from "@entities"
 import { IIndex } from "@interfaces"
+import connectionInstance from "@entities/connection"
 import { optionSummariesLists } from "@service_helpers/ingest_helper"
 
 /**
@@ -47,24 +47,27 @@ export default class IndexService extends Service {
     this.parseServiceSchema({
       name: "index",
 
-      adapter: new TypeOrmDbAdapter(configuration.adapter),
+      // adapter: new TypeOrmDbAdapter<MethodologyIndex>(configuration.adapter),
+      // adapter: connectionInstance(),
+      // getConnection("default"),
+      // adapter: connectionInstance("index"),
 
       model: MethodologyIndex,
 
       mixins: [DbService],
 
       settings: {
-        $dependencyTimeout: 30000
+        $dependencyTimeout: 30000,
 
-        // fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"]
+        fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"],
 
-        // idField: 'timestamp'
+        idField: "timestamp"
       },
 
       dependencies: [
-        // {
-        //   name: "ingest"
-        // }
+        {
+          name: "ingest"
+        }
       ],
 
       metadata: {
@@ -87,7 +90,7 @@ export default class IndexService extends Service {
           handler(this: IndexService, ctx: Context<IIndex.EstimateParams>): Promise<IIndex.EstimateResponse> {
             return this.indexOperation(ctx, ctx.params)
               .then(evidence => {
-                this.logger.info(JSON.stringify(evidence))
+                this.logger.trace(JSON.stringify(evidence))
                 return evidence
               })
               .catch(reason => {
@@ -96,24 +99,30 @@ export default class IndexService extends Service {
               })
           }
         }
+      },
+
+      async started() {
+        // const connection = getConnection();
+        // return void (await connectionInstance())
+      },
+
+      async stopped() {
+        return await getConnection().close()
       }
+
+      // started() {
+      // this.adapter = getConnection("default")
+      //  const connection = getConnection("default")
+      // return Promise.resolve()
+      //}
     })
   }
 
   private get repository(): Repository<MethodologyIndex> {
-    return (this.adapter as TypeOrmDbAdapter<MethodologyIndex>).repository
+    return getRepository(MethodologyIndex)
   }
 
   private async indexOperation(context: Context<IIndex.EstimateParams>, params: IIndex.EstimateParams) {
-    // const indexAtDate = new Date(params.at)
-    // const methodologyDates = mfivDates(indexAtDate, params.interval, params.expiryType)
-    // const _expiries: { status: "fulfilled" | "rejected"; value: OptionSummary[] }[] = await this.broker.mcall(
-    //   [
-    //     { action: "ingest.summaries", params: { expiry: methodologyDates.nearExpiration } },
-    //     { action: "ingest.summaries", params: { expiry: methodologyDates.nextExpiration } }
-    //   ],
-    //   { settled: true }
-    // )
     const indexAtDate = new Date(params.at)
 
     const methodologyDates = mfivDates(new Date(params.at), params.interval, params.expiryType)
@@ -197,14 +206,12 @@ export default class IndexService extends Service {
     },
     extra: { requestId: string; iVal: string; near: string; next: string }
   ) {
-    // const repository = getConnection().getRepository<MethodologyIndex>(MethodologyIndex)
-    debugger
-
     const ctx = evidence.context
-    const index = this.repository.create()
-    const partial: MethodologyIndex = this.repository.create(ctx as DeepPartial<MethodologyIndex>)
+    //const index = this.adapter.getRepository<MethodologyIndex>(MethodologyIndex)
+    // const index = repository.create()
+    // const repository = getConnection().getRepository(MethodologyIndex)
 
-    console.log(partial)
+    const index: MethodologyIndex = this.repository.create() // ctx as DeepPartial<MethodologyIndex>
     index.timestamp = new Date(evidence.params.at)
     index.value = evidence.result.dVol?.toString() ?? "undefined"
     index.baseCurrency = ctx.currency as BaseCurrencyEnum
@@ -253,6 +260,6 @@ function cmpOldest(a: OptionSummary, b: OptionSummary): number {
 //       emit repetitive values rather than 'undefined'
 // const findLastUnderlyingPrice = (options: OptionSummary[]) => chainFrom(options).max(cmpFuncOrd)?.underlyingPrice
 const findMostRecent = (options: OptionSummary[]) => chainFrom(options).max(cmpMostRecent)
-const findOldest = (options: OptionSummary[]) => chainFrom(options).max(cmpOldest)
-const hud = (o: OptionSummary | null) =>
-  o ? [o.timestamp, o.bestBidPrice, o.symbol, o.bestAskPrice, o.localTimestamp] : []
+// const findOldest = (options: OptionSummary[]) => chainFrom(options).max(cmpOldest)
+// const hud = (o: OptionSummary | null) =>
+//  o ? [o.timestamp, o.bestBidPrice, o.symbol, o.bestAskPrice, o.localTimestamp] : []

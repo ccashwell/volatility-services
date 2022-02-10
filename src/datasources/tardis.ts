@@ -1,5 +1,5 @@
 import { init } from "tardis-dev"
-import secrets from "@lib/utils/secrets"
+import { DefaultClient as SecretsClient } from "@clients/secrets_client"
 
 /**
  * Bootstrap the tardis api with credentials
@@ -10,8 +10,9 @@ import secrets from "@lib/utils/secrets"
  * @returns - void
  */
 export const initTardis = async () => {
-  const secretsJson = await secrets()
+  const tardisSecret = await SecretsClient({ secretName: "API_Keys" }).requireRead("TARDIS_API_KEY")
+
   return init({
-    apiKey: secretsJson.TARDIS_API_KEY
+    apiKey: tardisSecret.TARDIS_API_KEY
   })
 }

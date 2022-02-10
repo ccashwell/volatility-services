@@ -1,37 +1,64 @@
-"use strict"
-import Moleculer, { Errors, ServiceBroker } from "moleculer"
+import { IpfsClientConfig } from "./../../../src/clients/types"
+;("use strict")
+import { Errors, ServiceBroker } from "moleculer"
 import mfivEvent from "../../fixtures/mfiv_event"
-import IPFSService from "../../../services/ipfs.service"
-import { IIPFS } from "../../../src/interfaces/services/ipfs"
-import { FleekResponse } from "../../../src/datasources"
+import IPFSService from "@services/ipfs.service"
+import { IIPFS } from "@interfaces/services/ipfs"
+import DefaultClient from "@clients/ipfs_client"
+import { Bufferable } from "@datasources/types"
 
-jest.mock("../../../src/datasources/fleek", () => {
-  const originalModule = jest.requireActual("../../../src/datasources/fleek")
-  return {
-    __esModule: true,
-    ...originalModule,
-    default: jest.fn((params: IIPFS.StoreParams) => {
-      const key = params.key
-      const response: FleekResponse = {
-        hash: `${key}-hash`,
-        hashV0: "",
-        key: key,
-        bucket: "volatilitycom-bucket",
-        publicUrl: `https://fleek.co/${key}`
-      } as FleekResponse
+// jest.mock("@clients/ipfs_client", () => ({
+//   DefaultClient: jest.fn((cfg: IpfsClientConfig) => jest.fn((key: string, buffer: Bufferable) => {}))
+// }))
+// jest.mock("@datasources/fleek", () => ({
+//   provideIpfsClient: jest.fn((params: IIPFS.StoreParams) => {
+//     const key = params.key
+//     const response: FleekResponse = {
+//       hash: `${key}-hash`,
+//       hashV0: "",
+//       key: key,
+//       bucket: "volatilitycom-bucket",
+//       publicUrl: `https://fleek.co/${key}`
+//     } as FleekResponse
 
-      if (key.includes("retryable")) {
-        return Promise.reject(
-          new Errors.MoleculerRetryableError("a retryable error", 500, "SOME_ERROR", { details: ["Some details"] })
-        )
-      } else if (key.includes("throw")) {
-        return Promise.reject(new Error("Test threw an error"))
-      }
+//     if (key.includes("retryable")) {
+//       return Promise.reject(
+//         new Errors.MoleculerRetryableError("a retryable error", 500, "SOME_ERROR", { details: ["Some details"] })
+//       )
+//     } else if (key.includes("throw")) {
+//       return Promise.reject(new Error("Test threw an error"))
+//     }
+//     return Promise.resolve(response)
+//   })
+// }))
 
-      return Promise.resolve(response)
-    })
-  }
-})
+// jest.mock("@datasources/fleek", () => {
+//   const originalModule = jest.requireActual("@datasources/fleek")
+//   return {
+//     __esModule: true,
+//     ...originalModule,
+//     default: jest.fn((params: IIPFS.StoreParams) => {
+//       const key = params.key
+//       const response: FleekResponse = {
+//         hash: `${key}-hash`,
+//         hashV0: "",
+//         key: key,
+//         bucket: "volatilitycom-bucket",
+//         publicUrl: `https://fleek.co/${key}`
+//       } as FleekResponse
+
+//       if (key.includes("retryable")) {
+//         return Promise.reject(
+//           new Errors.MoleculerRetryableError("a retryable error", 500, "SOME_ERROR", { details: ["Some details"] })
+//         )
+//       } else if (key.includes("throw")) {
+//         return Promise.reject(new Error("Test threw an error"))
+//       }
+
+//       return Promise.resolve(response)
+//     })
+//   }
+// })
 
 describe("ipfs.service", () => {
   const broker = new ServiceBroker({ logger: false })

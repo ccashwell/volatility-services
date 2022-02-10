@@ -1,6 +1,6 @@
 "use strict"
 import { ServiceBroker } from "moleculer"
-import WSService from "../../../services/ws.service"
+import WSService from "@services/ws.service"
 import WebSocket from "ws"
 import util from "util"
 import evidence from "../../fixtures/evidence"
@@ -13,7 +13,7 @@ describe.skip("ws.service", () => {
   afterAll(() => service.stop())
 
   describe("subscribing to 'mfiv.14d.eth'", () => {
-    const ws = new WebSocket("ws://localhost:3000")
+    const ws = new WebSocket("ws://localhost:4000/ws")
     ws.binaryType = "arraybuffer"
 
     const encoder = new util.TextEncoder()

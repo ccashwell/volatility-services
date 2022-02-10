@@ -1,5 +1,5 @@
 import { Errors } from "moleculer"
-import { Failure } from "./failure"
+import { Failure } from "../failure"
 
 export enum VGError {
   FleekUploadFailure = "FleekUploadFailure",

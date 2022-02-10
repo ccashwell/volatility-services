@@ -1,24 +1,16 @@
 // "use strict"
 import { Context, Service, ServiceBroker } from "moleculer"
-//#region Global Imports
 import { combine, ResultAsync } from "neverthrow"
 import { Exchange, OptionSummary, StreamNormalizedOptions } from "tardis-dev"
 import { chainFrom } from "transducist"
-//#endregion Global Imports
 
 import configuration from "@configuration"
 import { initTardis, stream } from "@datasources"
 import { insufficientDataError } from "@lib/errors"
-import { handleError } from "@lib/handlers/errors"
-
-//#region Local Imports
-//#endregion Local Imports
-
-//#region Interface Imports
+import { mfivDates } from "@lib/expiries"
+import { handleAsMoleculerError, handleError } from "@lib/handlers/errors"
 import { IIngest, IInstrumentInfo } from "@interfaces"
-import { mfivDates } from "src/lib/expiries"
 import { MethodologyExpiryEnum } from "@entities"
-//#endregion Interface Imports
 
 export default class IngestService extends Service {
   private latestMessage?: OptionSummary
@@ -102,8 +94,8 @@ export default class IngestService extends Service {
     return void ResultAsync.fromPromise(this.fetchInstruments(expiries), handleError)
       .map(streamNormalizedOptions({ exchange: configuration.tardis.exchange }))
       .map(stream)
-      .map(this.process.bind(this))
-      .mapErr(err => console.error("error", err))
+      .map(messages => this.process(messages))
+      .mapErr(console.error)
   }
 
   private async process(messages: AsyncIterableIterator<OptionSummary>) {
@@ -113,6 +105,8 @@ export default class IngestService extends Service {
 
       // Save to cache
       this.cacheMessage(message)
+
+      this.broker.emit("mfiv.14d.eth.expiry", message).catch(handleAsMoleculerError)
     }
 
     return true
