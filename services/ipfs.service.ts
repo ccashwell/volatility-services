@@ -3,15 +3,16 @@ import * as DbAdapter from "moleculer-db"
 import Moleculer, { ActionParams, Context, ServiceBroker, ServiceSchema, ServiceSettingSchema } from "moleculer"
 import { getConnection } from "typeorm"
 import { ResultAsync } from "neverthrow"
+import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
+import configuration from "@configuration"
 import { UploadResponse } from "@datasources/types"
 import IpfsClient from "@clients/ipfs_client"
 import { FleekTransaction } from "@entities"
-import connectionInstance from "@entities/connection"
 import { IIPFS } from "@interfaces/services/ipfs"
 import { IIPFSServiceMeta } from "@interfaces/meta"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
-import IpfsRepository from "@repositories/ipfs_repository"
-
+// import IpfsRepository from "@repositories/ipfs_repository"
+// let IpfsRepository: Repository<FleekTransaction>
 interface IpfsSettingsSchema extends ServiceSchema {
   bucket: string
   // settings: {
@@ -55,8 +56,7 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
       // Dependencies
       dependencies: [],
 
-      // adapter: new TypeOrmDbAdapter(configuration.adapter),
-      // adapter: connectionInstance("ipfs"),
+      adapter: new TypeOrmDbAdapter(configuration.adapter),
 
       model: FleekTransaction,
 
@@ -97,20 +97,12 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
         }
       },
 
-      created() {
-        // this.secrets = SecretsClient()
-        this.repository = IpfsRepository
-      },
-
       async started() {
         // const promiseFun = (): Promise<{ FLEEK_ID: string; FLEEK_SECRET: string }> => {
         //   const settings: IpfsSettingsSchema = this.settings as IpfsSettingsSchema
 
         //   return settings.secrets.requireRead("FLEEK_ID", "FLEEK_SECRET").then(result => result)
         // }
-
-        // eslint-disable-next-line no-debugger
-        debugger
 
         this.IpfsUpload = IpfsClient.AsyncDefaultClient(this.settings?.bucket as string)
 
@@ -168,7 +160,7 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
   }
 
   private buildResource(context: Context<IIPFS.StoreParams, IIPFSServiceMeta>) {
-    const resource = IpfsRepository.create()
+    const resource = this.repository.create()
     return (output: UploadResponse) => {
       resource.hash = output.hash
       resource.key = output.publicUrl
@@ -178,7 +170,7 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
   }
 
   private persist(this: IPFSService, resource: FleekTransaction) {
-    return IpfsRepository.save(resource)
+    return this.repository.save(resource)
   }
 }
 

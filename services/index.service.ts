@@ -1,14 +1,6 @@
 /* eslint-disable max-len */
 "use strict"
-import { Context, Service, ServiceBroker } from "moleculer"
-import { getConnection, getRepository, Repository } from "typeorm"
-import * as DbService from "moleculer-db"
-import { OptionSummary } from "tardis-dev"
-import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
-import { chainFrom } from "transducist"
-import { Result } from "neverthrow"
 import configuration from "@configuration"
-import { mfivDates } from "@lib/expiries"
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -18,8 +10,16 @@ import {
   SymbolTypeEnum
 } from "@entities"
 import { IIndex } from "@interfaces"
-import connectionInstance from "@entities/connection"
+import { mfivDates } from "@lib/expiries"
 import { optionSummariesLists } from "@service_helpers/ingest_helper"
+import { Context, Service, ServiceBroker } from "moleculer"
+import * as DbService from "moleculer-db"
+import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
+import { Result } from "neverthrow"
+import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
+import { OptionSummary } from "tardis-dev"
+import { chainFrom } from "transducist"
+import { getConnection, getRepository, Repository } from "typeorm"
 
 /**
  * VG.MethodologyParams = { exchange: 'deribit', baseCurrency: 'eth', type: 'option', methodology: 'mfiv', timestamp: Date }}
@@ -47,17 +47,17 @@ export default class IndexService extends Service {
     this.parseServiceSchema({
       name: "index",
 
-      // adapter: new TypeOrmDbAdapter<MethodologyIndex>(configuration.adapter),
+      adapter: new TypeOrmDbAdapter<MethodologyIndex>(configuration.adapter),
       // adapter: connectionInstance(),
       // getConnection("default"),
-      // adapter: connectionInstance("index"),
+      // adapter: connectionInstance(),
 
       model: MethodologyIndex,
 
       mixins: [DbService],
 
       settings: {
-        $dependencyTimeout: 30000,
+        $dependencyTimeout: 60000,
 
         fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"],
 
@@ -101,10 +101,11 @@ export default class IndexService extends Service {
         }
       },
 
-      async started() {
-        // const connection = getConnection();
-        // return void (await connectionInstance())
-      },
+      // async started() {
+      //   // const connection = getConnection()
+      //   return Promise.resolve()
+      //   // return void (await connectionInstance())
+      // },
 
       async stopped() {
         return await getConnection().close()

@@ -16,7 +16,7 @@ RUN --mount=type=ssh,id=me git clone git@github.com:volatilitygroup/node-volatil
 
 # Install dependencies
 COPY package.json package-lock.json ./
-RUN --mount=type=ssh,id=me  npm install -g npm@8.4.1
+RUN --mount=type=ssh,id=me npm install -g npm@8.4.1
 RUN --mount=type=ssh,id=me npm ci --development
 
 # Copy source

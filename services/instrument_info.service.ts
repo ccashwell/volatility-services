@@ -47,9 +47,13 @@ export default class InstrumentInfoService extends Service {
         }
       },
 
+      // created() {
+      //   this.logger.info("Service created\n")
+      // },
+
       // Service methods
       started(this: InstrumentInfoService) {
-        this.logger.info("Service started")
+        this.logger.info("Service started\n")
         return initTardis()
       }
     })

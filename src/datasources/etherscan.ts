@@ -4,9 +4,10 @@ import { ResultAsync } from "neverthrow"
 import { GetAbiResponse, ParsedAbiResponse } from "./types"
 import { DefaultClient as SecretsClient } from "@clients/secrets_client"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
+import C from "@lib/constants"
 
 const provideAddressUrl = (apiKey: string) => (address: string) =>
-  `https://api.etherscan.io/api?module=contract&action=getabi&address=${address}&apikey=${apiKey}`
+  `${C.ETHERSCAN_API_URI}?module=contract&action=getabi&address=${address}&apikey=${apiKey}`
 
 const transformAbiResponseResult = (response: GetAbiResponse): ParsedAbiResponse => {
   const { result, ...rest } = response.data

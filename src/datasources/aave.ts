@@ -6,9 +6,11 @@ import { provideEtherscan as etherscan } from "@datasources/etherscan"
 import { DefaultClient as SecretsClient } from "@clients/secrets_client"
 import { ErrorType } from "@lib/types"
 import { IRate } from "@interfaces"
+import C from "@lib/constants"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
+import { AAVE } from "@contracts/known_addresses"
 
-const aaveReserve = Web3.utils.toChecksumAddress("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
+const aaveReserve = Web3.utils.toChecksumAddress(AAVE.LendingPoolV2)
 
 /**
  * Bootstrap the fleek client
@@ -36,7 +38,7 @@ const provideWeb3HttpProvider = (url: string) => new Web3.providers.HttpProvider
  * @param projectId - string representing the Infura project ID
  * @returns Web3.Providers.HttpProvider for specific Infura project
  */
-const provideInfuraClient = (projectId: string) => provideWeb3HttpProvider(`https://mainnet.infura.io/v3/${projectId}`)
+const provideInfuraClient = (projectId: string) => provideWeb3HttpProvider(`${C.INFURA_URI}/${projectId}`)
 
 /**
  * Get a Web3 instance backed by an HttpProvider
@@ -53,11 +55,10 @@ const provideWeb3 = (provider: HttpProvider) => new Web3(provider)
  * @returns Contract
  */
 const provideContract = (abiClient: AbiClient) => {
-  const aaveLendingPoolV2Impl = "0xc6845a5c768bf8d7681249f8927877efda425baf"
-  const aaveLendingPoolV2Proxy = Web3.utils.toChecksumAddress("0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9")
+  const aaveLendingPoolV2Proxy = Web3.utils.toChecksumAddress(AAVE.LendingPoolV2Proxy)
 
   return async (web3: Web3) => {
-    const abiResult = await abiClient(aaveLendingPoolV2Impl)
+    const abiResult = await abiClient(AAVE.LendingPoolV2Impl)
 
     if (abiResult.isOk()) {
       return Result.fromThrowable(
@@ -100,13 +101,13 @@ const provideAaveLiquidityValue = () =>
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         const contractValues = (await contract.methods.getReserveData(aaveReserve).call()) as number[]
         return contractValues[3] // currentLiquidityRate expressed in RAY
-        // const RAY = 10 ** 27
-        // const rate = exchangeData[3] // currentLiquidityRate expressed in RAY
-        // return 100.0 * (rate / RAY)
       }
       throw result.error
     })
 
+/**
+ * @remark This conversion is specific to the LendingPool contract
+ */
 const toLiquidityRate = (value: number) => {
   const RAY = 10 ** 27
   return 100.0 * (value / RAY) // currentLiquidityRate expressed in RAY

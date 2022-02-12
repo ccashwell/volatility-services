@@ -1,8 +1,9 @@
-import { Connection, createConnection } from "typeorm"
+import { Connection, createConnection, getConnection } from "typeorm"
 
 export default async (): Promise<Connection | undefined> => {
   try {
-    return await createConnection()
+    return getConnection()
+    // return await createConnection()
   } catch (error) {
     console.error(error)
     return undefined

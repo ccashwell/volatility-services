@@ -55,7 +55,7 @@
     "node_modules",
     "dist",
     "**/node_modules/*",
-    "test",
+    "test/**.spec.ts",
     "postgres",
     "ormconfig.js",
     "coverage",

@@ -107,7 +107,16 @@ module.exports = {
 		"guard-for-in": "error",
 		"id-blacklist": ["error", "any", "Number", "number", "String", "string", "Boolean", "boolean", "Undefined", "undefined"],
 		"id-match": "error",
-		"import/order": "error",
+		"import/order": ["error", {
+			pathGroups: [
+				{
+					pattern: "@*/**",
+					group: "external",
+					position: "after"
+				}
+			],
+			pathGroupsExcludedImportTypes: ["builtin"]
+		}],
 		"max-classes-per-file": ["error", 1],
 		"max-len": [
 			"error",

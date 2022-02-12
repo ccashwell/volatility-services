@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "declaration": true,
     "incremental": true,
     // "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -32,6 +33,8 @@
       "@clients/*": ["src/clients/*"],
       "@clients": ["src/clients"],
       "@configuration": ["configuration"],
+      "@contracts/*": ["src/contracts/*"],
+      "@contracts": ["src/contracts"],
       "@datasources/*": ["src/datasources/*"],
       "@datasources": ["src/datasources"],
       "@entities/*": ["src/entities/*"],
@@ -54,7 +57,7 @@
       "@lib": ["src/lib"]
     }
   },
-  "include": ["./src/**/*.ts", "./services/**/*.ts", "./test/**/*.spec.ts", "moleculer.config.ts"],
+  "include": ["./ormconfig.js", "./src/**/*.ts", "./services/**/*.ts", "./test/**/*.spec.ts", "moleculer.config.ts"],
   "exclude": [
     "node_modules",
     "dist",

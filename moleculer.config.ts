@@ -2,7 +2,33 @@
 import "reflect-metadata"
 import { BrokerOptions, MetricRegistry } from "moleculer"
 import { Connection, createConnection } from "typeorm"
+// import chalk from "chalk"
 import config from "@configuration"
+
+// process.on("unhandledRejection", function handleWarning(reason, promise) {
+//   console.log(chalk.red.bold("[PROCESS] Unhandled Promise Rejection"))
+//   console.log(chalk.red.bold("- - - - - - - - - - - - - - - - - - -"))
+//   console.log(reason)
+//   console.log(chalk.red.bold("- -"))
+// })
+
+// createConnection method will automatically read connection options
+// from your ormconfig file or environment variables
+// async function dbInit() {
+//   const connection = await createConnection()
+//   return connection
+// }
+
+// ;(async () => {
+//   try {
+//     await dbInit()
+//     console.log("&&&&&& Initialized DB &&&&&&&&&")
+//   } catch (e) {
+//     // Deal with the fact the chain failed
+//   }
+// })()
+//   .then(value => console.log("init db"))
+//   .catch(err => console.error(err))
 
 /**
  * Moleculer ServiceBroker configuration file
@@ -74,7 +100,7 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   // Number of seconds to send heartbeat packet to other nodes.
   heartbeatInterval: 10,
   // Number of seconds to wait before setting node to unavailable status.
-  heartbeatTimeout: 30,
+  heartbeatTimeout: 120,
 
   // Cloning the params of context if enabled. High performance impact, use it with caution!
   contextParamsCloning: false,
@@ -199,8 +225,8 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   async started(broker) {
     // createConnection method will automatically read connection options
     // from your ormconfig file or environment variables
-    const connection = await createConnection()
-    this.connection = connection
+    // const connection = await createConnection()
+    // this.connection = connection
   }
   // started: async (broker: Moleculer.ServiceBroker): Promise<void> => {},
   // Called after broker stopped.

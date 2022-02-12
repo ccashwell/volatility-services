@@ -32,7 +32,7 @@ export default class IngestService extends Service {
 
       // Settings
       settings: {
-        $dependencyTimeout: 30000,
+        $dependencyTimeout: 60000,
         expiryType: MethodologyExpiryEnum.FridayT08
       },
       // Metadata

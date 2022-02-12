@@ -2,7 +2,8 @@
 import { TextEncoder } from "util"
 import { Context, Service, ServiceBroker } from "moleculer"
 import ApiGateway from "moleculer-web-uws"
-import { MfivEvidence } from "node-volatility-mfiv"
+import { MfivEvidence, OptionSummary } from "node-volatility-mfiv"
+import uWS from "uWebSockets.js"
 
 /**
  * Compute index values from data produced by the ingest service
@@ -14,8 +15,10 @@ export default class WSService extends Service {
       name: "ws",
       mixins: [ApiGateway],
       settings: {
+        encoder: new TextEncoder(),
+
         ws: {
-          path: "/*",
+          path: "/ws",
 
           compression: 0,
 
@@ -41,9 +44,13 @@ export default class WSService extends Service {
 
           // upgrade: (res, req, context) => {},
 
-          open: (socket: { subscribe: (arg0: string) => void }) => {
-            console.info("subscribing to mfiv.14d.eth")
-            socket.subscribe("mfiv.14d.eth")
+          open: (socket: uWS.WebSocket) => {
+            // eslint-disable-next-line no-debugger
+            // wsList.push(socket)
+            // socket.subscribe("mfiv.14d.eth.expiry")
+            //            wsList.push(socket)
+            socket.subscribe("mfiv/expiry")
+            socket.subscribe("mfiv/14d/eth")
           },
 
           message: (
@@ -55,20 +62,24 @@ export default class WSService extends Service {
           ) => {
             console.info("ws message received", message)
             // eslint-disable-next-line no-debugger
-            debugger
-            socket.publish("mfiv.14d.eth", message)
+            socket.publish("mfiv/expiry", message)
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          },
+
+          close: (ws: uWS.WebSocket, code: number, message: ArrayBuffer) => {
+            console.info("CLOSING SOCKET")
+            // wsList.shift()
           }
         }
       },
       actions: {
         announce: {
           ws: {
-            topic: "eth.mfiv.14d",
+            // topic: "eth.mfiv.14d.expiry",
 
             publish: true,
 
-            send: true,
+            send: false,
             // If defined and is a callback, a client will only be subscribed to the topic if the callback returns true.
             // Optional
             condition: true // Should return a truthy result
@@ -76,28 +87,40 @@ export default class WSService extends Service {
 
           port: 3000,
 
-          handler(context: Context<MfivEvidence>) {
+          handler(context: Context<OptionSummary>) {
             const message = context.params
-            const encoder = new TextEncoder()
 
-            this.logger.info("Received Message", message)
+            throw new Error("Shouldn't be here")
+            // if (wsList.length > 0) {
+            //   console.log("topics", wsList[0].getTopics())
+            //   wsList[0].publish("mfiv/expiry", JSON.stringify(message))
+            // }
+            return message
+            // wsList[0].publish("mfiv/expiry", JSON.stringify(message))
+            // const decoder = new TextDecoder()
+            // const index = JSON.parse(decoder.decode(message)) as Record<string, unknown>
 
-            const result = context.params.result
-            const { dVol, invdVol, currency, value } = result
+            //            const decoded = decoder.decode(message as Buffer)
+            // const encoder = new TextEncoder()
 
-            const index = {
-              type: context.params.type,
-              at: context.params.params.at,
-              dVol,
-              invdVol,
-              currency,
-              value
-            }
+            // this.logger.info("Received Message", message)
 
-            /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-            this.server.publish("mfiv.14d.eth", encoder.encode(JSON.stringify(index)), true, false)
+            // const result = context.params.result
+            // const { dVol, invdVol, currency, value } = result
 
-            return index
+            // const index = {
+            //   type: context.params.type,
+            //   at: context.params.params.at,
+            //   dVol,
+            //   invdVol,
+            //   currency,
+            //   value
+            // }
+
+            // /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+            // this.server.publish("mfiv.14d.eth", encoder.encode(JSON.stringify(index)), true, false)
+
+            return message
             // ts-config ignore
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
             // this.server.publish("mfiv.14d.eth", encoder.encode(JSON.stringify(index)), true, false)
@@ -109,12 +132,43 @@ export default class WSService extends Service {
       },
 
       events: {
-        "mfiv.14d.eth.index.created": {
+        "mfiv.14d.eth.expiry": {
+          handler(context: Context<OptionSummary>) {
+            // await this.actions.announce(context.params)
+            const payload = { topic: "mfiv/expiry", data: context.params }
+            const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(payload))
+
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+            this.server.publish("mfiv/expiry", message, false)
+            // wsList.forEach(ws => {
+            //   if (ws.isSubscribed("mfiv/expiry") || ws.) {
+            //     const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(context.params))
+            //     ws.send(message, false, false)
+            //   }
+            // })
+            //   ws.publish("mfiv/expiry", JSON.stringify(context.params))
+            // })
+            // const encoder = new TextEncoder()
+            // const message = encoder.encode(
+            //   JSON.stringify({
+            //     topic: "mfiv.14d.eth.expiry",
+            //     data: context.params
+            //   })
+            // )
+            // uWS.
+            // await (this as ApiGateway).server.publish("mfiv/expiry", context.params, false, false)
+            // uWS.publish
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+            // await this.server.publish("mfiv.14d.eth.expiry", message, true, false)
+            // await this.actions.announce(context.params)
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+            //await this.server.publish("mfiv.14d.eth.expiry", message, true, false)
+          }
+        },
+        "mfiv.14d.ETH.index.created": {
           async handler(this: WSService, context: Context<MfivEvidence>) {
-            // eslint-disable-next-line no-debugger
             const result = context.params.result
             const { dVol, invdVol, currency, value } = result
-
             const index = {
               type: context.params.type,
               at: context.params.params.at,
@@ -123,17 +177,10 @@ export default class WSService extends Service {
               currency,
               value
             }
-            const encoder = new TextEncoder()
-            const message = encoder.encode(
-              JSON.stringify({
-                topic: "mfiv.14d.eth",
-                data: index
-              })
-            )
-
-            console.log("Publishing message")
+            const payload = { topic: "mfiv/14d/eth", data: index }
+            const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(payload))
             /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-            await this.server.publish("mfiv.14d.eth", message, true, false)
+            await this.server.publish("mfiv/14d/eth", message, false)
           }
         }
       },

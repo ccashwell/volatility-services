@@ -1,8 +1,3 @@
-import Moleculer, { LogLevels } from "moleculer"
-import { Exchange } from "tardis-dev"
-import { NormalizedExchange } from "@lib/types"
-import { IIndex } from "@interfaces"
-import MoleculerRetryableError = Moleculer.Errors.MoleculerRetryableError
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -11,6 +6,12 @@ import {
   MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities"
+import { IIndex } from "@interfaces"
+import { NormalizedExchange } from "@lib/types"
+import Moleculer, { LogLevels } from "moleculer"
+import { Exchange } from "tardis-dev"
+
+import MoleculerRetryableError = Moleculer.Errors.MoleculerRetryableError
 
 interface AwsConfig {
   region: string
