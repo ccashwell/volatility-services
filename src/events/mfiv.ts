@@ -1,4 +1,4 @@
-import { MfivContext, MfivParams, MfivResult } from "node-volatility-mfiv"
+// import { MfivContext, MfivParams, MfivResult } from "node-volatility-mfiv"
 
 export interface MfivEvent {
   version: "2022-01-01"
@@ -16,7 +16,8 @@ export interface MfivEvent {
   // metric: "com.volatility.events.index.mfiv.14d.estimate.deribit.eth.option"
 
   // transaction_id: string
-  context: MfivContext
-  params: MfivParams
-  result: MfivResult
+  //   context: MfivContext
+  //   params: MfivParams
+  //   result: MfivResult
+  // }
 }

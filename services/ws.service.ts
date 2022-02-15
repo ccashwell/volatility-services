@@ -1,8 +1,8 @@
 "use strict"
-import { TextEncoder } from "util"
 import { Context, Service, ServiceBroker } from "moleculer"
 import ApiGateway from "moleculer-web-uws"
 import { MfivEvidence, OptionSummary } from "node-volatility-mfiv"
+import { TextEncoder } from "util"
 import uWS from "uWebSockets.js"
 
 /**

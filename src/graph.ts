@@ -1,9 +1,8 @@
-import util from "util"
-import WebSocket from "ws"
 import blessed, { ChartOptions } from "blessed"
 import contrib from "blessed-contrib"
 import { OptionSummary } from "node-volatility-mfiv"
-import colors from "colors/safe"
+import util from "util"
+import WebSocket from "ws"
 
 const decoder = new util.TextDecoder()
 const transactionsData: ChartOptions = {
@@ -132,7 +131,7 @@ ws.on("open", () => {
         transactionsData1.y.shift()
         transactionsData1.y.push(payload.underlyingPrice)
       } else {
-        //console.log("received: %j", index)
+        console.log("received: %j", index)
       }
     }
 
@@ -237,7 +236,7 @@ setInterval(function () {
 //   screen.render()
 // }, 500)
 
-screen.key(["escape", "q", "C-c"], function (ch, key) {
+screen.key(["escape", "q", "C-c"], function (_ch, key) {
   ws.close()
   return process.exit(0)
 })

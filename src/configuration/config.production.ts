@@ -1,4 +1,3 @@
-import * as aws from "aws-sdk"
 import { config as _config, EnvConfig } from "./config.base"
 // import { ISecretsManager } from "@clients/types"
 

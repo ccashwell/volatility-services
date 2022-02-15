@@ -8,10 +8,7 @@ import {
 } from "@entities"
 import { IIndex } from "@interfaces"
 import { NormalizedExchange } from "@lib/types"
-import Moleculer, { LogLevels } from "moleculer"
 import { Exchange } from "tardis-dev"
-
-import MoleculerRetryableError = Moleculer.Errors.MoleculerRetryableError
 
 interface AwsConfig {
   region: string
@@ -39,8 +36,6 @@ export interface EnvConfig {
   // clients?: {
   //   secretsManager: ISecretsManager
   // }
-  logLevel: Moleculer.LogLevels
-  logger: Moleculer.LoggerConfig
   // db?: {
   //   username: string
   //   password: string
@@ -57,8 +52,6 @@ export interface EnvConfig {
     risklessRateAt: string
     risklessRateSource: string
   }
-  requestTimeout: number
-  retryPolicy: Moleculer.RetryPolicyOptions
   tardis: TardisConfig
 }
 
@@ -79,31 +72,6 @@ export const config: EnvConfig = {
     region: process.env.AWS_REGION ?? "us-east-2",
     smName: "API_Keys"
   },
-  logger: {
-    type: "Console",
-    options: {
-      // Using colors on the output
-      colors: true,
-      // Print module names with different colors (like docker-compose for containers)
-      moduleColors: true,
-      // Line formatter. It can be "json", "short", "simple", "full", a `Function` or a template string like "{timestamp} {level} {nodeID}/{mod}: {msg}"
-      formatter: "full",
-      // Custom object printer. If not defined, it uses the `util.inspect` method.
-      objectPrinter: null,
-      // Auto-padding the module name in order to messages begin at the same column.
-      autoPadding: true,
-
-      log4js: {
-        appenders: {
-          app: { type: "file", filename: "./logs/application.log" }
-        },
-        categories: {
-          default: { appenders: ["app"], level: "info" }
-        }
-      }
-    }
-  },
-  logLevel: (process.env.LOG_LEVEL ?? "info") as LogLevels,
   cronSettings: {
     estimate: {
       exchange: (process.env.EXCHANGE as MethodologyExchangeEnum) ?? MethodologyExchangeEnum.Deribit,
@@ -120,21 +88,7 @@ export const config: EnvConfig = {
     risklessRateAt: process.env.RISKLESS_RATE_AT ?? "2021-10-01T07:02:00.000Z",
     risklessRateSource: process.env.RISKLESS_RATE_SOURCE ?? "aave"
   },
-  retryPolicy: {
-    // Enable feature
-    enabled: true,
-    // Count of retries
-    retries: 3,
-    // First delay in milliseconds.
-    delay: 100,
-    // Maximum delay in milliseconds.
-    maxDelay: 1000,
-    // Backoff factor for delay. 2 means exponential backoff.
-    factor: 2,
-    // A function to check failed requests.
-    check: (err: Error) => err && err instanceof MoleculerRetryableError && !!err.retryable
-  },
-  requestTimeout: 10 * 1000,
+
   tardis: {
     exchange: (process.env.EXCHANGE ?? "deribit") as Exchange & NormalizedExchange,
     waitWhenDataNotYetAvailable: true

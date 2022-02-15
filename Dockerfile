@@ -1,30 +1,59 @@
-# FROM node:16 as intermediate
-FROM node:16
+# syntax=docker/dockerfile:1
 
-# This should be production
-ENV NODE_ENV=development
+FROM bitnami/node:16.14.0
 
-# Working directory
+# RUN apk add --no-cache openssh-client git
+# RUN apk add --no-cache --virtual .gyp python make g++ \
+#     && npm install \
+#     && apk del .gyp
+
+# RUN apk add --no-cache --virtual .gyp \
+#         python3 \
+#         make \
+#         g++ && \
+#         rm -rf /var/cache/apk/*
+
+# RUN apk add --update python3 make g++ && rm -rf /var/cache/apk/*
+
+# RUN apk --no-cache add --virtual .builds-deps build-base python3
+
+# RUN mkdir /app
 WORKDIR /app
 
-# add credentials on build
-RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+COPY package.json package-lock.json ./
+RUN npm install
+# RUN npm ci
 
-# Build private repo
-RUN --mount=type=ssh,id=me git clone git@github.com:volatilitygroup/node-volatility-mfiv.git
+# RUN apk add --no-cache --virtual .gyp \
+#         python3 \
+#         make \
+#         g++
+# COPY package.json package-lock.json ./
 
+# RUN npm install && npm rebuild bcrypt --build-from-source && npm cache clean --force
+
+RUN apt-get -yq update && \
+    apt-get -yqq install openssh-client git
+
+RUN mkdir -m 700 /root/.ssh; \
+    touch -m 600 /root/.ssh/known_hosts; \
+    ssh-keyscan github.com > /root/.ssh/known_hosts
+
+# RUN --mount=type=ssh,id=me mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+COPY . .
+RUN --mount=type=ssh git clone git@github.com:volatilitygroup/node-volatility-mfiv.git node-volatility-mfiv
 
 # Install dependencies
-COPY package.json package-lock.json ./
-RUN --mount=type=ssh,id=me npm install -g npm@8.4.1
-RUN --mount=type=ssh,id=me npm ci --development
+# COPY package.json package-lock.json ./
+# RUN npm ci
+RUN npm install --save /app/node-volatility-mfiv
 
-# Copy source
-COPY . .
+# RUN --mount=type=ssh npm install
+# COPY tsconfig*.json ./
+# COPY src ./src
+RUN npm run build
 
-# Build and cleanup
-RUN npm run build \
- && npm prune
+# RUN npm run build \
+#  && npm prune
 
-# Start server
-CMD ["npm", "run", "start"]
+CMD ["npm", "start"]

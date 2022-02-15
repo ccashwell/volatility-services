@@ -1,140 +1,36 @@
-version: "3.3"
+version: "3.8"
 
 services:
-
-  # api:
+  # cron:
   #   build: .
-  #   image: volatility-mfiv-index
+  #   image: volatiliy-services
+  #   container_name: cron
   #   env_file: docker-compose.env
   #   environment:
-  #     SERVICES: api
-  #     PORT: 3000
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.api-gw.rule=PathPrefix(`/`)"
-  #     - "traefik.http.services.api-gw.loapostgresalancer.server.port=3000"
-  #   networks:
-  #     - internal
-
-  cron:
-    build:
-      context: .
-    image: cron
-    env_file: docker-compose.env
-    volumes:
-      - ${SSH_AUTH_SOCK}:${SSH_AUTH_SOCK}
-    environment:
-      - SSH_AUTH_SOCK="${SSH_AUTH_SOCK}"
-      - SERVICES=cron
-    depends_on:
-      - nats
-      - index
-    networks:
-      - internal
-
-
-  index:
-    build: .
-    image: index
-    env_file: docker-compose.env
-    environment:
-      SERVICES: index
-    depends_on:
-      - postgresd
-      - nats
-      - ingest
-      - ipfs
-    networks:
-      - internal
-
-  ingest:
-    build: .
-    image: ingest
-    env_file: docker-compose.env
-    environment:
-      SERVICES: ingest
-    depends_on:
-      - nats
-      - instrument_info
-    networks:
-      - internal
-  instrument_info:
-    build: .
-    image: instrument_info
-    env_file: docker-compose.env
-    environment:
-      SERVICES: instrument_info
-    depends_on:
-      - nats
-    networks:
-      - internal
-
-  ipfs:
-    build: .
-    image: ipfs
-    env_file: docker-compose.env
-    environment:
-      SERVICES: ipfs
-    depends_on:
-      - postgresd
-      - nats
-    networks:
-      - internal
-
-  rate:
-    build: .
-    image: rate
-    env_file: docker-compose.env
-    environment:
-      SERVICES: rate
-    depends_on:
-      - nats
-      - postgresd
-    networks:
-      - internal
-
-  ws-gw:
-    build: .
-    image: ws
-    env_file: docker-compose.env
-    environment:
-      SERVICES: ws
-    labels:
-      # - "traefik.backend=ws-gw"
-      - "traefik.enable=true"
-      - "traefik.port=80"
-      - "traefik.http.routers.ws-gw.rule=PathPrefix(`/ws`)"
-      - "traefik.http.routers.ws-gw.rule=Host(`ws-gw.volatility.com`)"
-      - "traefik.http.routers.ws-gw.entrypoints=websocket"
-      - traefik.http.routers.ws-gw.tls=true
-      - traefik.http.routers.ws-gw.tls.certresolver=lets-encrypt
-      # - "traefik.http.services.ws-gw.loadbalancer.server.url=http://ws-gw/"
-      # - "traefik.webservice.frontend.entryPoints=http,ws"
-    networks:
-      - internal
-      - web
-    depends_on:
-      - nats
+  #     DOCKER_BUILDKIT: 1
+  #     TRANSPORTER: nats://nats:4222
+  #     SERVICES: cron.service.js
+  #     SSH_AUTH_SOCK: "${SSH_AUTH_SOCK}"
+  #   links:
+  #     - nats
+  #   volumes:
+  #     - ./:/app
+  #   depends_on:
+  #     - nats
+  #     - postgresd
 
   nats:
     image: nats:2
+    container_name: nats
     ports:
       - '4222:4222'
     restart: unless-stopped
     command:
       - '-m'
       - '8222'
+      - '--debug'
     labels:
       - "traefik.enable=false"
-    networks:
-      - internal
-  nats_exporter:
-    image: natsio/prometheus-nats-exporter:latest
-    command:
-      - '-varz'
-      - http://nats:8222
-    networks:
-      - internal
 
   postgresd:
     container_name: postgresd
@@ -142,57 +38,93 @@ services:
     ports:
       - 5432:5432
     environment:
-      - POSTGRES_USER=mfiv_user
-      - POSTGRES_PASSWORD=volatility-postgres-password
-      - POSTGRES_HOST=postgresd
-      - POSTGRES_PORT=5432
-      - POSTGRES_postgres=volatility_development
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
-      - pgdata1:/var/lib/postgresql/data
-    networks:
-      - internal
-      - web
-  traefik:
-    image: traefik:v2.4
-    command:
-      - "--log.level=DEBUG"
-      - "--api=true"
-      - "--api.insecure=true" # Don't do that in production!
-      - "--api.debug=true"
-      - "--docker"
-      - "--docker.domain=volatility.com"
-      # - "--entryPoints.http.address=:80"
-      - "--entrypoints.websocket.address=:80"
-      - "--entryPoints.metrics.address=:8082"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.entryPoint=metrics"
-      - "--accessLog"
-    ports:
-      - "80:80"
-      - "443:443"
-      # - "80:80"
-      # - "8080:8080"
-      # - 3000:80
-      # - 3001:8080
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/acme.json:/acme.json
-      - ./traefik/traefik.toml:/traefik.toml
-      # - /dev/null:/traefik.toml
-    networks:
-      - web
-      - internal
-      # - default
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init-db.sql:/docker-entrypoint-initdb.d/init.sql
 
-networks:
-  web:
-    external: true
-  internal:
-    external: false
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379"
+    volumes:
+      - redis_data:/var/lib/redis/data
+
+  index:
+    container_name: index
+    build:
+      context: .
+    image: volatility-services
+    env_file: docker-compose.env
+    environment:
+      SERVICES: index
+    links:
+      - nats
+      - postgresd
+    volumes:
+      - ~/.aws/:/root/.aws/
+      - ./:/app
+      - ~/.ssh:/root/.ssh
+    depends_on:
+      - ingest
+
+  instrument_info:
+    build:
+      context: .
+    image: volatility-services
+    container_name: instrument_info
+    env_file: docker-compose.env
+    environment:
+      SERVICES: instrument_info
+    links:
+      - nats
+    volumes:
+      - ~/.aws/:/root/.aws/
+      - ./:/app
+      - ~/.ssh:/root/.ssh
+    depends_on:
+      - nats
+
+  ingest:
+    build:
+      context: .
+    image: volatility-services
+    container_name: ingest
+    env_file: docker-compose.env
+    restart: on-failure
+    environment:
+      SERVICES: ingest
+    links:
+      - nats
+    volumes:
+      - ~/.aws/:/root/.aws/
+      - ./:/app
+      - ~/.ssh:/root/.ssh
+    depends_on:
+      - nats
+      - instrument_info
+
+  ws:
+    build:
+      context: .
+    image: volatility-services
+    container_name: ws
+    env_file: docker-compose.env
+    ports:
+      - 3000:3000
+    environment:
+      SERVICES: ws
+    links:
+      - nats
+    volumes:
+      - ~/.aws/:/root/.aws/
+      - ./:/app
+      - ~/.ssh:/root/.ssh
+    depends_on:
+      - nats
 
 volumes:
-  pgdata1: {}
-  data:
+  postgres_data:
+  redis_data:

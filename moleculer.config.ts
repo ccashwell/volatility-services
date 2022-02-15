@@ -1,34 +1,7 @@
 "use strict"
+import { BrokerOptions, Errors, LogLevels, MetricRegistry } from "moleculer"
 import "reflect-metadata"
-import { BrokerOptions, MetricRegistry } from "moleculer"
-import { Connection, createConnection } from "typeorm"
-// import chalk from "chalk"
-import config from "@configuration"
-
-// process.on("unhandledRejection", function handleWarning(reason, promise) {
-//   console.log(chalk.red.bold("[PROCESS] Unhandled Promise Rejection"))
-//   console.log(chalk.red.bold("- - - - - - - - - - - - - - - - - - -"))
-//   console.log(reason)
-//   console.log(chalk.red.bold("- -"))
-// })
-
-// createConnection method will automatically read connection options
-// from your ormconfig file or environment variables
-// async function dbInit() {
-//   const connection = await createConnection()
-//   return connection
-// }
-
-// ;(async () => {
-//   try {
-//     await dbInit()
-//     console.log("&&&&&& Initialized DB &&&&&&&&&")
-//   } catch (e) {
-//     // Deal with the fact the chain failed
-//   }
-// })()
-//   .then(value => console.log("init db"))
-//   .catch(err => console.error(err))
+import { Connection } from "typeorm"
 
 /**
  * Moleculer ServiceBroker configuration file
@@ -67,11 +40,34 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
 
   // Enable/disable logging or use custom logger. More info: https://moleculer.services/docs/0.14/logging.html
   // Available logger types: "Console", "File", "Pino", "Winston", "Bunyan", "debug", "Log4js", "Datadog"
-  logger: config.logger,
+  logger: {
+    type: "Console",
+    options: {
+      // Using colors on the output
+      colors: true,
+      // Print module names with different colors (like docker-compose for containers)
+      moduleColors: true,
+      // Line formatter. It can be "json", "short", "simple", "full", a `Function` or a template string like "{timestamp} {level} {nodeID}/{mod}: {msg}"
+      formatter: "full",
+      // Custom object printer. If not defined, it uses the `util.inspect` method.
+      objectPrinter: null,
+      // Auto-padding the module name in order to messages begin at the same column.
+      autoPadding: true,
+
+      log4js: {
+        appenders: {
+          app: { type: "file", filename: "./logs/application.log" }
+        },
+        categories: {
+          default: { appenders: ["app"], level: "info" }
+        }
+      }
+    }
+  },
 
   // Default log level for built-in console logger. It can be overwritten in logger options above.
   // Available values: trace, debug, info, warn, error, fatal
-  logLevel: config.logLevel,
+  logLevel: (process.env.LOG_LEVEL ?? "info") as LogLevels,
 
   // Define transporter.
   // More info: https://moleculer.services/docs/0.14/networking.html
@@ -89,10 +85,23 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   serializer: "JSON",
 
   // Number of milliseconds to wait before reject a request with a RequestTimeout error. Disabled: 0
-  requestTimeout: config.requestTimeout,
+  requestTimeout: 10 * 1000,
 
   // Retry policy settings. More info: https://moleculer.services/docs/0.14/fault-tolerance.html#Retry
-  retryPolicy: config.retryPolicy,
+  retryPolicy: {
+    // Enable feature
+    enabled: true,
+    // Count of retries
+    retries: 3,
+    // First delay in milliseconds.
+    delay: 100,
+    // Maximum delay in milliseconds.
+    maxDelay: 1000,
+    // Backoff factor for delay. 2 means exponential backoff.
+    factor: 2,
+    // A function to check failed requests.
+    check: (err: Error) => err && err instanceof Errors.MoleculerRetryableError && !!err.retryable
+  },
 
   // Limit of calling level. If it reaches the limit, broker will throw an MaxCallLevelError error. (Infinite loop protection)
   maxCallLevel: 100,

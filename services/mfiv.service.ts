@@ -1,6 +1,6 @@
-import { Context, Service, ServiceBroker } from "moleculer"
 import { MethodologyIndex } from "@entities"
 import { MfivEvent } from "@events"
+import { Context, Service, ServiceBroker } from "moleculer"
 
 export default class MfivService extends Service {
   public constructor(public broker: ServiceBroker) {

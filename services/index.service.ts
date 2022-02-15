@@ -1,6 +1,5 @@
 /* eslint-disable max-len */
 "use strict"
-import configuration from "@configuration"
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -20,6 +19,7 @@ import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node
 import { OptionSummary } from "tardis-dev"
 import { chainFrom } from "transducist"
 import { getConnection, getRepository, Repository } from "typeorm"
+import configuration from "../src/configuration"
 
 /**
  * VG.MethodologyParams = { exchange: 'deribit', baseCurrency: 'eth', type: 'option', methodology: 'mfiv', timestamp: Date }}

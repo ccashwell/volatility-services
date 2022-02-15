@@ -6,14 +6,12 @@ module.exports = {
   globals: {
     "ts-jest": {
       // ts-jest configuration goes here
-      tsconfig: "./test/tsconfig.test.json",
-    },
+      tsconfig: "./test/tsconfig.test.json"
+    }
   },
-  testPathIgnorePatterns: [
-    "<rootDir>/configuration/config.test.ts"
-  ],
+  testPathIgnorePatterns: ["<rootDir>/configuration/config.test.ts"],
   moduleNameMapper: {
-    "^@configuration$": "<rootDir>/configuration",
+    "^@configuration$": "<rootDir>/src/configuration",
     "^@clients/(.*)$": "<rootDir>/src/clients/$1",
     "^@clients$": "<rootDir>/src/clients",
     "^@datasources$": "<rootDir>/src/datasources",

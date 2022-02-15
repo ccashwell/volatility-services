@@ -1,13 +1,13 @@
 /* eslint-disable no-debugger */
 "use strict"
+import { IIndex } from "@interfaces"
+import { handleError } from "@lib/handlers/errors"
+import { toIsoNoMs } from "@lib/utils"
+import * as IndexHelper from "@service_helpers"
 import { Service, ServiceBroker } from "moleculer"
 import * as Cron from "moleculer-cron"
 import { ResultAsync } from "neverthrow"
-import configuration from "@configuration"
-import { toIsoNoMs } from "@lib/utils"
-import { handleError } from "@lib/handlers/errors"
-import * as IndexHelper from "@service_helpers"
-import { IIndex } from "@interfaces"
+import configuration from "../src/configuration"
 
 /**
  * Compute index values from data produced by the ingest service

@@ -1,14 +1,14 @@
+import { NormalizedExchange } from "@lib/types"
 import {
-  streamNormalized,
-  normalizeOptionsSummary,
-  replayNormalized,
-  StreamNormalizedOptions,
   Exchange,
   MapperFactory,
-  ReplayNormalizedOptions
+  normalizeOptionsSummary,
+  replayNormalized,
+  ReplayNormalizedOptions,
+  streamNormalized,
+  StreamNormalizedOptions
 } from "tardis-dev"
-import configuration from "@configuration"
-import { NormalizedExchange } from "@lib/types"
+import configuration from "../configuration"
 
 /**
  * Realtime stream of OptionSummary data.

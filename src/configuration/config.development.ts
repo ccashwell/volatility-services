@@ -16,6 +16,5 @@ export const config: EnvConfig = {
     //   host: process.env.POSTGRES_HOST as string,
     //   port: +(process.env.POSTGRES_PORT as string)
     // }
-  },
-  logLevel: "info"
+  }
 }
