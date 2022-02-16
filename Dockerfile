@@ -39,8 +39,11 @@ RUN mkdir -m 700 /root/.ssh; \
     touch -m 600 /root/.ssh/known_hosts; \
     ssh-keyscan github.com > /root/.ssh/known_hosts
 
-# RUN --mount=type=ssh,id=me mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 COPY . .
+# COPY the default (~/.ssh/id_rsa) ssh key into the container
+ADD $HOME/.ssh/id_rsa /root/.ssh/id_rsa
+# And append to the ssh config so that it's the default ssh key
+RUN  echo "    IdentityFile /root/.ssh/id_rsa" >> /etc/ssh/ssh_config
 RUN --mount=type=ssh git clone git@github.com:volatilitygroup/node-volatility-mfiv.git node-volatility-mfiv
 
 # Install dependencies
