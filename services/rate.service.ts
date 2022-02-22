@@ -1,15 +1,16 @@
 /* eslint-disable max-len */
 "use strict"
-import { Context, Service, ServiceBroker, Errors } from "moleculer"
-import * as DbAdapter from "moleculer-db"
-import { DeepPartial, Repository, getConnection, getRepository } from "typeorm"
-import { ResultAsync } from "neverthrow"
 import { provideRateResponse } from "@datasources/aave"
-import { IRate } from "@interfaces/services/rate"
 import { Rate } from "@entities"
-import connectionInstance from "@entities/connection"
+import { IRate } from "@interfaces/services/rate"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
 import { Mappers } from "@lib/utils/mappers"
+import { Context, Errors, Service, ServiceBroker } from "moleculer"
+import * as DbAdapter from "moleculer-db"
+import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
+import { ResultAsync } from "neverthrow"
+import { DeepPartial, getConnection, getRepository, Repository } from "typeorm"
+import configuration from "../src/configuration"
 
 export default class RateService extends Service {
   public constructor(public broker: ServiceBroker) {
@@ -31,15 +32,16 @@ export default class RateService extends Service {
         scalable: true
       },
 
-      // adapter: connectionInstance("rate"),
-      // adapter: new TypeOrmDbAdapter(configuration.adapter),
+      adapter: new TypeOrmDbAdapter<Rate>(configuration.adapter),
 
       model: Rate,
 
       mixins: [DbAdapter],
 
-      // Actions
       actions: {
+        /**
+         * Get the liquidity rate from AAVE via the LendingPools contract
+         */
         risklessRate: {
           params: {
             source: { type: "enum", values: ["aave"], default: "aave" }
@@ -63,10 +65,6 @@ export default class RateService extends Service {
             }
           }
         }
-      },
-
-      async started() {
-        // return void (await connectionInstance())
       },
 
       async stopped() {

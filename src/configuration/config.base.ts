@@ -1,12 +1,3 @@
-import {
-  BaseCurrencyEnum,
-  MethodologyEnum,
-  MethodologyExchangeEnum,
-  MethodologyExpiryEnum,
-  MethodologyWindowEnum,
-  SymbolTypeEnum
-} from "@entities"
-import { IIndex } from "@interfaces"
 import { NormalizedExchange } from "@lib/types"
 import { Exchange } from "tardis-dev"
 
@@ -44,9 +35,6 @@ export interface EnvConfig {
   //   port: number
   //   logging?: (message: any, ...optionalParams: any[]) => void
   // }
-  cronSettings: {
-    estimate: Omit<IIndex.EstimateParams, "at">
-  }
   indexSettings: {
     risklessRate: number
     risklessRateAt: string
@@ -71,17 +59,6 @@ export const config: EnvConfig = {
   aws: {
     region: process.env.AWS_REGION ?? "us-east-2",
     smName: "API_Keys"
-  },
-  cronSettings: {
-    estimate: {
-      exchange: (process.env.EXCHANGE as MethodologyExchangeEnum) ?? MethodologyExchangeEnum.Deribit,
-      methodology: (process.env.METHODOLOGY as MethodologyEnum) ?? MethodologyEnum.MFIV,
-      baseCurrency: (process.env.BASE_CURRENCY as BaseCurrencyEnum) ?? BaseCurrencyEnum.ETH,
-      interval: (process.env.INTERVAL as MethodologyWindowEnum) ?? MethodologyWindowEnum.Day14,
-      symbolType: (process.env.INSTRUMENT as SymbolTypeEnum) ?? SymbolTypeEnum.Option,
-      expiryType: (process.env.EXPIRY_TYPE as MethodologyExpiryEnum) ?? MethodologyExpiryEnum.FridayT08,
-      contractType: ["call_option", "put_option"]
-    }
   },
   indexSettings: {
     risklessRate: parseFloat(process.env.RISKLESS_RATE ?? "0.0055"),

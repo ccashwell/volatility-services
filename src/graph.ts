@@ -97,14 +97,12 @@ ws.on("open", () => {
   // console.info("Subscribed to messages")
 })
   .on("ping", () => {
-    //console.log("PINGED")
     ws.pong()
   })
   .on("message", message => {
     const buffer = message as ArrayBuffer
     const index = JSON.parse(decoder.decode(buffer)) as { topic: string; data: unknown }
     if (index.topic === "mfiv/14d/eth") {
-      // console.log("GOT MFIV")
       const payload = index.data as {
         type: string
         at: string
@@ -118,8 +116,8 @@ ws.on("open", () => {
     } else if (index.topic === "mfiv/expiry") {
       const payload = index.data as OptionSummary
       const expirationDate = payload.expirationDate as unknown as string
-      const nearExpiry = "2022-02-25T08:00:00.000Z"
-      const nextExpiry = "2022-03-04T08:00:00.000Z"
+      const nearExpiry = "2022-03-04T08:00:00.000Z"
+      const nextExpiry = "2022-03-11T08:00:00.000Z"
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
       log.log(`${payload.timestamp} : ${payload.symbol} : ${payload.underlyingPrice}`)

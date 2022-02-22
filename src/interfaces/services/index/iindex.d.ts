@@ -1,12 +1,12 @@
-import { ContractType } from "tardis-dev"
 import {
-  MethodologyEnum,
-  MethodologyWindowEnum,
   BaseCurrencyEnum,
+  MethodologyEnum,
   MethodologyExchangeEnum,
-  SymbolTypeEnum,
-  MethodologyExpiryEnum
+  MethodologyExpiryEnum,
+  MethodologyWindowEnum,
+  SymbolTypeEnum
 } from "@entities"
+import { ContractType } from "tardis-dev"
 
 export interface EstimateParams {
   at: string

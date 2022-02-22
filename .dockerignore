@@ -1,10 +1,36 @@
-docker-compose.env
-docker-compose.yml
-Dockerfile
+
 node_modules
-test
-.vscode
 dist
 docs
-*.log
+coverage
+db-data
+logs
+repl-commands
+*.out
+traefik
+test
+# docker-compose.env
+docker-compose.*
+Dockerfile
+.vscode
+# dist
+# docs
 
+coverage
+*.log
+.env
+.git
+.gitignore
+.husky
+.editorconfig
+.dockerignore
+# repl-commands
+# ecosystem.config.js
+k8s.yaml
+Makefile
+src/graph.ts
+.eslint*
+.prettier*
+tmp
+db-data
+.npmrc

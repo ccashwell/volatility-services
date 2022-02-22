@@ -1,7 +1,7 @@
-import * as _ from "underscore"
-import { SecretClient, SecretKey } from "./types"
 import { FetchSecret } from "@datasources/secret_manager"
 import { SecretClientError } from "@lib/errors/secret_error"
+import * as _ from "lodash"
+import { SecretClient, SecretKey } from "./types"
 
 export interface ClientConfig {
   secretName: string

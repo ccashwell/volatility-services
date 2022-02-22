@@ -18,9 +18,9 @@ services:
   #   depends_on:
   #     - nats
   #     - postgresd
-
   nats:
-    image: nats:2
+    # platform: linux/amd64
+    image: nats:2.7.2
     container_name: nats
     ports:
       - '4222:4222'
@@ -33,20 +33,25 @@ services:
       - "traefik.enable=false"
 
   postgresd:
+    # platform: linux/amd64
     container_name: postgresd
-    image: postgres:12
+    image: postgres:12.10
     ports:
       - 5432:5432
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./db-data/:/var/lib/postgresql/data/
+      # - postgres_data:/var/lib/postgresql/data
       - ./postgres/init-db.sql:/docker-entrypoint-initdb.d/init.sql
 
   redis:
-    image: redis:alpine
+    # platform: linux/arm64
+    image: arm64v8/redis:6.2.6
     container_name: redis
+    environment:
+      - REDIS_PASSWORD='redis-password'
     ports:
       - "6379"
     volumes:
@@ -56,6 +61,7 @@ services:
     container_name: index
     build:
       context: .
+      # dockerfile: Dockerfile.slim
     image: volatility-services
     env_file: docker-compose.env
     environment:
@@ -64,32 +70,35 @@ services:
       - nats
       - postgresd
     volumes:
-      - ~/.aws/:/root/.aws/
-      - ./:/app
-      - ~/.ssh:/root/.ssh
+      - ~/.aws:/home/node/.aws
+      # - ./:/app
+      # - ./:/usr/src/app
     depends_on:
       - ingest
 
   instrument_info:
     build:
       context: .
+      # dockerfile: Dockerfile.slim
     image: volatility-services
     container_name: instrument_info
     env_file: docker-compose.env
     environment:
       SERVICES: instrument_info
+      REDIS_DB: 0
     links:
       - nats
     volumes:
-      - ~/.aws/:/root/.aws/
-      - ./:/app
-      - ~/.ssh:/root/.ssh
+      - ~/.aws:/home/node/.aws
+      # - ./:/app
+      # - ./:/usr/src/app
     depends_on:
       - nats
 
   ingest:
     build:
       context: .
+      # dockerfile: Dockerfile.slim
     image: volatility-services
     container_name: ingest
     env_file: docker-compose.env
@@ -99,9 +108,9 @@ services:
     links:
       - nats
     volumes:
-      - ~/.aws/:/root/.aws/
-      - ./:/app
-      - ~/.ssh:/root/.ssh
+      - ~/.aws:/home/node/.aws
+      # - ./:/app
+      # - ./:/usr/src/app
     depends_on:
       - nats
       - instrument_info
@@ -109,6 +118,7 @@ services:
   ws:
     build:
       context: .
+      # dockerfile: Dockerfile.slim
     image: volatility-services
     container_name: ws
     env_file: docker-compose.env
@@ -119,9 +129,9 @@ services:
     links:
       - nats
     volumes:
-      - ~/.aws/:/root/.aws/
-      - ./:/app
-      - ~/.ssh:/root/.ssh
+      - ~/.aws:/home/node/.aws
+      # - ./:/app
+      # - ./:/usr/src/app
     depends_on:
       - nats
 

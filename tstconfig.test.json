@@ -2,6 +2,6 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "baseUrl": "./dist"
-  } //,
-  //"exclude": ["node_modules", "src/graph.ts", "./test/**/*.ts"]
+  },
+  "include": ["./test/**/*.spec.ts"]
 }

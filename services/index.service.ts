@@ -48,9 +48,6 @@ export default class IndexService extends Service {
       name: "index",
 
       adapter: new TypeOrmDbAdapter<MethodologyIndex>(configuration.adapter),
-      // adapter: connectionInstance(),
-      // getConnection("default"),
-      // adapter: connectionInstance(),
 
       model: MethodologyIndex,
 
@@ -101,21 +98,9 @@ export default class IndexService extends Service {
         }
       },
 
-      // async started() {
-      //   // const connection = getConnection()
-      //   return Promise.resolve()
-      //   // return void (await connectionInstance())
-      // },
-
       async stopped() {
         return await getConnection().close()
       }
-
-      // started() {
-      // this.adapter = getConnection("default")
-      //  const connection = getConnection("default")
-      // return Promise.resolve()
-      //}
     })
   }
 
@@ -137,6 +122,7 @@ export default class IndexService extends Service {
       ...configuration.indexSettings
     }
 
+    // The last option price by timestamp becomes the underlying price
     const mostRecent = findMostRecent(options)
     const underlyingPrice = mostRecent?.underlyingPrice ?? 0
     const mfivParams: MfivParams = {

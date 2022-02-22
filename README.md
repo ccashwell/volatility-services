@@ -6,6 +6,17 @@ This is a [Moleculer](https://moleculer.services/)-based microservices project. 
 
 ## Usage
 
+THESE INSTRUCTIONS ARE VERY SPECIFIC TO THIS BRANCH ONLY:
+
+NOTE: Before you begin, make sure docker is NOT running and make sure you have an ssh key located at `~/.ssh/id_rsa`
+
+- Add your ssh key to the ssh-agent with `ssh-add ~/.ssh/id_rsa`
+- Open Leapp.app and create an 'admin' profile in us-east-1 if you do not have one already.
+- Run `make hack` This will make sure things get setup correctly for the node-volatility-mfiv-internal repo which is what we use here to process MFIV
+- Run `make build` to build the docker container
+- Run `npm run dc:up` to start all the services via docker-compose
+- Run `ts-node src/graph.ts` to check that you're getting websocket data
+
 Start the project with `npm run dev` command.
 After starting, open the http://localhost:3000/ URL in your browser.
 On the welcome page you can test the generated services via API Gateway and check the nodes & services.

@@ -28,7 +28,6 @@
       "blessed": ["typings/blessed/index.d.ts"],
       "moleculer-cron": ["typings/moleculer-cron/index.d.ts"],
       "moleculer-web-uws": ["typings/moleculer-web-uws/index.d.ts"],
-      "node-volatility-mfiv": ["typings/node-volatility-mfiv/index.d.ts"],
       "@clients/*": ["src/clients/*"],
       "@clients": ["src/clients"],
       "@configuration/*": ["src/configuration/*"],
@@ -57,6 +56,6 @@
       "@lib": ["src/lib"]
     }
   },
-  "include": ["./src/**/*.ts", "./services/**/*.ts", "./test/**/*.spec.ts", "./moleculer.config.ts"],
-  "exclude": ["node_modules"]
+  "include": ["./src/**/*.ts", "./services/**/*.ts", "./moleculer.config.ts", "./test/**/*.ts"],
+  "exclude": ["node_modules", "src/graph.ts"]
 }

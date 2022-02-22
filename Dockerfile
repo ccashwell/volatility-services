@@ -1,62 +1,43 @@
 # syntax=docker/dockerfile:1
 
-FROM bitnami/node:16.14.0
-
-# RUN apk add --no-cache openssh-client git
-# RUN apk add --no-cache --virtual .gyp python make g++ \
-#     && npm install \
-#     && apk del .gyp
-
-# RUN apk add --no-cache --virtual .gyp \
-#         python3 \
-#         make \
-#         g++ && \
-#         rm -rf /var/cache/apk/*
-
-# RUN apk add --update python3 make g++ && rm -rf /var/cache/apk/*
-
-# RUN apk --no-cache add --virtual .builds-deps build-base python3
-
-# RUN mkdir /app
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm install
-# RUN npm ci
-
-# RUN apk add --no-cache --virtual .gyp \
-#         python3 \
-#         make \
-#         g++
-# COPY package.json package-lock.json ./
-
-# RUN npm install && npm rebuild bcrypt --build-from-source && npm cache clean --force
-
-RUN apt-get -yq update && \
-    apt-get -yqq install openssh-client git
-
-RUN mkdir -m 700 /root/.ssh; \
-    touch -m 600 /root/.ssh/known_hosts; \
-    ssh-keyscan github.com > /root/.ssh/known_hosts
-
-COPY . .
-# COPY the default (~/.ssh/id_rsa) ssh key into the container
-ADD $HOME/.ssh/id_rsa /root/.ssh/id_rsa
-# And append to the ssh config so that it's the default ssh key
-RUN  echo "    IdentityFile /root/.ssh/id_rsa" >> /etc/ssh/ssh_config
-RUN --mount=type=ssh git clone git@github.com:volatilitygroup/node-volatility-mfiv.git node-volatility-mfiv
-
-# Install dependencies
-# COPY package.json package-lock.json ./
-# RUN npm ci
-RUN npm install --save /app/node-volatility-mfiv
-
-# RUN --mount=type=ssh npm install
-# COPY tsconfig*.json ./
-# COPY src ./src
+# Stage 1 compiles typescript
+FROM node:16.14.0 as ts-compile
+WORKDIR /usr/src/app
+RUN touch newrelic_agent.log
+COPY package*.json ./
+COPY tsconfig*.json ./
+ENV NODE_ENV production
+RUN npm ci --only=production
+COPY . ./
 RUN npm run build
 
-# RUN npm run build \
-#  && npm prune
+# Stage 2 compiles typescript
+FROM node:16.14.0 as ts-remover
+WORKDIR /usr/src/app
+ENV NODE_ENV production
+COPY --from=ts-compile /usr/src/app/package*.json ./
+COPY --from=ts-compile /usr/src/app/tsconfig*.json ./
+COPY --from=ts-compile /usr/src/app/newrelic.js ./
+COPY --from=ts-compile /usr/src/app/dist ./dist
+COPY --from=ts-compile /usr/src/app/newrelic_agent.log ./
+COPY --from=ts-compile /usr/src/app/node-volatility-mfiv-internal ./node-volatility-mfiv-internal
+RUN npm set-script prepare "" && \
+    npm install --production && \
+    npm prune --production
 
-CMD ["npm", "start"]
+# FROM gcr.io/distroless/nodejs:16
+FROM node:16.14.0
+RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_arm64.deb && \
+    dpkg -i dumb-init_*.deb && \
+    rm -rf /var/cache/apt/lists
+WORKDIR /usr/src/app
+ENV NODE_ENV production
+COPY --from=ts-remover --chown=node:node /usr/src/app ./
+# COPY --from=ts-remover --chown=1000:1000 /usr/src/app ./
+# USER 1000
+USER node
+EXPOSE 3000
+ENV TS_NODE_PROJECT tsconfig.production.json
+# CMD ["./node_modules/moleculer/bin/moleculer-runner.js", "dist/services"]
+CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "dist/services"]
+

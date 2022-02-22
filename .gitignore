@@ -67,3 +67,17 @@ jspm_packages/
 dist/
 
 .ssh
+
+db-data/
+
+# Scratch for notes etc. that you don't want added to the repo
+scratch.txt
+scratch.json
+
+# Output from building docker via Makefile
+build.out
+
+*.ignore*
+
+# Adding this temporarily while this branch exists
+node-volatility-mfiv-internal

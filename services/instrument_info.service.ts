@@ -1,10 +1,10 @@
 "use strict"
+import { initTardis } from "@datasources/tardis"
+import { tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"
+import { IInstrumentInfo } from "@interfaces/services/instrument_info"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { InstrumentInfo } from "tardis-dev"
 import { chainFrom } from "transducist"
-import { IInstrumentInfo } from "@interfaces/services/instrument_info"
-import { initTardis } from "@datasources/tardis"
-import { tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"
 
 export default class InstrumentInfoService extends Service {
   public constructor(public broker: ServiceBroker) {
@@ -47,13 +47,7 @@ export default class InstrumentInfoService extends Service {
         }
       },
 
-      // created() {
-      //   this.logger.info("Service created\n")
-      // },
-
-      // Service methods
       started(this: InstrumentInfoService) {
-        this.logger.info("Service started\n")
         return initTardis()
       }
     })
@@ -68,6 +62,7 @@ export default class InstrumentInfoService extends Service {
     const Available = (item: InstrumentInfo) =>
       item.availableSince <= params.timestamp && item.availableTo ? item.availableTo > params.timestamp : true
 
+    // chainFrom begins a transducer which reduces the instruments from the exchange
     return chainFrom(await this.fetchActiveInstruments(params))
       .filter(Available)
       .filter(item => !!item.expiry && params.expirationDates.includes(item.expiry))

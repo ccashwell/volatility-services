@@ -32,12 +32,15 @@ export default class IngestService extends Service {
       // Settings
       settings: {
         $dependencyTimeout: 60000,
+
         expiryType: MethodologyExpiryEnum.FridayT08
       },
+
       // Metadata
       metadata: {
         scalable: true
       },
+
       // Dependencies
       dependencies: [
         {
@@ -89,6 +92,7 @@ export default class IngestService extends Service {
   }
 
   ingest(this: IngestService) {
+    // Construct the parameters necessary to get the instrument's ids for the call to streamNormalized
     const expiries = mfivDates(new Date(), "14d", MethodologyExpiryEnum.FridayT08)
     return void ResultAsync.fromPromise(this.fetchInstruments(expiries), handleError)
       .map(streamNormalizedOptions({ exchange: configuration.tardis.exchange }))
@@ -105,7 +109,7 @@ export default class IngestService extends Service {
       // Save to cache
       this.cacheMessage(message)
 
-      // this.broker.emit("mfiv.14d.eth.expiry", message).catch(handleAsMoleculerError)
+      this.broker.emit("mfiv.14d.eth.expiry", message).catch(handleAsMoleculerError)
     }
 
     return true
@@ -114,12 +118,16 @@ export default class IngestService extends Service {
   /**
    * Keep a cached list of option prices. This is a sideband operation
    * that does not await the promise.
+   *
+   * @remark TODO: Use ioredis mset
+   *
    * @param o - OptionSummary to cache
    */
   private cacheMessage(o: OptionSummary): void {
     const expiryKey = o.expirationDate.toISOString()
     if (!this.expiryMap.has(expiryKey)) {
       this.logger.info("Cache Miss", expiryKey)
+      // TODO: Should probably be ingesting into a Red-Black Tree
       this.expiryMap.set(expiryKey, new Set<string>())
     }
     const expirySet = this.expiryMap.get(expiryKey)
@@ -160,6 +168,10 @@ export default class IngestService extends Service {
     })
   }
 
+  /**
+   * Small helper method to output what's going on if needed.
+   * @returns
+   */
   private stats() {
     return {
       clock: new Date().toISOString(),

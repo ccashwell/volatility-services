@@ -78,6 +78,24 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   // Define a cacher.
   // More info: https://moleculer.services/docs/0.14/caching.html
   cacher: "Memory",
+  // cacher: {
+  //   type: "Redis",
+  //   options: {
+  //     // Prefix for keys
+  //     prefix: "VG",
+  //     // set Time-to-live to 30sec.
+  //     // ttl: process.env.CACHER_TTL,
+  //     // Turns Redis client monitoring on.
+  //     monitor: false,
+  //     // Redis settings
+  //     redis: {
+  //       host: process.env.REDIS_HOST,
+  //       port: process.env.REDIS_PORT,
+  //       password: process.env.REDIS_PASSWORD,
+  //       db: process.env.REDIS_DB ?? 0
+  //     }
+  //   }
+  // },
 
   // Define a serializer.
   // Available values: "JSON", "Avro", "ProtoBuf", "MsgPack", "Notepack", "Thrift".

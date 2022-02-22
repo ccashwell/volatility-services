@@ -1,5 +1,21 @@
 SHELL=/bin/bash
 HOST_NAME := localhost
+# DOCKER_REGISTRY=volatilitygroup DOCKER_REPOSITORY=
+#  --platform linux/amd64
+
+hack:
+	@echo This is only necessary while https://github.com/node-volatility-mfiv is private
+	cp -R ../node-volatility-mfiv-internal ./node-volatility-mfiv-internal || (echo "cp of node-volatility-mfiv-internal failed. Make sure you have the repo and that it's adjacent to this one. $$?"; exit 1)
+	chmod 0777 ./node-volatility-mfiv-internal
+	chmod 0666 ./node-volatility-mfiv-internal/package.json
+	sed -i '' '/"prepare": "husky install",/d' ./node-volatility-mfiv-internal/package.json || (echo "Failed to modify node-volatility-mfiv-internal/package.json. $$?"; exit 1)
+	npm install ./node-volatility-mfiv-internal --save
+
+clobber:
+	rm -rf ./node-volatility-mfiv-internal
+
+build:
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile -t volatility-group/volatility-services . 2>&1 | tee build.out
 
 bootstrap:
 	psql --file postgres/init.sql --port 6432 --username postgres
