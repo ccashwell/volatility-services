@@ -1,0 +1,14 @@
+{
+  "types": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "chore", "hidden": "Chores" },
+    { "type": "docs", "hidden": "Docs" },
+    { "type": "style", "hidden": "Stylistic Changes" },
+    { "type": "refactor", "hidden": "Code Refactor" },
+    { "type": "perf", "hidden": "Performance Changes" },
+    { "type": "test", "hidden": "Tests" }
+  ],
+  "commitUrlFormat": "https://github.com/VolatilityGroup/volatility-services/commits/{{hash}}",
+  "compareUrlFormat": "https://github.com/VolatilityGroup/volatility-services/compare/{{previousTag}}...{{currentTag}}"
+}
