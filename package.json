@@ -8,6 +8,8 @@
     "dev:working": "NODE_ENV=development AWS_PROFILE=admin AWS_REGION=us-east-1 node -r newrelic -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts --hot !services/ws.service.ts services/**/*.service.ts",
     "dev:broken": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --repl --hot services",
     "dev": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts --repl --hot",
+    "dev:cron": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --env --config moleculer.config.ts --repl --hot services/cron.service.ts",
+    "dev:rate": "AWS_PROFILE=main-admin node -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --env --config moleculer.config.ts --repl --hot services/rate.service.ts",
     "dev:instrument_info": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts --repl --hot ./services/instrument_info.service.ts",
     "docker:dev": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --hot --config moleculer.config.ts",
     "dockerfile:lint": "docker run --platform linux/amd64 --rm -i hadolint/hadolint < Dockerfile",
