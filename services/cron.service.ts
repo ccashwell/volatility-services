@@ -77,7 +77,7 @@ const paramsProvider = ({
   const at = new Date()
   const fleekKeyBuilder = () => {
     const { methodology, interval, baseCurrency } = settingsEstimate
-    return `/indices/methodology=${methodology}/interval=${interval}/currency=${baseCurrency}/at=${toIsoNoMs(
+    return `/indices/methodology=${methodology}/interval=${interval}/currency=${baseCurrency}/at=${toUnixTimestamp(
       at
     )}/evidence.json`
   }

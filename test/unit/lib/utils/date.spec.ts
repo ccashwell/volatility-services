@@ -1,6 +1,15 @@
-"use strict"
+import { toIsoNoMs, toUnixTimestamp } from "@lib/utils/date"
 
-import { toIsoNoMs } from "@lib/utils/date"
+describe("Test 'toUnixSec'", () => {
+  const str = "2021-01-25T10:15:45.145Z"
+
+  describe(`when the time is '${str}'`, () => {
+    test("returns unix timestamp in seconds", () => {
+      const subject = toUnixTimestamp(new Date(str))
+      expect(subject).toEqual(1611569745)
+    })
+  })
+})
 
 describe("Test 'toIsoNoMs'", () => {
   const str = "2021-01-25T10:15:45.145Z"
