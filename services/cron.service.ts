@@ -1,5 +1,3 @@
-/* eslint-disable no-debugger */
-"use strict"
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -10,7 +8,7 @@ import {
 } from "@entities/types"
 import { IIndex } from "@interfaces"
 import { handleError } from "@lib/handlers/errors"
-import { toIsoNoMs } from "@lib/utils"
+import { toUnixTimestamp } from "@lib/utils/date"
 import * as IndexHelper from "@service_helpers"
 import { Service, ServiceBroker } from "moleculer"
 import * as Cron from "moleculer-cron"

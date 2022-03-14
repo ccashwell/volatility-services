@@ -1,8 +1,8 @@
 "use strict"
-import { ServiceBroker, Errors } from "moleculer"
-import RateService from "@services/rate.service"
 import { IRate } from "@interfaces/services/rate"
 import { risklessRateError } from "@lib/errors"
+import RateService from "@services/rate.service"
+import { Errors, ServiceBroker } from "moleculer"
 
 // const mockAave = (response: IRate.RisklessRateParams) => {
 //   jest.mock("@datasources/aave", () => {
