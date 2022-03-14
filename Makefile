@@ -3,10 +3,39 @@ HOST_NAME := localhost
 # DOCKER_REGISTRY=volatilitygroup DOCKER_REPOSITORY=
 #  --platform linux/amd64
 
-.PHONY: token login
+.PHONY: login bootstrap-npm ecr-login ecr-build ecr-tag ecr-push
+
+ecr-deploy: login bootstrap-npm ecr-login ecr-build ecr-tag ecr-push deploy
 
 login:
-	aws codeartifact login --tool npm --domain artifacts --domain-owner 061573364520 --repository volatility-npm-store
+	aws codeartifact login --tool npm --domain artifacts --domain-owner 994224827437 --repository node-volatility-mfiv
+
+bootstrap-npm: login
+	export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain artifacts --domain-owner 994224827437 --query authorizationToken --output text`
+	echo "@volatility-group:registry=https://artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/" > .npmrc
+	echo "//artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:always-auth=true" >> .npmrc
+	echo "//artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:_authToken=${CODEARTIFACT_AUTH_TOKEN}" >> .npmrc
+
+ecr-login:
+	aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 994224827437.dkr.ecr.us-east-2.amazonaws.com
+
+ecr-build: ecr-login
+	docker build -t compose-pipeline-volatility-services --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
+
+ecr-tag: ecr-build
+	docker tag compose-pipeline-volatility-services:latest 994224827437.dkr.ecr.us-east-2.amazonaws.com/compose-pipeline-volatility-services:latest
+
+ecr-push: ecr-tag
+	docker push 994224827437.dkr.ecr.us-east-2.amazonaws.com/compose-pipeline-volatility-services:latest
+
+deploy:
+	# BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name compose-pipeline --query "Stacks[0].Outputs[?OutputKey=='S3BucketName'].OutputValue" --output text`)
+	# BUCKET_NAME=compose-pipeline-sourcebucket-flkosb1nynzo
+	# IMAGE_URI=994224827437.dkr.ecr.us-east-2.amazonaws.com/compose-pipeline-volatility-services
+	# IMAGE_TAG=latest
+	zip -x dist -x copilot -x coverage -x db-data -x traefik -x node_modules -r -u compose-bundle.zip .
+	# aws s3 cp compose-bundle.zip s3://${BUCKET_NAME}/compose-bundle.zip
+	aws s3 cp compose-bundle.zip s3://compose-pipeline-sourcebucket-flkosb1nynzo/compose-bundle.zip
 
 token:
 	export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain artifacts --domain-owner 061573364520 --query authorizationToken --output text`

@@ -1,4 +1,3 @@
-
 node_modules
 dist
 docs
@@ -15,7 +14,7 @@ Dockerfile
 .vscode
 # dist
 # docs
-
+copilot
 coverage
 *.log
 .env
@@ -24,6 +23,7 @@ coverage
 .husky
 .editorconfig
 .dockerignore
+./scripts
 # repl-commands
 # ecosystem.config.js
 k8s.yaml
@@ -33,3 +33,14 @@ src/graph.ts
 .prettier*
 tmp
 db-data
+Makefile
+*.zip
+.envrc
+jest.config.js
+output
+*.md
+./types
+infrastructure
+.commitlintrc.json
+.versionrc.json
+infrastructure
