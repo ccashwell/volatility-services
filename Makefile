@@ -3,6 +3,19 @@ HOST_NAME := localhost
 # DOCKER_REGISTRY=volatilitygroup DOCKER_REPOSITORY=
 #  --platform linux/amd64
 
+.PHONY: token login
+
+login:
+	aws codeartifact login --tool npm --domain artifacts --domain-owner 061573364520 --repository volatility-npm-store
+
+token:
+	export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain artifacts --domain-owner 061573364520 --query authorizationToken --output text`
+
+# Add to .npmrc
+# registry=https://artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/
+# //artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:always-auth=true
+# //artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:_authToken=${CODEARTIFACT_AUTH_TOKEN}
+
 hack:
 	@echo This is only necessary while https://github.com/node-volatility-mfiv is private
 	cp -R ../node-volatility-mfiv-internal ./node-volatility-mfiv-internal || (echo "cp of node-volatility-mfiv-internal failed. Make sure you have the repo and that it's adjacent to this one. $$?"; exit 1)

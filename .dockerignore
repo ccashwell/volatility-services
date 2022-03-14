@@ -33,4 +33,3 @@ src/graph.ts
 .prettier*
 tmp
 db-data
-.npmrc

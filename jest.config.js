@@ -12,8 +12,10 @@ module.exports = {
   testPathIgnorePatterns: ["<rootDir>/configuration/config.test.ts"],
   moduleNameMapper: {
     "^@configuration$": "<rootDir>/src/configuration",
-    "^@clients/(.*)$": "<rootDir>/src/clients/$1",
     "^@clients$": "<rootDir>/src/clients",
+    "^@clients/(.*)$": "<rootDir>/src/clients/$1",
+    "^@contracts$": "<rootDir>/src/contracts",
+    "^@contracts/(.*)$": "<rootDir>/src/contracts/$1",
     "^@datasources$": "<rootDir>/src/datasources",
     "^@datasources/(.*)$": "<rootDir>/src/datasources/$1",
     "^@entities$": "<rootDir>/src/entities",
@@ -23,7 +25,7 @@ module.exports = {
     "^@repositories/(.*)$": "<rootDir>/src/repositories/$1",
     "^@service_helpers$": "<rootDir>/src/service_helpers",
     "^@service_helpers/(.*)$": "<rootDir>/src/service_helpers/$1",
-    "^@services/(.*)$": "<rootDir>/services",
+    "^@services/(.*)$": "<rootDir>/services/$1",
     "^@lib/(.*)$": "<rootDir>/src/lib/$1"
   }
 }

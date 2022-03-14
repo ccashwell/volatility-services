@@ -104,7 +104,7 @@
     "nats": "^2.4.0",
     "neverthrow": "^4.3.1",
     "newrelic": "^8.7.1",
-    "node-volatility-mfiv": "file:node-volatility-mfiv-internal",
+    "node-volatility-mfiv": "npm:@volatility-group/volatility-mfiv-internal@^0.2.0",
     "pg": "^8.7.1",
     "pg-hstore": "^2.3.4",
     "reflect-metadata": "^0.1.13",

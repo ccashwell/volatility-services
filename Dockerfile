@@ -4,10 +4,13 @@
 FROM node:16.14.0 as ts-compile
 WORKDIR /usr/src/app
 RUN touch newrelic_agent.log
+ARG CODEARTIFACT_AUTH_TOKEN
+COPY .npmrc .npmrc
 COPY package*.json ./
 COPY tsconfig*.json ./
 ENV NODE_ENV production
 RUN npm ci --only=production
+RUN rm -f .npmrc
 COPY . ./
 RUN npm run build
 
@@ -15,21 +18,27 @@ RUN npm run build
 FROM node:16.14.0 as ts-remover
 WORKDIR /usr/src/app
 ENV NODE_ENV production
-COPY --from=ts-compile /usr/src/app/package*.json ./
+ARG CODEARTIFACT_AUTH_TOKEN
+COPY --from=ts-compile /usr/src/app/package.json ./
 COPY --from=ts-compile /usr/src/app/tsconfig*.json ./
 COPY --from=ts-compile /usr/src/app/newrelic.js ./
 COPY --from=ts-compile /usr/src/app/dist ./dist
 COPY --from=ts-compile /usr/src/app/newrelic_agent.log ./
-COPY --from=ts-compile /usr/src/app/node-volatility-mfiv-internal ./node-volatility-mfiv-internal
+COPY --from=ts-compile /usr/src/app/.npmrc .npmrc
+# COPY --from=ts-compile /usr/src/app/node-volatility-mfiv-internal ./node-volatility-mfiv-internal
 RUN npm set-script prepare "" && \
     npm install --production && \
     npm prune --production
 
 # FROM gcr.io/distroless/nodejs:16
 FROM node:16.14.0
-RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_arm64.deb && \
-    dpkg -i dumb-init_*.deb && \
-    rm -rf /var/cache/apt/lists
+RUN apt-get update -y && apt-get install -y dumb-init
+# RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 && \
+#     dpkg -i dumb-init_1.2.5_x86_64 && \
+#     rm -rf /var/cache/apt/lists
+# RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_arm64.deb && \
+#     dpkg -i dumb-init_*.deb && \
+#     rm -rf /var/cache/apt/lists
 WORKDIR /usr/src/app
 ENV NODE_ENV production
 COPY --from=ts-remover --chown=node:node /usr/src/app ./
