@@ -1,0 +1,62 @@
+{
+  "app": "npx ts-node --prefer-ts-exts bin/cdk.ts",
+  "watch": {
+    "include": ["**"],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "**/*.d.ts",
+      "**/*.js",
+      "tsconfig.json",
+      "package*.json",
+      "yarn.lock",
+      "node_modules",
+      "test"
+    ]
+  },
+  "context": {
+    "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitiveId": true,
+    "@aws-cdk/core:stackRelativeExports": true,
+    "@aws-cdk/aws-rds:lowercaseDbIdentifier": true,
+    "@aws-cdk/aws-lambda:recognizeVersionProps": true,
+    "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": true,
+    "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
+    "@aws-cdk/aws-ec2:uniqueImdsv2TemplateName": true,
+    "@aws-cdk/core:target-partitions": ["aws", "aws-cn"],
+    "namespace": "vg",
+    "root": {
+      "stage": "root",
+      "environment": "gbl",
+      "account": "261141020394",
+      "region": "us-east-2"
+    },
+    "dev": {
+      "stage": "devplatform",
+      "environment": "ue2",
+      "account": "994224827437",
+      "region": "us-east-2",
+      "domain": "dev.volatility.com"
+    },
+    "stage": {
+      "stage": "stageplatform",
+      "environment": "ue2",
+      "account": "594739244103",
+      "region": "us-east-2",
+      "domain": "stage.volatility.com"
+    },
+    "prod": {
+      "stage": "prodplatform",
+      "environment": "ue2",
+      "account": "562068007705",
+      "region": "us-east-2",
+      "domain": "prod.volatility.com"
+    },
+    "dns": {
+      "stage": "dns",
+      "environment": "gbl",
+      "account": "468825517946",
+      "region": "us-east-2",
+      "domain": "volatility.com"
+    }
+  }
+}
