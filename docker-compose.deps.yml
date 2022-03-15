@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  nats:
+    # platform: linux/amd64
+    image: public.ecr.aws/docker/library/nats:2.7.2
+    container_name: nats
+    env_file: docker-compose.env
+    ports:
+      - '4222:4222'
+    command:
+      - '-m'
+      - '8222'
+      - '--debug'
+    networks:
+      - vg-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  postgresd:
+    # platform: linux/amd64
+    container_name: postgresd
+    image: public.ecr.aws/bitnami/postgresql:12.10.0
+    env_file: docker-compose.env
+    environment:
+      - POSTGRESQL_USERNAME=volatility
+      - POSTGRESQL_PASSWORD=supersecretpassword
+      - POSTGRESQL_DATABASE=volatility_development
+    ports:
+      - 5432:5432
+    volumes:
+      # - postgres_data:/bitnami/postgresql
+      - postgres_data:/var/lib/postgresql/data/
+      # - ./postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      # - postgres_data:/var/lib/postgresql/data/
+      # - postgres_data:/var/lib/postgresql/data
+      # - ./postgres/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - vg-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  redis:
+    image: public.ecr.aws/docker/library/redis:6.2
+    # image: redis:6.2.6
+    # image: arm64v8/redis:6.2.6
+    container_name: redis
+    env_file: docker-compose.env
+    ports:
+      - "6379"
+    volumes:
+      - redis_data:/var/lib/redis/data
+    networks:
+      - vg-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  vg-network:
+    driver: overlay
+    attachable: true

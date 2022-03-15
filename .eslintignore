@@ -2,3 +2,9 @@ postgres/init.sql
 database/models/index.js
 database/migrations/
 newrelic.js
+services/accounts.service.js
+services/tokens.service.js
+services/config.service.js
+services/mail.service.js
+mixins/db.mixin.js
+mixins/cron.mixin.js

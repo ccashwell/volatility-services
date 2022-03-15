@@ -50,7 +50,5 @@ USER node
 EXPOSE 3000
 ENV TS_NODE_PROJECT=tsconfig.production.json
 COPY --from=ts-remover --chown=node:node /usr/src/app ./
-RUN ls -ltrha dist
 # CMD ["./node_modules/moleculer/bin/moleculer-runner.js", "dist/services"]
 CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "dist/services"]
-
