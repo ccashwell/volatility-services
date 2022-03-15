@@ -1,14 +1,14 @@
-import Web3 from "web3"
-import { HttpProvider } from "web3-core"
-import { AbiItem } from "web3-utils"
-import { Result, ResultAsync } from "neverthrow"
-import { provideEtherscan as etherscan } from "@datasources/etherscan"
 import { DefaultClient as SecretsClient } from "@clients/secrets_client"
-import { ErrorType } from "@lib/types"
+import { AAVE } from "@contracts/known_addresses"
+import { provideEtherscan as etherscan } from "@datasources/etherscan"
 import { IRate } from "@interfaces"
 import C from "@lib/constants"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
-import { AAVE } from "@contracts/known_addresses"
+import { ErrorType } from "@lib/types"
+import { Result, ResultAsync } from "neverthrow"
+import Web3 from "web3"
+import { HttpProvider } from "web3-core"
+import { AbiItem } from "web3-utils"
 
 const aaveReserve = Web3.utils.toChecksumAddress(AAVE.LendingPoolV2)
 
