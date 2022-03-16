@@ -36,7 +36,7 @@ module.exports = {
     "@typescript-eslint/ban-types": "error",
     "@typescript-eslint/class-name-casing": "off",
     "@typescript-eslint/consistent-type-assertions": "error",
-    "@typescript-eslint/consistent-type-definitions": "error",
+    "@typescript-eslint/consistent-type-definitions": "warn",
     "@typescript-eslint/explicit-member-accessibility": [
       "off",
       {
@@ -78,16 +78,19 @@ module.exports = {
     "@typescript-eslint/no-namespace": "error",
     "@typescript-eslint/no-parameter-properties": "off",
     "@typescript-eslint/no-use-before-define": "off",
+    "@typescript-eslint/no-unsafe-assignment": "warn",
+    "@typescript-eslint/no-unsafe-member-access": "warn",
+    "@typescript-eslint/no-unsafe-argument": "warn",
     "@typescript-eslint/no-var-requires": "error",
     "@typescript-eslint/prefer-for-of": "error",
     "@typescript-eslint/prefer-function-type": "error",
     "@typescript-eslint/prefer-namespace-keyword": "off",
     "@typescript-eslint/quotes": [
       "error",
-      "double",
-      {
-        avoidEscape: true
-      }
+      "double"
+      // {
+      //   avoidEscape: false
+      // }
     ],
     "@typescript-eslint/triple-slash-reference": "error",
     //	"@typescript-eslint/type-annotation-spacing": "error",
@@ -156,7 +159,7 @@ module.exports = {
     "no-throw-literal": "error",
     // "no-trailing-spaces": "error",
     "no-undef-init": "error",
-    "no-underscore-dangle": "error",
+    // "no-underscore-dangle": "error",
     "no-unsafe-finally": "error",
     "no-unused-expressions": "error",
     "no-unused-labels": "error",

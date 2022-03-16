@@ -53,9 +53,17 @@
       "@Meta/*": ["src/meta/*"],
       "@Meta": ["src/meta"],
       "@lib/*": ["src/lib/*"],
-      "@lib": ["src/lib"]
+      "@lib": ["src/lib"],
+      "@volatility-api/*": ["volatility-api/*"],
+      "@volatility-api": ["volatility-api"]
     }
   },
-  "include": ["./src/**/*.ts", "./services/**/*.ts", "./moleculer.config.ts", "./test/**/*.ts"],
+  "include": [
+    "./src/**/*.ts",
+    "./services/**/*.ts",
+    "./moleculer.config.ts",
+    "./test/**/*.ts",
+    "./volatility-api/**/*.ts"
+  ],
   "exclude": ["node_modules", "src/graph.ts"]
 }

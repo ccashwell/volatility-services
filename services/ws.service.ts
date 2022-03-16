@@ -1,14 +1,21 @@
+/* eslint-disable camelcase */
 "use strict"
 import { Context, Service, ServiceBroker } from "moleculer"
 import ApiGateway from "moleculer-web-uws"
 import { MfivEvidence, OptionSummary } from "node-volatility-mfiv"
 import { TextEncoder } from "util"
-import uWS from "uWebSockets.js"
+import { DISABLED, WebSocket } from "uWebSockets.js"
+import { streamNormalizedWS } from "../src/ws/stream"
 
 /**
  * Compute index values from data produced by the ingest service
  */
 export default class WSService extends Service {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  readonly wsRoutes = {
+    "/ws-stream-normalized": streamNormalizedWS
+  } as any
+
   public constructor(public broker: ServiceBroker) {
     super(broker)
     this.parseServiceSchema({
@@ -20,13 +27,15 @@ export default class WSService extends Service {
         ws: {
           path: "/ws",
 
-          compression: 0,
-
-          idleTimeout: 0,
-
-          maxBackPressure: 1024 * 1024,
+          compression: DISABLED,
 
           maxPayloadLength: 16 * 1024,
+
+          idleTimeout: 24 * 60 * 60,
+
+          maxBackpressure: 5 * 1024 * 1024,
+
+          closeOnBackpressureLimit: true,
 
           keepAlive: {
             // Amount of seconds after which a PING message is sent to the client
@@ -42,37 +51,103 @@ export default class WSService extends Service {
             pong: new Uint8Array([65])
           },
 
-          // upgrade: (res, req, context) => {},
+          // upgrade: (res: HttpResponse, req: HttpRequest, context: us_socket_context_t) => {
+          //   this.logger.info("upgrade")
 
-          open: (socket: uWS.WebSocket) => {
+          //   res.upgrade(
+          //     { req },
+          //     req.getHeader("sec-websocket-key"),
+          //     req.getHeader("sec-websocket-protocol"),
+          //     req.getHeader("sec-websocket-extensions"),
+          //     context
+          //   )
+          // },
+
+          open: (ws: WebSocket) => {
+            this.logger.info("Opening")
             // eslint-disable-next-line no-debugger
-            // wsList.push(socket)
-            // socket.subscribe("mfiv.14d.eth.expiry")
-            //            wsList.push(socket)
-            socket.subscribe("mfiv/expiry")
-            socket.subscribe("mfiv/14d/eth")
+            debugger
+
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+            const path = ws.req.getUrl().toLocaleLowerCase() as string
+
+            console.log(`Opening path ${path}`)
+
+            ws.closed = false
+            const matchingRoute = this.wsRoutes[path]
+
+            if (matchingRoute !== undefined) {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+              matchingRoute(ws, ws.req)
+            } else {
+              ws.end(1008)
+            }
           },
 
-          message: (
-            app: { publish: (topic: string, data: any) => void },
-            socket: { publish: (topic: string, data: unknown) => void },
-            message: any,
-            isBinary: boolean,
-            topic: string
-          ) => {
-            console.info("ws message received", message)
-            // eslint-disable-next-line no-debugger
-            socket.publish("mfiv/expiry", message)
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          message: (ws: WebSocket, message: ArrayBuffer) => {
+            this.logger.info("Message")
+
+            if (ws.onmessage !== undefined) {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+              ws.onmessage(message)
+            }
           },
 
-          close: (ws: uWS.WebSocket, code: number, message: ArrayBuffer) => {
-            console.info("CLOSING SOCKET")
-            // wsList.shift()
+          close: (ws: WebSocket) => {
+            this.logger.info("Close")
+
+            ws.closed = true
+            if (ws.onclose !== undefined) {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+              ws.onclose()
+            }
           }
+
+          // open: (socket: uWS.WebSocket) => {
+          //   // eslint-disable-next-line no-debugger
+          //   // wsList.push(socket)
+          //   // socket.subscribe("mfiv.14d.eth.expiry")
+          //   //            wsList.push(socket)
+          //   socket.subscribe("mfiv/expiry")
+          //   socket.subscribe("mfiv/14d/eth")
+          // },
+
+          // message: (
+          //   app: { publish: (topic: string, data: any) => void },
+          //   socket: { publish: (topic: string, data: unknown) => void },
+          //   message: any,
+          //   isBinary: boolean,
+          //   topic: string
+          // ) => {
+          //   console.info("ws message received", message)
+          //   // eslint-disable-next-line no-debugger
+          //   socket.publish("mfiv/expiry", message)
+          //   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          // },
+
+          // close: (ws: uWS.WebSocket, code: number, message: ArrayBuffer) => {
+          //   console.info("CLOSING SOCKET")
+          //   // wsList.shift()
+          // }
         }
       },
       actions: {
+        hello: {
+          rest: "GET /hello",
+
+          handler(ctx: Context<void>) {
+            return "World!"
+          }
+        },
+
+        health: {
+          rest: "GET /health",
+
+          handler(ctx: Context<void>) {
+            return ctx.call("$node.health")
+          }
+        },
+
         announce: {
           ws: {
             // topic: "eth.mfiv.14d.expiry",
