@@ -160,7 +160,7 @@ export default class WSService extends Service {
             condition: true // Should return a truthy result
           },
 
-          port: 3000,
+          port: 80,
 
           handler(context: Context<OptionSummary>) {
             const message = context.params

@@ -5,7 +5,7 @@ HOST_NAME := localhost
 
 .PHONY: login bootstrap-npm ecr-login ecr-build ecr-tag ecr-push
 
-ecr-deploy: login bootstrap-npm ecr-login ecr-build ecr-tag ecr-push deploy
+ecr-deploy: login bootstrap-npm ecr-login ecr-build ecr-tag ecr-push
 
 login:
 	aws codeartifact login --tool npm --domain artifacts --domain-owner 994224827437 --repository node-volatility-mfiv
@@ -20,13 +20,13 @@ ecr-login:
 	aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 994224827437.dkr.ecr.us-east-2.amazonaws.com
 
 ecr-build: ecr-login
-	docker build -t compose-pipeline-volatility-services --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
+	docker build -t volatility-services:latest --platform linux/amd64 --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
 
 ecr-tag: ecr-build
-	docker tag compose-pipeline-volatility-services:latest 994224827437.dkr.ecr.us-east-2.amazonaws.com/compose-pipeline-volatility-services:latest
+	docker tag volatility-services:latest 994224827437.dkr.ecr.us-east-2.amazonaws.com/volatility-services:latest
 
 ecr-push: ecr-tag
-	docker push 994224827437.dkr.ecr.us-east-2.amazonaws.com/compose-pipeline-volatility-services:latest
+	docker push 994224827437.dkr.ecr.us-east-2.amazonaws.com/volatility-services:latest
 
 deploy:
 	# BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name compose-pipeline --query "Stacks[0].Outputs[?OutputKey=='S3BucketName'].OutputValue" --output text`)

@@ -1,17 +1,29 @@
-import { Stack, StackProps } from "aws-cdk-lib"
-import { Certificate, CertificateValidation } from "aws-cdk-lib/aws-certificatemanager"
+import { RemovalPolicy, Stack, StackProps } from "aws-cdk-lib"
+import { Certificate } from "aws-cdk-lib/aws-certificatemanager"
 // import * as ecs from "aws-cdk-lib/aws-ecs"
 import * as ec2 from "aws-cdk-lib/aws-ec2"
-import { Vpc } from "aws-cdk-lib/aws-ec2"
-import { Cluster, ContainerImage, FargateService, FargateTaskDefinition, LogDrivers } from "aws-cdk-lib/aws-ecs"
+import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2"
+import { Repository } from "aws-cdk-lib/aws-ecr"
+import {
+  AwsLogDriver,
+  Cluster,
+  ContainerImage,
+  FargateService,
+  FargateTaskDefinition,
+  LogDrivers
+} from "aws-cdk-lib/aws-ecs"
 import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns"
-import { Role } from "aws-cdk-lib/aws-iam"
-import { RetentionDays } from "aws-cdk-lib/aws-logs"
+import {
+  ApplicationProtocol,
+  ApplicationTargetGroup,
+  Protocol,
+  TargetType
+} from "aws-cdk-lib/aws-elasticloadbalancingv2"
+import { ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam"
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs"
 import { CrossAccountZoneDelegationRecord, PublicHostedZone } from "aws-cdk-lib/aws-route53"
 import * as servicediscovery from "aws-cdk-lib/aws-servicediscovery"
 import { Construct } from "constructs"
-import { VgFargateRdsNestedStack } from "./fargate-rds-stack"
-import { VgFargateRedisCacheNestedStack } from "./fargate-redis-cache-stack"
 
 const stackPrefix = (namespace: string, environment: string, stage: string) => {
   return (componentName: string) => `${namespace}-${environment}-${stage}-${componentName}`
@@ -45,11 +57,16 @@ export class VgServicesStack extends Stack {
       )
     })
 
-    const certificate = new Certificate(this, "SSLCertificate", {
-      domainName: "dev.volatility.com",
-      subjectAlternativeNames: ["api.dev.volatility.com"],
-      validation: CertificateValidation.fromDns()
-    })
+    const certificate = Certificate.fromCertificateArn(
+      this,
+      "DevSSLCertificate",
+      "arn:aws:acm:us-east-2:994224827437:certificate/b2bb00b9-b772-49d8-9634-9b0af14f7cd9"
+    )
+    // const certificate = new Certificate(this, "SSLCertificate", {
+    //   domainName: "dev.volatility.com",
+    //   subjectAlternativeNames: ["ws.dev.volatility.com"],
+    //   validation: CertificateValidation.fromDns()
+    // })
 
     const vpc = new Vpc(this, "Vpc", {
       cidr: "10.0.0.0/16",
@@ -74,15 +91,15 @@ export class VgServicesStack extends Stack {
       ]
     })
 
-    const { rdsCluster, databaseCredentialsSecret } = new VgFargateRdsNestedStack(this, "RdsNestedStack", {
-      vpc,
-      stage
-    })
+    // const { rdsCluster, databaseCredentialsSecret } = new VgFargateRdsNestedStack(this, "RdsNestedStack", {
+    //   vpc,
+    //   stage
+    // })
 
-    const { redisCluster } = new VgFargateRedisCacheNestedStack(this, "RedisCacheNestedStack", {
-      securityGroups: [],
-      subnets: vpc.isolatedSubnets
-    })
+    // const { redisCluster } = new VgFargateRedisCacheNestedStack(this, "RedisCacheNestedStack", {
+    //   securityGroups: [],
+    //   subnets: vpc.isolatedSubnets
+    // })
 
     // EFS Security Group
     // const filesystemSecurityGroup = new ec2.SecurityGroup(this, "EfsSecurity", {
@@ -96,26 +113,53 @@ export class VgServicesStack extends Stack {
       vpc
     })
 
+    const ecsSecurityGroup = new SecurityGroup(this, "ECSSecurityGroup", {
+      vpc,
+      allowAllOutbound: true
+    })
+
+    const serviceLogGroup = new LogGroup(this, `WSServiceLogGroup`, {
+      logGroupName: `/ecs/WSService`,
+      removalPolicy: RemovalPolicy.RETAIN,
+      retention: RetentionDays.ONE_MONTH
+    })
+
+    /* Fargate only support awslog driver */
+    const serviceLogDriver = new AwsLogDriver({
+      logGroup: serviceLogGroup,
+      streamPrefix: `WSService`
+    })
+
     const namespace = new servicediscovery.PrivateDnsNamespace(this, "Namespace", {
+      description: "Private DnsNamespace for volatility-services",
       name: "volatility.local",
       vpc
     })
 
-    // ------------------------------------------------------------------------------------------------- //
-    const wsTaskdef = new FargateTaskDefinition(this, "WSTaskdef", {
-      memoryLimitMiB: 2048, // Default is 512
-      cpu: 512 // Default is 256
+    const taskRole = new Role(this, "ecsTaskExecutionRole", {
+      assumedBy: new ServicePrincipal("ecs-tasks.amazonaws.com")
     })
 
+    taskRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonECSTaskExecutionRolePolicy"))
+
+    // ------------------------------------------------------------------------------------------------- //
+    const wsTaskdef = new FargateTaskDefinition(this, "WSTaskDef", {
+      memoryLimitMiB: 2048, // Default is 512
+      cpu: 512, // Default is 256
+      taskRole
+    })
+
+    const ecrRepository = Repository.fromRepositoryName(this, "EcrRepository", "volatility-services")
     const wsContainer = wsTaskdef.addContainer("WSContainer", {
-      // image: ContainerImage.fromRegistry("compose-pipeline-volatility-services:latest"),
-      image: ContainerImage.fromAsset("../.."),
+      image: ContainerImage.fromEcrRepository(ecrRepository, "latest"),
+      //image: ContainerImage.fromAsset("../.."),
       environment: {
         SEARCH_DOMAIN: namespace.namespaceName,
         SERVICE_NAMESPACE: serviceNamespace,
-        TRANSPORTER: "nats://nats:4222"
+        TRANSPORTER: "nats://nats:4222",
+        SERVICES: "ws"
       },
-      logging: LogDrivers.awsLogs({ streamPrefix: id, logRetention: RetentionDays.ONE_MONTH })
+      logging: serviceLogDriver
     })
 
     // logging: LogDriver.awsLogs({
@@ -130,22 +174,72 @@ export class VgServicesStack extends Stack {
     // Create a load-balanced Fargate service and make it public
     const wsService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, "WSService", {
       cluster, // Required
-      circuitBreaker: {
-        rollback: true
-      },
+      // circuitBreaker: {
+      //   rollback: true
+      // },
       desiredCount: 1,
       domainZone: subZone,
-      domainName: "api.dev.volatility.com",
+      domainName: "ws.dev.volatility.com",
       certificate,
       redirectHTTP: true,
+      //protocol: ApplicationProtocol.HTTPS,
       // targetProtocol: ApplicationProtocol.HTTPS,
       // recordType: "dev.volatility.com",
       // sslPolicy: SslPolicy.RECOMMENDED,
       // domainName: "api.dev.volatility.com",
+      securityGroups: [ecsSecurityGroup],
       publicLoadBalancer: true, // Default is false
       taskDefinition: wsTaskdef,
       cloudMapOptions: { name: "ws", cloudMapNamespace: namespace }
     })
+
+    // new ecs.FargateService(this, `${serviceName}Service`, {
+    //   cluster: cluster,
+    //   taskDefinition: serviceTaskDefinition,
+    //   // Must be `true` when using public images
+    //   assignPublicIp: true,
+    //   // If you set it to 0, the deployment will finish succesfully anyway
+    //   desiredCount: 1,
+    //   securityGroup: serviceSecGrp,
+    //   cloudMapOptions: {
+    //     // This will be your service_name.namespace
+    //     name: serviceName,
+    //     cloudMapNamespace: dnsNamespace,
+    //     dnsRecordType: DnsRecordType.A,
+    //   },
+    // });
+
+    // wsService.targetGroup.configureHealthCheck({
+    //   path: "/health",
+    //   protocol: Protocol.HTTP
+    // })
+
+    // const targetGroupHttp = new ApplicationTargetGroup(this, "ALBTargetGroup", {
+    //   port: 3000,
+    //   vpc,
+    //   protocol: ApplicationProtocol.HTTP,
+    //   targetType: TargetType.IP
+    // })
+
+    // targetGroupHttp.configureHealthCheck({
+    //   path: "/health",
+    //   protocol: Protocol.HTTP
+    // })
+
+    // wsService.targetGroup.loadBalancerAttached.
+
+    // use a security group to provide a secure connection between the ALB and the containers
+    // const lbSecurityGroup = new ec2.SecurityGroup(this, "LBSecurityGroup", {
+    //   vpc,
+    //   allowAllOutbound: true
+    // })
+    // lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), "Allow https traffic")
+    // wsService.loadBalancer.addSecurityGroup(lbSecurityGroup)
+
+    // ecsSecurityGroup.connections.allowFrom(lbSecurityGroup, ec2.Port.allTcp(), "Application load balancer")
+
+    // wsService.loadBalancer.connections.allowFrom(natsService, ec2.Port.tcp(4222), "NATS transport port assignment")
+    // wsService.connections.allowFrom(natsService, ec2.Port.tcp(4222), "NATS transport port assignment")
 
     // const sslListener = wsservice.loadBalancer.addListener("SSL", {
     //   port: 443,
@@ -153,9 +247,8 @@ export class VgServicesStack extends Stack {
     //   protocol: ApplicationProtocol.HTTPS
     // })
 
-    // const aRecord = new ARecord(this, "Alias", {
+    // const cnameRecord = new CnameRecord(this, "ClusterCname", {
     //   zone: subZone,
-    //   target: RecordTarget.fromAlias(new LoadBalancerTarget(wsservice)),
     //   recordName: "ws"
     // })
 
@@ -163,64 +256,64 @@ export class VgServicesStack extends Stack {
 
     // ------------------------------------------------------------------------------------------------- //
 
-    const ingestTaskdef = new FargateTaskDefinition(this, "IngestTaskDef", {
-      memoryLimitMiB: 2048, // Default is 512
-      cpu: 512 // Default is 256
-    })
+    // const ingestTaskdef = new FargateTaskDefinition(this, "IngestTaskDef", {
+    //   memoryLimitMiB: 2048, // Default is 512
+    //   cpu: 512 // Default is 256
+    // })
 
-    const ingestContainer = ingestTaskdef.addContainer("IngestContainer", {
-      image: ContainerImage.fromRegistry("volatility-group/volatility-services:0.2.2"),
-      environment: {
-        SEARCH_DOMAIN: namespace.namespaceName,
-        SERVICE_NAMESPACE: serviceNamespace,
-        TRANSPORTER: "nats://nats:4222",
-        REDIS_HOST: redisCluster.attrRedisEndpointAddress,
-        REDIS_PORT: redisCluster.attrRedisEndpointPort,
-        INGEST_INTERVAL: "14d",
-        INGEST_EXPIRY_TYPE: "FridayT08:00:00Z"
-      },
-      secrets: {},
-      logging: LogDrivers.awsLogs({ streamPrefix: id, logRetention: RetentionDays.ONE_MONTH })
-    })
+    // const ingestContainer = ingestTaskdef.addContainer("IngestContainer", {
+    //   image: ContainerImage.fromRegistry("volatility-group/volatility-services:0.2.2"),
+    //   environment: {
+    //     SEARCH_DOMAIN: namespace.namespaceName,
+    //     SERVICE_NAMESPACE: serviceNamespace,
+    //     TRANSPORTER: "nats://nats:4222",
+    //     REDIS_HOST: redisCluster.attrRedisEndpointAddress,
+    //     REDIS_PORT: redisCluster.attrRedisEndpointPort,
+    //     INGEST_INTERVAL: "14d",
+    //     INGEST_EXPIRY_TYPE: "FridayT08:00:00Z"
+    //   },
+    //   secrets: {},
+    //   logging: LogDrivers.awsLogs({ streamPrefix: id, logRetention: RetentionDays.ONE_MONTH })
+    // })
 
-    // Create a standard Fargate service
-    const ingestService = new FargateService(this, "IngestService", {
-      cluster, // Required
-      desiredCount: 1, // Default is 1
-      serviceName: "ingest",
-      taskDefinition: ingestTaskdef,
-      cloudMapOptions: { name: "ingest", cloudMapNamespace: namespace }
-    })
-
-    // ------------------------------------------------------------------------------------------------- //
+    // // Create a standard Fargate service
+    // const ingestService = new FargateService(this, "IngestService", {
+    //   cluster, // Required
+    //   desiredCount: 1, // Default is 1
+    //   serviceName: "ingest",
+    //   taskDefinition: ingestTaskdef,
+    //   cloudMapOptions: { name: "ingest", cloudMapNamespace: namespace }
+    // })
 
     // ------------------------------------------------------------------------------------------------- //
 
-    const instrumentInfoTaskdef = new FargateTaskDefinition(this, "InstrumentInfoTaskDef", {
-      memoryLimitMiB: 2048, // Default is 512
-      cpu: 512 // Default is 256
-    })
+    // ------------------------------------------------------------------------------------------------- //
 
-    const instrumentInfoContainer = instrumentInfoTaskdef.addContainer("InstrumentInfoContainer", {
-      image: ContainerImage.fromRegistry("volatility-group/volatility-services:0.2.2"),
-      environment: {
-        SEARCH_DOMAIN: namespace.namespaceName,
-        SERVICE_NAMESPACE: serviceNamespace,
-        TRANSPORTER: "nats://nats:4222",
-        REDIS_HOST: redisCluster.attrRedisEndpointAddress,
-        REDIS_PORT: redisCluster.attrRedisEndpointPort
-      },
-      logging: LogDrivers.awsLogs({ streamPrefix: id, logRetention: RetentionDays.ONE_MONTH })
-    })
+    // const instrumentInfoTaskdef = new FargateTaskDefinition(this, "InstrumentInfoTaskDef", {
+    //   memoryLimitMiB: 2048, // Default is 512
+    //   cpu: 512 // Default is 256
+    // })
 
-    // Create a standard Fargate service
-    const instrumentInfoService = new FargateService(this, "InstrumentInfoService", {
-      cluster, // Required
-      desiredCount: 1, // Default is 1
-      serviceName: "instrumentInfo",
-      taskDefinition: instrumentInfoTaskdef,
-      cloudMapOptions: { name: "instrumentInfo", cloudMapNamespace: namespace }
-    })
+    // const instrumentInfoContainer = instrumentInfoTaskdef.addContainer("InstrumentInfoContainer", {
+    //   image: ContainerImage.fromRegistry("volatility-group/volatility-services:0.2.2"),
+    //   environment: {
+    //     SEARCH_DOMAIN: namespace.namespaceName,
+    //     SERVICE_NAMESPACE: serviceNamespace,
+    //     TRANSPORTER: "nats://nats:4222",
+    //     REDIS_HOST: redisCluster.attrRedisEndpointAddress,
+    //     REDIS_PORT: redisCluster.attrRedisEndpointPort
+    //   },
+    //   logging: LogDrivers.awsLogs({ streamPrefix: id, logRetention: RetentionDays.ONE_MONTH })
+    // })
+
+    // // Create a standard Fargate service
+    // const instrumentInfoService = new FargateService(this, "InstrumentInfoService", {
+    //   cluster, // Required
+    //   desiredCount: 1, // Default is 1
+    //   serviceName: "instrumentInfo",
+    //   taskDefinition: instrumentInfoTaskdef,
+    //   cloudMapOptions: { name: "instrumentInfo", cloudMapNamespace: namespace }
+    // })
 
     // ingestService.connections.allowFrom(wsservice.service, ec2.Port.tcp(4567))
 
@@ -337,8 +430,22 @@ export class VgServicesStack extends Stack {
       cpu: 512 // Default is 256
     })
 
+    const natsLogGroup = new LogGroup(this, `WSServiceLogGroup`, {
+      logGroupName: `/ecs/NATSService`,
+      removalPolicy: RemovalPolicy.RETAIN,
+      retention: RetentionDays.ONE_MONTH
+    })
+
+    /* Fargate only support awslog driver */
+    const natsLogDriver = new AwsLogDriver({
+      logGroup: serviceLogGroup,
+      streamPrefix: `NATSService`
+    })
+
     const natsContainer = natsTaskdef.addContainer("NatsContainer", {
-      image: ContainerImage.fromRegistry("nats:2.7.2")
+      image: ContainerImage.fromRegistry("nats:2.7.2"),
+      command: ["-m", "8222", "--debug"],
+      logging: natsLogDriver
     })
 
     // Create a standard Fargate service
@@ -349,8 +456,9 @@ export class VgServicesStack extends Stack {
       cloudMapOptions: { name: "nats", cloudMapNamespace: namespace }
     })
 
-    natsService.connections.allowFrom(natsService, ec2.Port.tcp(4222), "NATS transport port assignment")
+    natsService.connections.allowFrom(wsService.service, ec2.Port.tcp(4222), "NATS transport port assignment")
 
+    // yelbappserverservice.connections.allowFrom(yelbuiservice.service, ec2.Port.tcp(4567))
     // ------------------------------------------------------------------------------------------------- //
 
     // const queue = new sqs.Queue(this, 'CdkQueue', {

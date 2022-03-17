@@ -54,14 +54,14 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
       // Auto-padding the module name in order to messages begin at the same column.
       autoPadding: true,
 
-      log4js: {
-        appenders: {
-          app: { type: "file", filename: "./logs/application.log" }
-        },
-        categories: {
-          default: { appenders: ["app"], level: "info" }
-        }
-      }
+      // log4js: {
+      //   appenders: {
+      //     app: { type: "file", filename: "./logs/application.log" }
+      //   },
+      //   categories: {
+      //     default: { appenders: ["app"], level: "info" }
+      //   }
+      // }
     }
   },
 
