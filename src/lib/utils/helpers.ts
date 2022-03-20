@@ -1,11 +1,7 @@
 import {
   Disconnect,
   MapperFactory,
-  normalizeBookChanges,
-  normalizeBookTickers,
   NormalizedData,
-  normalizeDerivativeTickers,
-  normalizeLiquidations,
   normalizeOptionsSummary,
   normalizeTrades,
   ReplayNormalizedOptions,
@@ -28,27 +24,9 @@ export function* getNormalizers(dataTypes: string[]): IterableIterator<MapperFac
   if (dataTypes.includes("trade") || dataTypes.some(dataType => dataType.startsWith("trade_bar_"))) {
     yield normalizeTrades
   }
-  if (
-    dataTypes.includes("book_change") ||
-    dataTypes.some(dataType => dataType.startsWith("book_snapshot_")) ||
-    dataTypes.some(dataType => dataType.startsWith("quote"))
-  ) {
-    yield normalizeBookChanges
-  }
 
-  if (dataTypes.includes("derivative_ticker")) {
-    yield normalizeDerivativeTickers
-  }
-
-  if (dataTypes.includes("liquidation")) {
-    yield normalizeLiquidations
-  }
   if (dataTypes.includes("option_summary")) {
     yield normalizeOptionsSummary
-  }
-
-  if (dataTypes.includes("book_ticker")) {
-    yield normalizeBookTickers
   }
 }
 

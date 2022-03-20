@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Stage 1 compiles typescript
-FROM node:16.14.0 as ts-compile
+FROM public.ecr.aws/docker/library/node:16.14.0 as ts-compile
 ARG CODEARTIFACT_AUTH_TOKEN
 COPY package*.json .npmrc /usr/src/app/
 WORKDIR /usr/src/app
@@ -12,12 +12,12 @@ COPY src/ src
 COPY mixins/ mixins
 COPY typings/ typings
 COPY moleculer.config.ts ormconfig.js newrelic.js tsconfig*.json ./
-RUN npm run build
-RUN cp services/*.js dist/services/
-RUN rm -rf node_modules
+RUN npm run build && \
+    cp services/*.js dist/services/ && \
+    rm -rf node_modules
 
 # Stage 2 compiles typescript
-FROM node:16.14.0 as ts-remover
+FROM public.ecr.aws/docker/library/node:16.14.0 as ts-remover
 ENV NODE_ENV=production
 COPY .npmrc /usr/src/app/
 WORKDIR /usr/src/app
@@ -34,12 +34,12 @@ RUN npm set-script prepare "" && \
 RUN touch newrelic_agent.log
 
 # FROM gcr.io/distroless/nodejs:16
-FROM node:16.14.0
+FROM public.ecr.aws/docker/library/node:16.14.0
 ENV NODE_ENV=production
-# RUN apt-get update -y && apt-get install -y dumb-init
-RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 && \
-    dpkg -i dumb-init_1.2.5_x86_64 && \
-    rm -rf /var/cache/apt/lists
+RUN apt-get update -y && apt-get install -y dumb-init
+# RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 && \
+#     dpkg -i dumb-init_1.2.5_x86_64 && \
+#     rm -rf /var/cache/apt/lists
 # RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_arm64.deb && \
 #     dpkg -i dumb-init_*.deb && \
 #     rm -rf /var/cache/apt/lists
@@ -51,4 +51,4 @@ EXPOSE 80
 ENV TS_NODE_PROJECT=tsconfig.production.json
 COPY --from=ts-remover --chown=node:node /usr/src/app ./
 # CMD ["./node_modules/moleculer/bin/moleculer-runner.js", "dist/services"]
-CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "dist/services"]
+CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "--env", "--config", "dist/moleculer.config.js", "dist/services"]

@@ -1,10 +1,5 @@
-//#region Global Imports
 import { Context } from "moleculer"
-//#endregion Global Imports
-
-//#region Interface Imports
 import { OptionSummary } from "tardis-dev"
-//#endregion Interface Imports
 
 const prefix = "ingest"
 

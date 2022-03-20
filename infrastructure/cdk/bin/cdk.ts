@@ -9,7 +9,7 @@ const dns = getEnv(app, "dns")
 const dev = getEnv(app, "dev")
 
 // new VgDnsStack(app, "DnsStack", { env: dns })
-new VgServicesStack(app, "ServicesStack", { env: dev })
+new VgServicesStack(app, "VolatilityServicesStack", { env: dev })
 // new VgFargateRdsStack(app, "RdsStack", { env: dev })
 // const envDevPlatform = { account: "994224827437", region: "us-east-2" }
 // const app = new cdk.App()

@@ -1,5 +1,5 @@
-import { Context, Service } from "moleculer"
 import { IIndex } from "@interfaces"
+import { Context, Service } from "moleculer"
 
 const prefix = "index"
 

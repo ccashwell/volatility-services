@@ -1,25 +1,13 @@
-import { RemovalPolicy, Stack, StackProps } from "aws-cdk-lib"
+import { Duration, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib"
 import { Certificate } from "aws-cdk-lib/aws-certificatemanager"
 // import * as ecs from "aws-cdk-lib/aws-ecs"
 import * as ec2 from "aws-cdk-lib/aws-ec2"
-import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2"
+import { Vpc } from "aws-cdk-lib/aws-ec2"
 import { Repository } from "aws-cdk-lib/aws-ecr"
-import {
-  AwsLogDriver,
-  Cluster,
-  ContainerImage,
-  FargateService,
-  FargateTaskDefinition,
-  LogDrivers
-} from "aws-cdk-lib/aws-ecs"
+import { AwsLogDriver, Cluster, ContainerImage, FargateService, FargateTaskDefinition } from "aws-cdk-lib/aws-ecs"
 import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns"
-import {
-  ApplicationProtocol,
-  ApplicationTargetGroup,
-  Protocol,
-  TargetType
-} from "aws-cdk-lib/aws-elasticloadbalancingv2"
-import { ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam"
+import { Protocol } from "aws-cdk-lib/aws-elasticloadbalancingv2"
+import { Role } from "aws-cdk-lib/aws-iam"
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs"
 import { CrossAccountZoneDelegationRecord, PublicHostedZone } from "aws-cdk-lib/aws-route53"
 import * as servicediscovery from "aws-cdk-lib/aws-servicediscovery"
@@ -68,28 +56,29 @@ export class VgServicesStack extends Stack {
     //   validation: CertificateValidation.fromDns()
     // })
 
-    const vpc = new Vpc(this, "Vpc", {
-      cidr: "10.0.0.0/16",
-      natGateways: 1,
-      maxAzs: 2,
-      subnetConfiguration: [
-        {
-          cidrMask: 20,
-          name: "public",
-          subnetType: ec2.SubnetType.PUBLIC
-        },
-        {
-          cidrMask: 19,
-          name: "application",
-          subnetType: ec2.SubnetType.PRIVATE_WITH_NAT
-        },
-        {
-          cidrMask: 21,
-          name: "data",
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED
-        }
-      ]
-    })
+    const vpc = new Vpc(this, "Vpc", {})
+    // const vpc = new Vpc(this, "Vpc", {
+    //   cidr: "10.0.0.0/16",
+    //   natGateways: 1,
+    //   maxAzs: 2,
+    //   subnetConfiguration: [
+    //     {
+    //       cidrMask: 20,
+    //       name: "public",
+    //       subnetType: ec2.SubnetType.PUBLIC
+    //     },
+    //     {
+    //       cidrMask: 19,
+    //       name: "application",
+    //       subnetType: ec2.SubnetType.PRIVATE_WITH_NAT
+    //     },
+    //     {
+    //       cidrMask: 21,
+    //       name: "data",
+    //       subnetType: ec2.SubnetType.PRIVATE_ISOLATED
+    //     }
+    //   ]
+    // })
 
     // const { rdsCluster, databaseCredentialsSecret } = new VgFargateRdsNestedStack(this, "RdsNestedStack", {
     //   vpc,
@@ -113,13 +102,26 @@ export class VgServicesStack extends Stack {
       vpc
     })
 
-    const ecsSecurityGroup = new SecurityGroup(this, "ECSSecurityGroup", {
-      vpc,
-      allowAllOutbound: true
-    })
+    // const lbSecurityGroup = new SecurityGroup(this, "LBSecurityGroup", {
+    //   vpc,
+    //   allowAllOutbound: true
+    // })
 
-    const serviceLogGroup = new LogGroup(this, `WSServiceLogGroup`, {
-      logGroupName: `/ecs/WSService`,
+    // lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), "Allow https traffic")
+    // lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), "Allow http traffic")
+    // lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv6(), ec2.Port.tcp(443), "Allow https traffic")
+    // lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv6(), ec2.Port.tcp(80), "Allow http traffic")
+
+    // const ecsSecurityGroup = new SecurityGroup(this, "ECSSecurityGroup", {
+    //   vpc,
+    //   allowAllOutbound: true
+    // })
+    // ecsSecurityGroup.addIngressRule(lbSecurityGroup, ec2.Port.tcp(3000), "Allow http traffic")
+    // ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.icmpPing(), "Allow ping traffic")
+    // ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv6(), ec2.Port.icmpPing(), "Allow ping traffic")
+
+    const serviceLogGroup = new LogGroup(this, "WSServiceLogGroup", {
+      logGroupName: "/ecs/WSService",
       removalPolicy: RemovalPolicy.RETAIN,
       retention: RetentionDays.ONE_MONTH
     })
@@ -127,7 +129,7 @@ export class VgServicesStack extends Stack {
     /* Fargate only support awslog driver */
     const serviceLogDriver = new AwsLogDriver({
       logGroup: serviceLogGroup,
-      streamPrefix: `WSService`
+      streamPrefix: "WSService"
     })
 
     const namespace = new servicediscovery.PrivateDnsNamespace(this, "Namespace", {
@@ -136,17 +138,17 @@ export class VgServicesStack extends Stack {
       vpc
     })
 
-    const taskRole = new Role(this, "ecsTaskExecutionRole", {
-      assumedBy: new ServicePrincipal("ecs-tasks.amazonaws.com")
-    })
+    // const taskRole = new Role(this, "ecsTaskExecutionRole", {
+    //   assumedBy: new ServicePrincipal("ecs-tasks.amazonaws.com")
+    // })
 
-    taskRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonECSTaskExecutionRolePolicy"))
+    // taskRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonECSTaskExecutionRolePolicy"))
 
     // ------------------------------------------------------------------------------------------------- //
     const wsTaskdef = new FargateTaskDefinition(this, "WSTaskDef", {
       memoryLimitMiB: 2048, // Default is 512
-      cpu: 512, // Default is 256
-      taskRole
+      cpu: 512 // Default is 256
+      // taskRole
     })
 
     const ecrRepository = Repository.fromRepositoryName(this, "EcrRepository", "volatility-services")
@@ -156,8 +158,12 @@ export class VgServicesStack extends Stack {
       environment: {
         SEARCH_DOMAIN: namespace.namespaceName,
         SERVICE_NAMESPACE: serviceNamespace,
-        TRANSPORTER: "nats://nats:4222",
-        SERVICES: "ws"
+        TRANSPORTER: "nats://nats.volatility.local:4222",
+        SERVICEDIR: "dist/services",
+        SERVICES: "ws.service.js",
+        NAMESPACE: serviceNamespace,
+        LOGLEVEL: "trace",
+        LOG_LEVEL: "trace"
       },
       logging: serviceLogDriver
     })
@@ -168,7 +174,7 @@ export class VgServicesStack extends Stack {
     // }),
 
     wsContainer.addPortMappings({
-      containerPort: 80
+      containerPort: 3000
     })
 
     // Create a load-balanced Fargate service and make it public
@@ -177,7 +183,7 @@ export class VgServicesStack extends Stack {
       // circuitBreaker: {
       //   rollback: true
       // },
-      desiredCount: 1,
+      desiredCount: 2,
       domainZone: subZone,
       domainName: "ws.dev.volatility.com",
       certificate,
@@ -187,11 +193,24 @@ export class VgServicesStack extends Stack {
       // recordType: "dev.volatility.com",
       // sslPolicy: SslPolicy.RECOMMENDED,
       // domainName: "api.dev.volatility.com",
-      securityGroups: [ecsSecurityGroup],
+      // securityGroups: [lbSecurityGroup],
       publicLoadBalancer: true, // Default is false
+      serviceName: "ws",
       taskDefinition: wsTaskdef,
       cloudMapOptions: { name: "ws", cloudMapNamespace: namespace }
     })
+
+    wsService.loadBalancer.connections.allowFrom(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), "Allow http traffic")
+    wsService.loadBalancer.connections.allowFrom(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), "Allow https traffic")
+    wsService.loadBalancer.connections.allowFrom(ec2.Peer.anyIpv6(), ec2.Port.tcp(80), "Allow http traffic")
+    wsService.loadBalancer.connections.allowFrom(ec2.Peer.anyIpv6(), ec2.Port.tcp(443), "Allow https traffic")
+    // wsService.service.connections.allowFrom(wsService.loadBalancer, ec2.Port.tcp(80), "LB to WS")
+
+    // wsService.service.connections.allowFrom(
+    //   wsService.loadBalancer,
+    //   ec2.Port.tcp(8222),
+    //   "NATS transport management port assignment"
+    // )
 
     // new ecs.FargateService(this, `${serviceName}Service`, {
     //   cluster: cluster,
@@ -209,10 +228,12 @@ export class VgServicesStack extends Stack {
     //   },
     // });
 
-    // wsService.targetGroup.configureHealthCheck({
-    //   path: "/health",
-    //   protocol: Protocol.HTTP
-    // })
+    wsService.targetGroup.configureHealthCheck({
+      path: "/ws/health",
+      interval: Duration.seconds(120),
+      unhealthyThresholdCount: 2,
+      protocol: Protocol.HTTP
+    })
 
     // const targetGroupHttp = new ApplicationTargetGroup(this, "ALBTargetGroup", {
     //   port: 3000,
@@ -240,7 +261,7 @@ export class VgServicesStack extends Stack {
 
     // wsService.loadBalancer.connections.allowFrom(natsService, ec2.Port.tcp(4222), "NATS transport port assignment")
     // wsService.connections.allowFrom(natsService, ec2.Port.tcp(4222), "NATS transport port assignment")
-
+    // wsService.service.connections.allowFrom(wsService.loadBalancer, ec2.Port.tcp(80))
     // const sslListener = wsservice.loadBalancer.addListener("SSL", {
     //   port: 443,
     //   certificates: [this.props.certificateHarvestSubdomain, this.props.certificateRootSubdomain],
@@ -430,8 +451,8 @@ export class VgServicesStack extends Stack {
       cpu: 512 // Default is 256
     })
 
-    const natsLogGroup = new LogGroup(this, `WSServiceLogGroup`, {
-      logGroupName: `/ecs/NATSService`,
+    const natsLogGroup = new LogGroup(this, "NATSServiceLogGroup", {
+      logGroupName: "/ecs/NATSService",
       removalPolicy: RemovalPolicy.RETAIN,
       retention: RetentionDays.ONE_MONTH
     })
@@ -439,7 +460,7 @@ export class VgServicesStack extends Stack {
     /* Fargate only support awslog driver */
     const natsLogDriver = new AwsLogDriver({
       logGroup: serviceLogGroup,
-      streamPrefix: `NATSService`
+      streamPrefix: "NATSService"
     })
 
     const natsContainer = natsTaskdef.addContainer("NatsContainer", {
@@ -457,6 +478,11 @@ export class VgServicesStack extends Stack {
     })
 
     natsService.connections.allowFrom(wsService.service, ec2.Port.tcp(4222), "NATS transport port assignment")
+    natsService.connections.allowFrom(
+      wsService.service,
+      ec2.Port.tcp(8222),
+      "NATS transport management port assignment"
+    )
 
     // yelbappserverservice.connections.allowFrom(yelbuiservice.service, ec2.Port.tcp(4567))
     // ------------------------------------------------------------------------------------------------- //

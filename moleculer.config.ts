@@ -52,7 +52,7 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
       // Custom object printer. If not defined, it uses the `util.inspect` method.
       objectPrinter: null,
       // Auto-padding the module name in order to messages begin at the same column.
-      autoPadding: true,
+      autoPadding: true
 
       // log4js: {
       //   appenders: {
@@ -67,7 +67,7 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
 
   // Default log level for built-in console logger. It can be overwritten in logger options above.
   // Available values: trace, debug, info, warn, error, fatal
-  logLevel: (process.env.LOG_LEVEL ?? "info") as LogLevels,
+  logLevel: (process.env.LOGLEVEL ?? "info") as LogLevels,
 
   // Define transporter.
   // More info: https://moleculer.services/docs/0.14/networking.html
@@ -89,10 +89,10 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   //     monitor: false,
   //     // Redis settings
   //     redis: {
-  //       host: process.env.REDIS_HOST,
-  //       port: process.env.REDIS_PORT,
-  //       password: process.env.REDIS_PASSWORD,
-  //       db: process.env.REDIS_DB ?? 0
+  //       host: "vg-ue2-devplatform-elasticache-redis.zfmhfe.ng.0001.use2.cache.amazonaws.com",
+  //       port: 6379
+  //       // password: process.env.REDIS_PASSWORD,
+  //       // db: process.env.REDIS_DB ?? 0
   //     }
   //   }
   // },
@@ -242,19 +242,19 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
 
   // Register custom REPL commands.
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  replCommands: undefined, // require("./repl-commands")
+  replCommands: undefined // require("./repl-commands")
   // Called after broker created.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // created: (broker: Moleculer.ServiceBroker): void => {},
   // Called after broker started.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
-  async started(broker) {
-    // createConnection method will automatically read connection options
-    // from your ormconfig file or environment variables
-    // const connection = await createConnection()
-    // this.connection = connection
-  }
+  // async started(broker) {
+  //   // createConnection method will automatically read connection options
+  //   // from your ormconfig file or environment variables
+  //   // const connection = await createConnection()
+  //   // this.connection = connection
+  // }
   // started: async (broker: Moleculer.ServiceBroker): Promise<void> => {},
   // Called after broker stopped.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
