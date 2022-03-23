@@ -1,26 +1,28 @@
 SHELL=/bin/bash
 HOST_NAME := localhost
+DOMAIN_OWNER := 994224827437
+
 # DOCKER_REGISTRY=volatilitygroup DOCKER_REPOSITORY=
 #  --platform linux/amd64
 
-.PHONY: login bootstrap-npm ecr-login ecr-build ecr-tag ecr-push
+.PHONY: login ecr-login ecr-build ecr-tag ecr-push bootstrap-pipeline
 
 ecr-deploy: login bootstrap-npm ecr-login ecr-build ecr-tag ecr-push
 
 login:
-	aws codeartifact login --tool npm --domain artifacts --domain-owner 994224827437 --repository node-volatility-mfiv
+	aws codeartifact login --tool npm --domain artifacts --domain-owner ${DOMAIN_OWNER} --repository node-volatility-mfiv
 
-bootstrap-npm: login
-	export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain artifacts --domain-owner 994224827437 --query authorizationToken --output text`
+.npmrc: ~/.aws/config login
+	$(eval CODEARTIFACT_AUTH_TOKEN=$(shell aws codeartifact get-authorization-token --domain artifacts --domain-owner 994224827437 --query authorizationToken --output text))
 	echo "@volatility-group:registry=https://artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/" > .npmrc
 	echo "//artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:always-auth=true" >> .npmrc
-	echo "//artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:_authToken=${CODEARTIFACT_AUTH_TOKEN}" >> .npmrc
+	echo "//artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:_authToken=$(CODEARTIFACT_AUTH_TOKEN)" >> .npmrc
 
 ecr-login:
 	aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 994224827437.dkr.ecr.us-east-2.amazonaws.com
 
 ecr-build: ecr-login
-	docker build -t volatility-services:latest --platform linux/amd64 --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
+	docker build -t volatility-services:latest --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
 
 ecr-tag: ecr-build
 	docker tag volatility-services:latest 994224827437.dkr.ecr.us-east-2.amazonaws.com/volatility-services:latest
@@ -33,15 +35,15 @@ deploy:
 	# BUCKET_NAME=compose-pipeline-sourcebucket-flkosb1nynzo
 	# IMAGE_URI=994224827437.dkr.ecr.us-east-2.amazonaws.com/compose-pipeline-volatility-services
 	# IMAGE_TAG=latest
-	zip -x dist -x copilot -x coverage -x db-data -x traefik -x node_modules -r -u compose-bundle.zip .
+	zip -x .git/**\* dist/**\* copilot/**\* coverage/**\* db-data/**\* traefik/**\* node_modules/**\* infrastructure/**\* -r -u compose-bundle.zip .
 	# aws s3 cp compose-bundle.zip s3://${BUCKET_NAME}/compose-bundle.zip
 	aws s3 cp compose-bundle.zip s3://compose-pipeline-sourcebucket-flkosb1nynzo/compose-bundle.zip
 
 token:
 	export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain artifacts --domain-owner 061573364520 --query authorizationToken --output text`
 
-docker-build: bootstrap-npm
-	docker build -t volatility-services --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
+docker-build: .npmrc
+	docker build -t volatility-services-refactor --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
 
 # Add to .npmrc
 # registry=https://artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/
@@ -62,6 +64,13 @@ clobber:
 build:
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile -t volatility-group/volatility-services . 2>&1 | tee build.out
 
+bootstrap-pipeline:
+	cd infrastructure/cdk && \
+	npm ci && \
+	npm run build
+	npx cdk synth VgCodePipelineStack
+
+
 bootstrap:
 	psql --file postgres/init.sql --port 6432 --username postgres
 
@@ -73,6 +82,28 @@ dbash:
 
 dlog:
 	docker-compose logs -f --tail="400" ${SVC}
+
+generate-ssm-secrets:
+	aws ssm put-parameter \
+    --name /volatility-services/dev/GITHUB_OWNER \
+    --type String \
+    --value VolatilityGroup && \
+	aws ssm put-parameter \
+			--name /volatility-services/dev/GITHUB_REPO \
+			--type String \
+			--value volatility-services && \
+	aws secretsmanager create-secret \
+			--name /volatility-services/dev/GITHUB_TOKEN \
+			--secret-string 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 && \
+	aws secretsmanager create-secret \
+			--name /volatility-services/prod/GITHUB_TOKEN \
+			--secret-string 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
+	aws secretsmanager create-secret \
+			--name /volatility-services/dev/GITHUB_TOKEN \
+			--secret-string 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
+	aws secretsmanager create-secret \
+			--name /volatility-services/dev/GITHUB_TOKEN \
+			--secret-string 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
 
 ifneq ($(HOST_NAME),-)
 setup-local-certs:

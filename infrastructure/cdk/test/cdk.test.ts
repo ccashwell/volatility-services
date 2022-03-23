@@ -1,6 +1,6 @@
 import * as cdk from "aws-cdk-lib"
 import { Template } from "aws-cdk-lib/assertions"
-import * as Cdk from "../lib/services-stack"
+import * as Cdk from "../lib/fargate-services-stack"
 
 test("SQS Queue and SNS Topic Created", () => {
   const app = new cdk.App()

@@ -63,7 +63,7 @@ export const config: EnvConfig = {
   indexSettings: {
     risklessRate: parseFloat(process.env.RISKLESS_RATE ?? "0.0055"),
     risklessRateAt: process.env.RISKLESS_RATE_AT ?? "2021-10-01T07:02:00.000Z",
-    risklessRateSource: process.env.RISKLESS_RATE_SOURCE ?? "aave"
+    risklessRateSource: process.env.RISKLESS_RATE_SOURCE ?? "AAVE"
   },
 
   tardis: {

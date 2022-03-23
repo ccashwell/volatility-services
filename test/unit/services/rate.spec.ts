@@ -24,7 +24,7 @@ describe("rate.service api", () => {
   const risklessRate = (params: IRate.RisklessRateParams) =>
     broker.call<never, IRate.RisklessRateParams>("rate.risklessRate", params)
   const params: IRate.RisklessRateParams = {
-    risklessRateSource: "aave"
+    risklessRateSource: "AAVE"
   }
 
   beforeAll(() => broker.start())
@@ -36,7 +36,7 @@ describe("rate.service api", () => {
         contractValue: 85583973859841772736137,
         risklessRate: 100.0 * (85583973859841772736137 / 10 ** 27), // 0.008558397385984177
         risklessRateAt: new Date().toISOString(),
-        risklessRateSource: "aave"
+        risklessRateSource: "AAVE"
       }
 
       service.fetchRisklessRate = jest.fn((params: IRate.RisklessRateParams) => Promise.resolve(response))
@@ -47,7 +47,7 @@ describe("rate.service api", () => {
           expect.objectContaining({
             risklessRate: expect.any(Number),
             risklessRateAt: expect.any(String),
-            risklessRateSource: expect.stringMatching("aave")
+            risklessRateSource: expect.stringMatching("AAVE")
           })
         )
       })

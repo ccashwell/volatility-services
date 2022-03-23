@@ -1,5 +1,4 @@
 import { init } from "tardis-dev"
-import { DefaultClient as SecretsClient } from "@clients/secrets_client"
 
 /**
  * Bootstrap the tardis api with credentials
@@ -9,8 +8,11 @@ import { DefaultClient as SecretsClient } from "@clients/secrets_client"
  *          `instrumentInfo` data.
  * @returns - void
  */
-export const initTardis = async () => {
-  const tardisSecret = await SecretsClient({ secretName: "API_Keys" }).requireRead("TARDIS_API_KEY")
+export const initTardis = /*async */ () => {
+  // const tardisSecret = await SecretsClient({ secretName: "API_Keys" }).requireRead("TARDIS_API_KEY")
+  const tardisSecret = {
+    TARDIS_API_KEY: process.env.TARDIS_API_KEY
+  }
 
   return init({
     apiKey: tardisSecret.TARDIS_API_KEY

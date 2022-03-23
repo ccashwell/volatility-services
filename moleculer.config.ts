@@ -1,8 +1,8 @@
 "use strict"
 import { BrokerOptions, Errors, LogLevels, MetricRegistry } from "moleculer"
 import "reflect-metadata"
-import { Connection } from "typeorm"
 
+const logLevel = (process.env.LOGLEVEL ?? "info") as LogLevels
 /**
  * Moleculer ServiceBroker configuration file
  *
@@ -28,7 +28,7 @@ import { Connection } from "typeorm"
  *    }
  *  }
  */
-const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
+const brokerConfig: BrokerOptions = {
   // Namespace of nodes to segment your nodes on the same network.
   namespace: "volatility-services",
   // Unique node identifier. Must be unique in a namespace.
@@ -36,12 +36,10 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   // Custom metadata store. Store here what you want. Accessing: `this.broker.metadata`
   metadata: {},
 
-  connection: undefined,
-
   // Enable/disable logging or use custom logger. More info: https://moleculer.services/docs/0.14/logging.html
   // Available logger types: "Console", "File", "Pino", "Winston", "Bunyan", "debug", "Log4js", "Datadog"
   logger: {
-    type: "Console",
+    type: "Log4js",
     options: {
       // Using colors on the output
       colors: true,
@@ -52,22 +50,23 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
       // Custom object printer. If not defined, it uses the `util.inspect` method.
       objectPrinter: null,
       // Auto-padding the module name in order to messages begin at the same column.
-      autoPadding: true
+      autoPadding: true,
 
-      // log4js: {
-      //   appenders: {
-      //     app: { type: "file", filename: "./logs/application.log" }
-      //   },
-      //   categories: {
-      //     default: { appenders: ["app"], level: "info" }
-      //   }
-      // }
+      log4js: {
+        appenders: { app: { type: "stdout" } },
+        // appenders: {
+        //   app: { type: "file", filename: "./logs/application.log" }
+        // },
+        categories: {
+          default: { appenders: ["app"], level: logLevel }
+        }
+      }
     }
   },
 
   // Default log level for built-in console logger. It can be overwritten in logger options above.
   // Available values: trace, debug, info, warn, error, fatal
-  logLevel: (process.env.LOGLEVEL ?? "info") as LogLevels,
+  logLevel,
 
   // Define transporter.
   // More info: https://moleculer.services/docs/0.14/networking.html
@@ -182,9 +181,29 @@ const brokerConfig: BrokerOptions & { connection: Connection | undefined } = {
   validator: true,
 
   errorHandler: (err: Error, info: unknown) => {
-    console.error(err, err.stack)
-    console.info(info)
-    throw err
+    // Emit a structured error so it can be easily ingested
+    const payload = {
+      type: "mol:unhandled_exception",
+      message: "Unhandled exception in volatility-services/moleculer.config",
+      error: {
+        name: err.name,
+        message: err.message,
+        details: err.stack
+      }
+      // info,
+      // git: pkg.repository as string
+    }
+
+    console.error(payload)
+    // console.error(JSON.stringify(payload, null, 2))
+    // console.error(`*** NOTICE ***: ${err.name} ***\n`, err.stack)
+    // console.error(`*** message: ${err.message}`)
+    // if (info !== undefined) {
+    //   console.error(">>> info:")
+    //   console.error(info)
+    // }
+    // console.error(`*** END: ${err.name} ***`)
+    // throw err
   }, //moleculerErrorHandler(this.logger),
 
   // Enable/disable built-in metrics function. More info: https://moleculer.services/docs/0.14/metrics.html

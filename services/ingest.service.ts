@@ -2,15 +2,13 @@
 import { initTardis, stream } from "@datasources"
 import { MethodologyExpiryEnum } from "@entities"
 import { IIngest, IInstrumentInfo } from "@interfaces"
-import { insufficientDataError } from "@lib/errors"
 import { mfivDates } from "@lib/expiries"
-import { handleAsMoleculerError, handleError } from "@lib/handlers/errors"
+import { handleError } from "@lib/handlers/errors"
+import _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
-import { combine, ResultAsync } from "neverthrow"
+import { ResultAsync } from "neverthrow"
 import { Exchange, OptionSummary, StreamNormalizedOptions } from "tardis-dev"
-import { chainFrom } from "transducist"
 import configuration from "../src/configuration"
-
 export default class IngestService extends Service {
   private latestMessage?: OptionSummary
 
@@ -27,11 +25,9 @@ export default class IngestService extends Service {
       // Name
       name: "ingest",
 
-      cacher: "Memory",
-
       // Settings
       settings: {
-        $dependencyTimeout: 60000,
+        $dependencyTimeout: 60000 * 5,
 
         expiryType: MethodologyExpiryEnum.FridayT08
       },
@@ -55,11 +51,14 @@ export default class IngestService extends Service {
         //   }
         // },
         stats: {
+          rest: "/stats",
           handler(this: IngestService) {
             return this.stats()
           }
         },
         expiries: {
+          rest: "/expiries",
+
           handler(this: IngestService) {
             return Array.from(this.expiryMap.entries())
           }
@@ -68,25 +67,33 @@ export default class IngestService extends Service {
           params: {
             expiry: { type: "string" }
           },
+          rest: "/summaries",
+          cache: {
+            ttl: 120
+          },
           async handler(
             this: IngestService,
             ctx: Context<IIngest.OptionSummariesParams>
           ): Promise<IIngest.OptionSummariesResponse> {
+            this.logger.info("fetching", ctx.params)
+
             const optionSummaryByExpiry = await this.fetchOptionSummaries(ctx.params)
 
-            if (optionSummaryByExpiry.isOk()) {
-              return Promise.resolve(optionSummaryByExpiry.value)
-            } else {
-              return Promise.reject(optionSummaryByExpiry.error)
-            }
+            return optionSummaryByExpiry
+            // if (optionSummaryByExpiry.isOk()) {
+            //   return Promise.resolve(optionSummaryByExpiry.value)
+            // } else {
+            //   return Promise.reject(optionSummaryByExpiry.error)
+            // }
           }
         }
       },
 
       // Service methods
-      async started(this: IngestService) {
-        await initTardis()
+      started(this: IngestService) {
+        initTardis()
         this.ingest()
+        return Promise.resolve()
       }
     })
   }
@@ -107,9 +114,9 @@ export default class IngestService extends Service {
       this.latestMessage = message
 
       // Save to cache
-      this.cacheMessage(message)
+      await this.cacheMessage(message)
 
-      this.broker.emit("mfiv.14d.eth.expiry", message).catch(handleAsMoleculerError)
+      // this.broker.broadcast("mfiv.14d.eth.expiry", message, ["ws"]).catch(handleAsMoleculerError)
     }
 
     return true
@@ -123,7 +130,7 @@ export default class IngestService extends Service {
    *
    * @param o - OptionSummary to cache
    */
-  private cacheMessage(o: OptionSummary): void {
+  private async cacheMessage(o: OptionSummary): Promise<void> {
     const expiryKey = o.expirationDate.toISOString()
     if (!this.expiryMap.has(expiryKey)) {
       this.logger.info("Cache Miss", expiryKey)
@@ -132,31 +139,117 @@ export default class IngestService extends Service {
     }
     const expirySet = this.expiryMap.get(expiryKey)
     expirySet?.add(o.symbol)
-    void this.broker.cacher?.set(
-      o.symbol,
-      summaryWithDefaults(o, { bestAskPrice: 0, bestBidPrice: 0, underlyingPrice: 0 })
-    )
+    if (this.broker.cacher) {
+      await this.broker.cacher.set(
+        o.symbol,
+        summaryWithDefaults(o, { bestAskPrice: 0, bestBidPrice: 0, underlyingPrice: 0 })
+      )
+    }
   }
 
   private async fetchOptionSummaries(params: IIngest.OptionSummariesParams) {
-    const cacher = this.broker.cacher
-    if (cacher === undefined) {
-      throw new Error("Cache should not be disabled")
-    }
-
     const symbolList = this.expiryMap.get(params.expiry)
-    if (!symbolList) {
-      throw insufficientDataError("Expiry is missing from expiry map.", [
-        `The requested expiry '${params.expiry}' has not been seen yet`,
-        "Check that the expiry date matches an existing intrument's expirationDate."
-      ])
-    } else {
-      return await combine(
-        chainFrom(Array.from(symbolList.values()))
-          .map(sym => ResultAsync.fromPromise(cacher.get(sym) as Promise<OptionSummary>, handleError))
-          .toArray()
-      )
-    }
+    const symbols = Array.from(symbolList?.values() ?? [])
+
+    const promises = symbols.map(sym => {
+      if (this.broker.cacher) {
+        return this.broker.cacher.get(sym) as Promise<OptionSummary | null>
+      }
+
+      return Promise.resolve(null)
+    })
+
+    const cacheValues = await Promise.all(promises)
+    return _.compact(cacheValues)
+    // const optionSummaries = symbols.reduce(async (prev: OptionSummary[], curr: string, idx: number, arr: string[]) => {
+    //   if (this.broker.cacher) {
+    //     const promise = this.broker.cacher.get(curr) as Promise<OptionSummary | null>
+    //     const val = await promise
+    //     if (val) {
+    //       prev.push(val)
+    //     }
+    //     // const optionSummary = await promise
+    //     // return Promise.resolve(optionSummary)
+    //     //prev.push()
+    //     // promise.then(optionSummaryOrNull => )
+    //     // if (optionSummary) {
+    //     //   prev.push(optionSummary)
+    //     // }
+    //   }
+
+    //   return prev
+    // }, [] as OptionSummary[])
+
+    // return optionSummaries
+    // symbols.map(symbol => )
+    // this.broker.cacher?.get(
+    // const cacher = this.broker.cacher
+    // if (cacher === undefined) {
+    //   throw new Error("Cache should not be disabled")
+    // }
+
+    // const readOptionSummaryCacheFn =
+    //   (cache: Moleculer.Cachers.Base) =>
+    //   (key: string): Promise<OptionSummary | null> => {
+    //     return cache.get(key).then(value => (value === null ? null : (value as OptionSummary)))
+    //   }
+
+    // const readOptionSummaryCache = readOptionSummaryCacheFn(cacher)
+    // // const foo = await combine(readOptionSummaryCache)
+    // // const readOptionSummaryCache = async (key: string): Promise<OptionSummary> => {
+    // //   return ResultAsync.fromPromise(cacher.get(key) as Promise<OptionSummary>, () => {
+    // //     return new Error(`reading ${key} threw an error`)
+    // //   })
+    // // }
+    // const symbolList = this.expiryMap.get(params.expiry)
+    // const symbols = Array.from(symbolList?.values() ?? [])
+
+    // this.logger.info("symbolList length", symbols.length)
+    // this.logger.info("symbolList", symbols)
+
+    // if (symbols.length === 0) {
+    //   throw insufficientDataError("Expiry is missing from expiry map.", [
+    //     `The requested expiry '${params.expiry}' has not been seen yet`,
+    //     "Check that the expiry date matches an existing intrument's expirationDate."
+    //   ])
+    // } else {
+    //   const optionSummaries = Promise.all(symbols.map(readOptionSummaryCache)).then(optionSummaryOrNull =>
+    //     _.compact(optionSummaryOrNull)
+    //   )
+
+    //   return optionSummaries
+    // return
+    // const optionSummaries = symbols.map(readOptionSummaryCache)
+    // this.broker.cacher.get(symbol)
+    // for await (const sym of symbolList.values()) {
+    //   const option = (await this.broker.cacher?.get(sym)) as OptionSummary | undefined
+    //   if (option !== undefined) {
+    //     options.push(option)
+    //   }
+    // }
+    // return optionSummaries
+    // const promises = combine(
+    //   chainFrom(Array.from(symbolList.values()))
+    //     .map(sym => {
+    //       if (!cacher) {
+    //         throw new Error("Cache should not be disabled")
+    //       }
+    //       this.logger.info("sym key", sym)
+    //       return ResultAsync.fromPromise(
+    //         cacher.get(sym) as Promise<OptionSummary>,
+    //         () => new Error(`Could not load ${sym}`)
+    //       )
+    //       // return ResultAsync.fromPromise(cacher.get(sym) as Promise<OptionSummary>, handleError)
+    //     })
+    //     .toArray()
+    // )
+    // return await promises
+    // return (await promises).isOk
+    // return await combine(
+    //   chainFrom(Array.from(symbolList.values()))
+    //     .map(sym => ResultAsync.fromPromise(this.broker.cacher.get(sym) as Promise<OptionSummary>, handleError))
+    //     .toArray()
+    // )
   }
 
   private async fetchInstruments(expiries: { nearExpiration: string; nextExpiration: string }): Promise<string[]> {

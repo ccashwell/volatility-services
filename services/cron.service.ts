@@ -27,30 +27,55 @@ export default class CronService extends Service {
       settings: {
         estimate: {
           exchange: process.env.CRON_ESTIMATE_EXCHANGE as MethodologyExchangeEnum,
-          methodology: process.env.METHODOLOGY as MethodologyEnum,
-          baseCurrency: process.env.BASE_CURRENCY as BaseCurrencyEnum,
-          interval: process.env.INTERVAL as MethodologyWindowEnum,
-          symbolType: process.env.INSTRUMENT as SymbolTypeEnum,
-          expiryType: process.env.EXPIRY_TYPE as MethodologyExpiryEnum,
+          methodology: process.env.CRON_METHODOLOGY as MethodologyEnum,
+          baseCurrency: process.env.CRON_BASE_CURRENCY as BaseCurrencyEnum,
+          interval: process.env.CRON_INTERVAL as MethodologyWindowEnum,
+          symbolType: process.env.CRON_SYMBOL_TYPE as SymbolTypeEnum,
+          expiryType: process.env.CRON_EXPIRY_TYPE as MethodologyExpiryEnum,
           contractType: ["call_option", "put_option"]
         } as Omit<IIndex.EstimateParams, "at">
       },
+      dependencies: ["index"],
       crons: [
+        // {
+        //   name: "mfiv.14d.ETH.estimate",
+        //   cronTime: process.env.MFIV_14D_ETH_CRONTIME,
+        //   onTick: () => {
+        //     this.logger.info("Cron Job", "MFIV.14d.ETH")
+        //     const provider = paramsProvider({
+        //       requestId: this.broker.generateUid(),
+        //       settingsEstimate: this.settings.estimate as Omit<IIndex.EstimateParams, "at">
+        //     })
+        //     const createIdx = (): Promise<IIndex.EstimateResponse> =>
+        //       IndexHelper.estimate(this, provider.estimate.params())
+        //     return ResultAsync.fromPromise(createIdx(), handleError)
+        //       .map(JSON.stringify)
+        //       .map(provider.ipfs.params)
+        //       .map(res => this.broker.call("ipfs.store", res))
+        //   },
+        //   timeZone: "UTC"
+        // },
         {
           name: "mfiv.14d.ETH.estimate",
-          cronTime: process.env.MFIV_14D_ETH_CRONTIME,
+          cronTime: process.env.CRON_MFIV_UPDATE_CRONTIME,
           onTick: () => {
             this.logger.info("Cron Job", "MFIV.14d.ETH")
+            const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "at">
             const provider = paramsProvider({
               requestId: this.broker.generateUid(),
-              settingsEstimate: this.settings.estimate as Omit<IIndex.EstimateParams, "at">
+              settingsEstimate
             })
+            // Patch when we report `at` since this isn't dependent on IPFS
+            provider.estimate = {
+              params: () => {
+                const at = new Date()
+                return { ...settingsEstimate, at: at.toISOString() } as IIndex.EstimateParams
+              }
+            }
+
             const createIdx = (): Promise<IIndex.EstimateResponse> =>
               IndexHelper.estimate(this, provider.estimate.params())
-            return ResultAsync.fromPromise(createIdx(), handleError)
-              .map(JSON.stringify)
-              .map(provider.ipfs.params)
-              .map(res => this.broker.call("ipfs.store", res))
+            return ResultAsync.fromPromise(createIdx(), handleError).map(JSON.stringify)
           },
           timeZone: "UTC"
         }
@@ -85,7 +110,7 @@ const paramsProvider = ({
     estimate: {
       params: () => {
         const utcMin = at.getUTCMinutes()
-        at.setUTCMinutes(Math.trunc(utcMin / 5) * 5, 0, 0)
+        at.setUTCMinutes(Math.trunc(utcMin / 1) * 1, 0, 0)
         return { ...settingsEstimate, at: at.toISOString() } as IIndex.EstimateParams
       }
     },

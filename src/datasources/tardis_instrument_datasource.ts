@@ -1,4 +1,4 @@
-import { Exchange, SymbolType, ContractType, getInstrumentInfo } from "tardis-dev"
+import { ContractType, Exchange, getInstrumentInfo, SymbolType } from "tardis-dev"
 
 export interface TardisInstrumentInfoFilter {
   exchange: Exchange

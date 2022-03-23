@@ -70,6 +70,7 @@ module.exports = {
     // 		multilineDetection: "brackets"
     // 	},
     // ],
+    "@typescript-eslint/ban-ts-comment": "off",
     "@typescript-eslint/member-ordering": "error",
     "@typescript-eslint/no-empty-function": "error",
     "@typescript-eslint/no-empty-interface": "error",

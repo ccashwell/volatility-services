@@ -1,9 +1,9 @@
-import { Entity, Column, CreateDateColumn, Index, PrimaryColumn, Unique } from "typeorm"
+import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, Unique } from "typeorm"
 import {
-  MethodologyEnum,
-  MethodologyWindowEnum,
   BaseCurrencyEnum,
+  MethodologyEnum,
   MethodologyExchangeEnum,
+  MethodologyWindowEnum,
   SymbolTypeEnum
 } from "./types"
 

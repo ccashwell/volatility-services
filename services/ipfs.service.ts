@@ -10,22 +10,14 @@ import * as DbAdapter from "moleculer-db"
 import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
 import { ResultAsync } from "neverthrow"
 import { getConnection } from "typeorm"
-import configuration from "../src/configuration"
-// import IpfsRepository from "@repositories/ipfs_repository"
-// let IpfsRepository: Repository<FleekTransaction>
+import OrmConfig from "../ormconfig"
+
 interface IpfsSettingsSchema extends ServiceSchema {
   bucket: string
-  // settings: {
-  //   bucket: string
-  // }
 }
 
-// class NewIPFSService extends Moleculer.Service<IpfsSettingsSchema> {}
-// interface ServiceSchema<S = ServiceSettingSchema> {
-
-// export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
-
 export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
+  adapter!: TypeOrmDbAdapter<FleekTransaction>
   public IpfsUpload!: ReturnType<typeof IpfsClient.AsyncDefaultClient>
   private bucket!: string
 
@@ -49,14 +41,13 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
         ipfsEnabled: false,
 
         bucket: process.env.FLEEK_BUCKET ?? "volatilitycom-bucket"
-        // secrets: SecretsClient()
       },
       // Metadata
       metadata: {},
       // Dependencies
       dependencies: [],
 
-      adapter: new TypeOrmDbAdapter(configuration.adapter),
+      adapter: new TypeOrmDbAdapter<FleekTransaction>(OrmConfig),
 
       model: FleekTransaction,
 
@@ -77,6 +68,7 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
               }
             }
           } as ActionParams,
+
           visibility: "public",
           async handler(
             this: IPFSService,
@@ -98,52 +90,21 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
       },
 
       async started() {
-        // const promiseFun = (): Promise<{ FLEEK_ID: string; FLEEK_SECRET: string }> => {
-        //   const settings: IpfsSettingsSchema = this.settings as IpfsSettingsSchema
-
-        //   return settings.secrets.requireRead("FLEEK_ID", "FLEEK_SECRET").then(result => result)
-        // }
-
         this.IpfsUpload = IpfsClient.AsyncDefaultClient(this.settings?.bucket as string)
 
         return Promise.resolve()
-        // return void (await ResultAsync.fromPromise(promiseFun(), handleAsMoleculerError).map(credentials =>
-        //   AsyncDefaultClient()
-        // ))
-        // DefaultClient()
-        // return void (await ResultAsync.fromPromise(promiseFun(), handleAsMoleculerError)).map(secrets =>
-        //   _.map(this, "settings.settings.$secureSettings").push()
-        // )
       },
 
       async stopped() {
         return await getConnection().close()
-      },
-
-      // Service methods
-      // async started(this: IPFSService) {
-      //   this.logger.info("Start ipfs service")
-      // },
-
-      // async stopped() {
-      //   await this.connection.close()
-      // }
-
-      afterConnected(this: IPFSService) {
-        this.logger.info("Connected successfully")
       }
     })
   }
 
-  // private get repository(): Repository<FleekTransaction> {
-  //   return getRepository(FleekTransaction)
-  //   // return (this.adapter as TypeOrmDbAdapter<FleekTransaction>).repository
-  // }
-
   private get operation() {
     return {
-      store: this.store.bind(this)
-      //persist: this.persist.bind(this)
+      store: this.store.bind(this),
+      persist: this.persist.bind(this)
     }
   }
 
@@ -160,7 +121,7 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
   }
 
   private buildResource(context: Context<IIPFS.StoreParams, IIPFSServiceMeta>) {
-    const resource = this.repository.create()
+    const resource = this.adapter.repository.create()
     return (output: UploadResponse) => {
       resource.hash = output.hash
       resource.key = output.publicUrl
@@ -170,7 +131,7 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
   }
 
   private persist(this: IPFSService, resource: FleekTransaction) {
-    return this.repository.save(resource)
+    return this.adapter.repository.save(resource)
   }
 }
 

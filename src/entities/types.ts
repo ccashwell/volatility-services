@@ -11,11 +11,11 @@ export enum SymbolTypeEnum {
 }
 
 export enum MethodologyEnum {
-  MFIV = "mfiv"
+  MFIV = "MFIV"
 }
 
 export enum MethodologyWindowEnum {
-  Day14 = "14d"
+  Day14 = "14D"
 }
 
 export enum MethodologyExpiryEnum {
@@ -23,5 +23,5 @@ export enum MethodologyExpiryEnum {
 }
 
 export enum RateSourceEnum {
-  Aave = "aave"
+  Aave = "AAVE"
 }

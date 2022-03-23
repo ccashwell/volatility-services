@@ -6,11 +6,9 @@ import { IRate } from "@interfaces/services/rate"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
 import { Mappers } from "@lib/utils/mappers"
 import { Context, Errors, Service, ServiceBroker } from "moleculer"
-import * as DbAdapter from "moleculer-db"
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
+import * as Cron from "moleculer-cron"
 import { ResultAsync } from "neverthrow"
-import { DeepPartial, getConnection, getRepository, Repository } from "typeorm"
-import configuration from "../src/configuration"
+import { DeepPartial, getRepository, Repository } from "typeorm"
 
 export default class RateService extends Service {
   public constructor(public broker: ServiceBroker) {
@@ -18,12 +16,29 @@ export default class RateService extends Service {
     this.parseServiceSchema({
       name: "rate",
 
+      crons: [
+        {
+          name: "FetchAaveRateCron",
+          cronTime: process.env.RATE_RISKLESS_RATE_CRONTIME,
+          onTick: async () => {
+            const result = await this.actions.risklessRate({ source: this.settings.risklessRateSource })
+            this.logger.info("aave rate", result)
+            await this.broker.broadcast("rate.updated", result, ["index"])
+          },
+          timeZone: "UTC"
+        }
+      ],
+
       settings: {
         $dependencyTimeout: 30000,
 
         fields: ["id", "value", "sourceValue", "source", "rateAt"],
 
-        idField: ["id"]
+        idField: ["id"],
+
+        skipPersist: process.env.RATE_SKIP_PERSIST === "true",
+
+        risklessRateSource: process.env.RATE_RISKLESS_RATE_SOURCE ?? "AAVE"
       },
 
       dependencies: [],
@@ -32,11 +47,12 @@ export default class RateService extends Service {
         scalable: true
       },
 
-      adapter: new TypeOrmDbAdapter<Rate>(configuration.adapter),
+      // adapter: new TypeOrmDbAdapter<Rate>(configuration.adapter),
 
-      model: Rate,
+      // model: Rate,
 
-      mixins: [DbAdapter],
+      mixins: [Cron],
+      // mixins: [DbService],
 
       actions: {
         /**
@@ -44,7 +60,7 @@ export default class RateService extends Service {
          */
         risklessRate: {
           params: {
-            source: { type: "enum", values: ["aave"], default: "aave" }
+            source: { type: "enum", values: ["AAVE"], default: "AAVE" }
           },
           async handler(
             this: RateService,
@@ -54,7 +70,9 @@ export default class RateService extends Service {
               this.fetchRisklessRate(ctx.params),
               handleAsMoleculerError
             ).map(async response => {
-              await this.persist(response)
+              if (!this.settings.skipPersist) {
+                await this.persist(response)
+              }
               return response
             })
 
@@ -68,7 +86,9 @@ export default class RateService extends Service {
       },
 
       async stopped() {
-        return await getConnection().close()
+        // if (!this.settings.skipPersist) {
+        //   return await getConnection().close()
+        // }
       }
     })
   }

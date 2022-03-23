@@ -1,5 +1,3 @@
-/* eslint-disable max-len */
-"use strict"
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -8,19 +6,16 @@ import {
   MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities"
-import { IIndex } from "@interfaces"
+import { IIndex, IRate } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
 import { optionSummariesLists } from "@service_helpers/ingest_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
-import * as DbService from "moleculer-db"
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
 import { Result } from "neverthrow"
 import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
 import { OptionSummary } from "tardis-dev"
 import { chainFrom } from "transducist"
-import { getConnection, getRepository, Repository } from "typeorm"
-import configuration from "../src/configuration"
-
+import { getRepository, Repository } from "typeorm"
+/* eslint-disable max-len */
 /**
  * VG.MethodologyParams = { exchange: 'deribit', baseCurrency: 'eth', type: 'option', methodology: 'mfiv', timestamp: Date }}
  * VG.MfivParams = MethodologyParams & { interval: '14d', methodology: 'mfiv', nearExpiration: Date, nextExpiration: Date }
@@ -42,23 +37,27 @@ import configuration from "../src/configuration"
  *
  */
 export default class IndexService extends Service {
+  private risklessRate?: IRate.RisklessRateResponse
+
   public constructor(public broker: ServiceBroker) {
     super(broker)
     this.parseServiceSchema({
       name: "index",
 
-      adapter: new TypeOrmDbAdapter<MethodologyIndex>(configuration.adapter),
+      // adapter: new TypeOrmDbAdapter<MethodologyIndex>(configuration.adapter),
 
-      model: MethodologyIndex,
+      // model: MethodologyIndex,
 
-      mixins: [DbService],
+      // mixins: [DbService],
 
       settings: {
         $dependencyTimeout: 60000,
 
-        fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"],
+        // fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"],
 
-        idField: "timestamp"
+        // idField: "timestamp",
+
+        skipPersist: process.env.INDEX_SKIP_PERSIST === "true"
       },
 
       dependencies: [
@@ -74,6 +73,7 @@ export default class IndexService extends Service {
       // Actions
       actions: {
         estimate: {
+          visibility: "public",
           params: {
             at: { type: "string" },
             exchange: { type: "enum", values: ["deribit"], default: "deribit" },
@@ -98,8 +98,16 @@ export default class IndexService extends Service {
         }
       },
 
+      events: {
+        "rate.updated": {
+          handler(this: IndexService, context: Context<IRate.RisklessRateResponse>) {
+            this.risklessRate = context.params
+          }
+        }
+      },
+
       async stopped() {
-        return await getConnection().close()
+        //return await getConnection().close()
       }
     })
   }
@@ -115,11 +123,17 @@ export default class IndexService extends Service {
 
     const options = await optionSummariesLists(context, methodologyDates)
 
+    const risklessRate = this.risklessRate ?? {
+      risklessRate: 0.366856442493147,
+      risklessRateAt: "2022-03-17T17:17:00.702Z",
+      risklessRateSource: "AAVE"
+    }
+
     const mfivContext: MfivContext = {
       ...params,
       windowInterval: params.interval,
       currency: params.baseCurrency,
-      ...configuration.indexSettings
+      ...risklessRate
     }
 
     // The last option price by timestamp becomes the underlying price
@@ -143,6 +157,8 @@ export default class IndexService extends Service {
       underlyingPrice
     }
 
+    this.logger.info("optionLists", options.length)
+
     const maybeMfivResult = Result.fromThrowable(
       () => compute(mfivContext, mfivParams),
       err => {
@@ -158,19 +174,23 @@ export default class IndexService extends Service {
     const mfivResult = maybeMfivResult.value
 
     const evidence: MfivEvidence = {
-      version: "2022-01-01",
-      type: "mfiv.estimate.evidence",
+      version: "2022-03-22",
+      type: "MFIV.ESTIMATE.EVIDENCE",
       context: mfivContext,
       params: mfivParams,
       result: mfivResult
     }
     await this.announce(evidence)
-    await this.persist(evidence, {
-      requestId: context.requestID ?? this.broker.generateUid(),
-      near: mfivParams.nearDate,
-      next: mfivParams.nextDate,
-      iVal: mfivResult.invdVol?.toString() || "undefined"
-    })
+
+    if (!this.settings.skipPersist) {
+      await this.persist(evidence, {
+        requestId: context.requestID ?? this.broker.generateUid(),
+        near: mfivParams.nearDate,
+        next: mfivParams.nextDate,
+        iVal: mfivResult.invdVol?.toString() || "undefined"
+      })
+    }
+
     const { intermediates, ...valObj } = mfivResult
     this.logger.debug("estimate - intermediates", intermediates)
     this.logger.info("estimate", { valObj, mfivContext })
@@ -179,7 +199,6 @@ export default class IndexService extends Service {
     //   near: { final: mfivResult.intermediates?.finalNearBook.length },
     //   next: { final: mfivResult.intermediates?.finalNextBook.length }
     // })
-
     return evidence
   }
 
@@ -214,7 +233,7 @@ export default class IndexService extends Service {
     this.logger.debug("compute(mfiv)", JSON.stringify(evidence))
     const ctx = evidence.context
     const event = `${ctx.methodology}.${ctx.windowInterval}.${ctx.currency}.index.created`
-    await this.broker.emit(event, evidence)
+    await this.broker.broadcast(event, evidence, ["ws"])
   }
 }
 

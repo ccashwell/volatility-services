@@ -23,6 +23,7 @@ const C = {
   VISIBILITY_PUBLIC: "public",
   VISIBILITY_PUBLISHED: "published",
 
+  TOKEN_LENGTH: 75,
   TOKEN_TYPE_VERIFICATION: "verification",
   TOKEN_TYPE_PASSWORDLESS: "passwordless",
   TOKEN_TYPE_PASSWORD_RESET: "password-reset",

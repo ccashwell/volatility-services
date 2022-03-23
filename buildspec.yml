@@ -1,0 +1,18 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+  build:
+    commands:
+      - echo Building the Docker image...
+      - export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain artifacts --domain-owner 994224827437 --query authorizationToken --output text`
+      - echo '@volatility-group:registry=https://artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/' > .npmrc
+      - echo '//artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:always-auth=true' >> .npmrc
+      - echo "//artifacts-994224827437.d.codeartifact.us-east-2.amazonaws.com/npm/node-volatility-mfiv/:_authToken=${CODEARTIFACT_AUTH_TOKEN}" >> .npmrc
+      - docker build -t $IMAGE_URI:$IMAGE_TAG --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
+  post_build:
+    commands:
+      - echo Pushing the Docker image...
+      - docker push $IMAGE_URI:$IMAGE_TAG

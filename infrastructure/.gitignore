@@ -25,6 +25,7 @@ coverage/
 .idea
 *.iml
 junit.xml
+*.bak
 
 # We don't want tsconfig at the root
 /tsconfig.json

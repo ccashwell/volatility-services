@@ -8,3 +8,4 @@ services/config.service.js
 services/mail.service.js
 mixins/db.mixin.js
 mixins/cron.mixin.js
+infrastructure/cdk/config/buildspec-content.ts

@@ -13,8 +13,6 @@ export default class InstrumentInfoService extends Service {
       // Name
       name: "instrument_info",
 
-      cacher: "Memory",
-
       // Settings
       settings: {},
       // Metadata
@@ -37,18 +35,23 @@ export default class InstrumentInfoService extends Service {
           },
           rest: "/instruments",
           // Enable caching to this action
-          cache: true,
+          cache: {
+            // These cache entries will be expired after 5 seconds instead of 30.
+            ttl: 30
+          },
           async handler(
             this: InstrumentInfoService,
             ctx: Context<IInstrumentInfo.InstrumentInfoParams>
           ): Promise<IInstrumentInfo.InstrumentInfoResponse> {
+            this.logger.info("/instruments called", ctx.params)
             return await this.fetchInstruments(ctx.params)
           }
         }
       },
 
-      started(this: InstrumentInfoService) {
-        return initTardis()
+      async started() {
+        initTardis()
+        return Promise.resolve()
       }
     })
   }

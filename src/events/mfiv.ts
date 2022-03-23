@@ -1,9 +1,9 @@
 // import { MfivContext, MfivParams, MfivResult } from "node-volatility-mfiv"
 
 export interface MfivEvent {
-  version: "2022-01-01"
+  version: "2022-03-22"
 
-  eventType: "mfiv.14d.eth.index.created"
+  eventType: "MFIV.14D.ETH.INDEX.CREATED"
 
   metadata: {
     "uma.priceId": string

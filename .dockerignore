@@ -23,7 +23,7 @@ coverage
 .husky
 .editorconfig
 .dockerignore
-./scripts
+# ./scripts
 # repl-commands
 # ecosystem.config.js
 k8s.yaml

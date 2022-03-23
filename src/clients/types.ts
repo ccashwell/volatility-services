@@ -1,5 +1,5 @@
-import { uploadInput } from "@fleekhq/fleek-storage-js"
 import { UploadResponse } from "@datasources/types"
+import { uploadInput } from "@fleekhq/fleek-storage-js"
 
 export declare const SECRETKEYS: readonly [
   "TARDIS_API_KEY",

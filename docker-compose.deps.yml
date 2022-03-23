@@ -1,6 +1,20 @@
 version: "3.8"
 
 services:
+  # instrument_info:
+  #   image: volatility-services-multi:latest
+  #   container_name: volatility-services
+  #   env_file: docker-compose.env
+  #   networks:
+  #     - vg-network
+  #   environment:
+  #     NODE_ENV: production
+  #     SERVICES: instrument_info.service.js
+  #     NEW_RELIC_APP_NAME: volatility-services
+  #   deploy:
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: on-failure
   nats:
     # platform: linux/amd64
     image: public.ecr.aws/docker/library/nats:2.7.2
@@ -8,6 +22,7 @@ services:
     env_file: docker-compose.env
     ports:
       - '4222:4222'
+      - '8222:8222'
     command:
       - '-m'
       - '8222'

@@ -6,6 +6,7 @@
     "skipLibCheck": true,
     "module": "commonjs",
     "allowJs": true,
+    "resolveJsonModule": true,
     "types": ["node", "jest"],
     "noImplicitAny": true,
     "noImplicitReturns": false,

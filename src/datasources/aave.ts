@@ -120,6 +120,6 @@ export async function provideRateResponse() {
     contractValue,
     risklessRate: toLiquidityRate(contractValue), // TODO: Return 'undefined' and let upstream handle it
     risklessRateAt: new Date().toISOString(),
-    risklessRateSource: "aave"
+    risklessRateSource: "AAVE"
   } as IRate.RisklessRateResponse & { contractValue: number }
 }

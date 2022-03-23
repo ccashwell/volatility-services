@@ -1,216 +1,67 @@
-import { Stack, StackProps } from "aws-cdk-lib"
-import * as ec2 from "aws-cdk-lib/aws-ec2"
-import { Cluster, ContainerImage, FargateService, FargateTaskDefinition, LogDrivers } from "aws-cdk-lib/aws-ecs"
-import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns"
-import { PublicHostedZone } from "aws-cdk-lib/aws-route53"
-import * as servicediscovery from "aws-cdk-lib/aws-servicediscovery"
+import { Stack, StackProps, Tags } from "aws-cdk-lib"
+import { Certificate, CertificateValidation } from "aws-cdk-lib/aws-certificatemanager"
+import { Role } from "aws-cdk-lib/aws-iam"
+import { CrossAccountZoneDelegationRecord, PublicHostedZone } from "aws-cdk-lib/aws-route53"
 import { Construct } from "constructs"
 
-export class VgDnsStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+interface DelegateDnsStackProps extends StackProps {
+  stage: string
+  environment: string
+  zoneName: string
+  stackPrefixFn: (constructName: string) => string
+  crossAccountDelegationRoleArn: string
+  subjectAlternativeNames: string[]
+}
+
+export class VgDelegatedDnsStack extends Stack {
+  readonly nameservers: string[]
+  readonly certificateArn: string
+
+  constructor(scope: Construct, id: string, props: DelegateDnsStackProps) {
     super(scope, id, props)
 
-    const subZone = new PublicHostedZone(this, "SubZone", {
-      zoneName: process.env.DOMAIN as string
-    })
-
-    // new CrossAccountZoneDelegationRecord(this, "DelegatedZone", {
-    //   delegatedZone: subZone,
-    //   parentHostedZoneId: parentZone.hostedZoneId,
-    //   delegationRole: parentZone.crossAccountZoneDelegationRole
-    // })
-
-    // props?.env?.account
-    // const env = getEnv(scope, "devplatform")
-    // const componentName = stackPrefix("vg", env.environment, env.stage)
-
-    // if (env.stage === "dns") {
-    //   const devEnv = getEnv(scope, "devplatform")
-    //   const parentZone = new PublicHostedZone(this, componentName("HostedZone"), {
-    //     zoneName: devEnv.domain as string,
-    //     crossAccountZoneDelegationPrincipal: new AccountPrincipal(devEnv.account)
-    //   })
-
-    //   return
-    // }
-
-    // const subZone = new PublicHostedZone(this, componentName("SubZone"), {
-    //   zoneName: env.domain as string
-    // })
-
-    // // import the delegation role by constructing the roleArn
-    // const delegationRoleArn = Stack.of(this).formatArn({
-    //   region: "", // IAM is global in each partition
-    //   service: "iam",
-    //   account: dnsEnv.account,
-    //   resource: "role",
-    //   resourceName: "MyDelegationRole"
-    // })
-
-    // const delegationRole = Role.fromRoleArn(this, "DelegationRole", delegationRoleArn)
-
-    // // create the record
-    // new CrossAccountZoneDelegationRecord(this, "delegate", {
-    //   delegatedZone: subZone,
-    //   parentHostedZoneName: dnsEnv.domain, // or you can use parentHostedZoneId
-    //   delegationRole
-    // })
-
+    console.log("Processing", props.zoneName, props.crossAccountDelegationRoleArn)
     // const domainZone = HostedZone.fromLookup(this, "Zone", { domainName: "volatility.com" })
     // const certificate = Certificate.fromCertificateArn(this, "Cert", "arn:aws:acm:us-east-1:123456:certificate/abcdefg")
+    const parentZone = PublicHostedZone.fromPublicHostedZoneId(
+      this,
+      "RootZone",
+      "Z00960273HOHML2G4GOJT"
+    ) as PublicHostedZone
+    //const parentZone = props?.parentZone as PublicHostedZone
+    // const delegationRole = parentZone.crossAccountZoneDelegationRole as Role
+    // const delgationRole = Fn.getAtt("RootZone", "CrossAccountZoneDelegationRole").toString()
+    const stackPrefixFn = props?.stackPrefixFn as (id: string) => string
+    const subZone = new PublicHostedZone(this, "SubZone", {
+      zoneName: props.zoneName,
+      caaAmazon: true
+    })
+    const makeFqdn = (subdomain: string) => `${subdomain}.${subZone.zoneName}`
 
-    const vpc = new ec2.Vpc(this, componentName("vpc"), {})
-
-    const cluster = new Cluster(this, componentName("cluster"), {
-      clusterName: "vg-services-cluster",
-      vpc
+    const zoneDelegationRecord = new CrossAccountZoneDelegationRecord(this, "delegate", {
+      delegatedZone: subZone,
+      parentHostedZoneId: parentZone.hostedZoneId,
+      delegationRole: Role.fromRoleArn(this, "CrossAccountDelegationRole", props.crossAccountDelegationRoleArn)
     })
 
-    const namespace = new servicediscovery.PrivateDnsNamespace(this, "Namespace", {
-      name: "volatility.local",
-      vpc
+    zoneDelegationRecord.node.addDependency(subZone)
+
+    this.nameservers = subZone.hostedZoneNameServers as string[]
+    const subjectAlternativeNames = props.subjectAlternativeNames ?? []
+    const sans = [subZone.zoneName, ...subjectAlternativeNames.map(makeFqdn)]
+    console.log("SANS", sans)
+    const certificate = new Certificate(this, `${stackPrefixFn("SubZoneSSLCertificate")}`, {
+      domainName: subZone.zoneName,
+      subjectAlternativeNames: sans,
+      validation: CertificateValidation.fromDns(subZone)
     })
+    certificate.node.addDependency(zoneDelegationRecord)
 
-    // ------------------------------------------------------------------------------------------------- //
-    const wstaskdef = new FargateTaskDefinition(this, componentName("ws-taskdef"), {
-      memoryLimitMiB: 2048, // Default is 512
-      cpu: 512 // Default is 256
-    })
+    this.certificateArn = certificate.certificateArn
 
-    const wscontainer = wstaskdef.addContainer("ws-container", {
-      // image: ContainerImage.fromRegistry("compose-pipeline-volatility-services:latest"),
-      image: ContainerImage.fromAsset("../.."),
-      environment: { SEARCH_DOMAIN: namespace.namespaceName },
-      logging: LogDrivers.awsLogs({ streamPrefix: "vg-services-log-group", logRetention: 7 })
-    })
-
-    wscontainer.addPortMappings({
-      containerPort: 80
-    })
-
-    // Create a load-balanced Fargate service and make it public
-    const wsservice = new ecsPatterns.ApplicationLoadBalancedFargateService(this, componentName("ws-service"), {
-      cluster, // Required
-      // taskImageOptions: {
-      //   image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
-      // },
-      // targetGroups: [
-
-      // ],
-      // redirectHTTP: true,
-      // targetProtocol: ApplicationProtocol.HTTPS,
-      // recordType: "dev.volatility.com",
-      // sslPolicy: SslPolicy.RECOMMENDED,
-      // domainName: "api.dev.volatility.com",
-      desiredCount: 1, // Default is 1
-      publicLoadBalancer: true, // Default is false
-      serviceName: "ws",
-      taskDefinition: wstaskdef,
-      cloudMapOptions: { name: "ws", cloudMapNamespace: namespace }
-    })
-
-    // ------------------------------------------------------------------------------------------------- //
-
-    // ------------------------------------------------------------------------------------------------- //
-
-    const appservertaskdef = new FargateTaskDefinition(this, componentName("appserver-taskdef"), {
-      memoryLimitMiB: 2048, // Default is 512
-      cpu: 512 // Default is 256
-    })
-
-    const appservercontainer = appservertaskdef.addContainer("appserver-container", {
-      image: ContainerImage.fromRegistry("mreferre/yelb-appserver:0.5"),
-      environment: { SEARCH_DOMAIN: namespace.namespaceName }
-    })
-
-    // Create a standard Fargate service
-    const appserverservice = new FargateService(this, componentName("appserver-service"), {
-      cluster, // Required
-      desiredCount: 1, // Default is 1
-      serviceName: "appserver",
-      taskDefinition: appservertaskdef,
-      cloudMapOptions: { name: "appserver", cloudMapNamespace: namespace }
-    })
-
-    appserverservice.connections.allowFrom(wsservice.service, ec2.Port.tcp(4567))
-
-    // -------------------------  ------------------------------------------------------------------------ //
-
-    // ------------------------------------------------------------------------------------------------- //
-
-    const dbtaskdef = new FargateTaskDefinition(this, componentName("db-taskdef"), {
-      memoryLimitMiB: 2048, // Default is 512
-      cpu: 512 // Default is 256
-    })
-
-    const dbcontainer = dbtaskdef.addContainer("db-container", {
-      image: ContainerImage.fromRegistry("postgres:12.10")
-    })
-
-    // Create a standard Fargate service
-    const dbservice = new FargateService(this, componentName("db-service"), {
-      cluster, // Required
-      serviceName: "db",
-      taskDefinition: dbtaskdef,
-      cloudMapOptions: { name: "db", cloudMapNamespace: namespace }
-    })
-
-    dbservice.connections.allowFrom(appserverservice, ec2.Port.tcp(5432))
-
-    // ------------------------------------------------------------------------------------------------- //
-
-    // ------------------------------------------------------------------------------------------------- //
-
-    const redisservertaskdef = new FargateTaskDefinition(this, componentName("redis-server-taskdef"), {
-      memoryLimitMiB: 2048, // Default is 512
-      cpu: 512 // Default is 256
-    })
-
-    const redisservercontainer = redisservertaskdef.addContainer("redis-server", {
-      image: ContainerImage.fromRegistry("redis:6.2.6")
-    })
-
-    // Create a standard Fargate service
-    const redisserverservice = new FargateService(this, componentName("redis-server-service"), {
-      cluster, // Required
-      serviceName: "redis-server",
-      taskDefinition: redisservertaskdef,
-      cloudMapOptions: { name: "redis-server", cloudMapNamespace: namespace }
-    })
-
-    redisserverservice.connections.allowFrom(appserverservice, ec2.Port.tcp(6379))
-
-    // ------------------------------------------------------------------------------------------------- //
-
-    // ------------------------------------------------------------------------------------------------- //
-
-    const natsservertaskdef = new FargateTaskDefinition(this, componentName("nats-server-taskdef"), {
-      memoryLimitMiB: 1024, // Default is 512
-      cpu: 512 // Default is 256
-    })
-
-    const natsservercontainer = natsservertaskdef.addContainer("nats-server", {
-      image: ContainerImage.fromRegistry("nats:2.7.2")
-    })
-
-    // Create a standard Fargate service
-    const natsserverservice = new FargateService(this, componentName("nats-server-service"), {
-      cluster, // Required
-      serviceName: "nats-server",
-      taskDefinition: natsservertaskdef,
-      cloudMapOptions: { name: "nats-server", cloudMapNamespace: namespace }
-    })
-
-    natsserverservice.connections.allowFrom(natsserverservice, ec2.Port.tcp(4222))
-
-    // ------------------------------------------------------------------------------------------------- //
-
-    // const queue = new sqs.Queue(this, 'CdkQueue', {
-    //   visibilityTimeout: Duration.seconds(300)
-    // });
-
-    // const topic = new sns.Topic(this, 'CdkTopic');
-
-    // topic.addSubscription(new subs.SqsSubscription(queue));
+    Tags.of(this).add("Stage", props.stage)
+    Tags.of(this).add("Environment", props.environment)
+    Tags.of(this).add("Cost", "infra")
+    Tags.of(this).add("Cdk", "true")
   }
 }

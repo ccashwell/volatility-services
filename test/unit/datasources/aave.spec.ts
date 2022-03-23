@@ -7,7 +7,7 @@ jest.mock("@datasources/aave", () => ({
       contractValue: 123456789,
       risklessRate: 0.0055, // TODO: Return 'undefined' and let upstream handle it
       risklessRateAt: new Date().toISOString(),
-      risklessRateSource: "aave"
+      risklessRateSource: "AAVE"
     } as IRate.RisklessRateResponse & { contractValue: number })
   )
 }))
@@ -19,7 +19,7 @@ jest.mock("@datasources/aave", () => ({
 //       contractValue: 123456789,
 //       risklessRate: 0.0055, // TODO: Return 'undefined' and let upstream handle it
 //       risklessRateAt: new Date().toISOString(),
-//       risklessRateSource: "aave"
+//       risklessRateSource: "AAVE"
 //     } as IRate.RisklessRateResponse & { contractValue: number })
 //   )
 //   return {
@@ -37,7 +37,7 @@ describe("aave client", () => {
             contractValue: 123456789,
             risklessRate: 0.0055,
             risklessRateAt: expect.any(String),
-            risklessRateSource: expect.stringMatching("aave")
+            risklessRateSource: expect.stringMatching("AAVE")
           })
         )
       })

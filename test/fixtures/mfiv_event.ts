@@ -18,7 +18,7 @@ export default {
     instrument: "option",
     risklessRate: 0.0056,
     risklessRateAt: "2021-10-01T07:02:00.000Z",
-    risklessRateSource: "aave"
+    risklessRateSource: "AAVE"
   },
   params: {
     at: "2021-10-01T07:02:00.000Z",
