@@ -1,8 +1,8 @@
-"use strict"
 import { initTardis } from "@datasources/tardis"
 import { tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"
 import { IInstrumentInfo } from "@interfaces/services/instrument_info"
 import { Context, Service, ServiceBroker } from "moleculer"
+// import * as Cron from "moleculer-cron"
 import { InstrumentInfo } from "tardis-dev"
 import { chainFrom } from "transducist"
 
@@ -20,24 +20,40 @@ export default class InstrumentInfoService extends Service {
       // Dependencies
       dependencies: [],
 
+      // mixins: [Cron],
+
+      // crons: [
+      //   {
+      //     name: "InstrumentInfoRefresh",
+      //     cronTime: process.env.INSTRUMENT_INFO_REFRESH_CRONTIME,
+      //     onTick: () => {
+      //       console.log("InstrumentInfo doRefresh()")
+      //       // const result = await this.actions.risklessRate({ source: this.settings.risklessRateSource })
+      //       // this.logger.info("aave rate", result)
+      //       // await this.broker.broadcast("rate.updated", result, ["index"])
+      //     },
+      //     timeZone: "UTC"
+      //   }
+      // ],
+
       // Actions
       actions: {
         instrumentInfo: {
+          visibility: "public",
+          // TODO: Enable caching to this action
+          cache: {
+            // These cache entries will be expired after 5 seconds instead of 30.
+            ttl: 30
+          },
           params: {
             timestamp: { type: "string" },
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
-            baseCurrency: { type: "string", enum: ["ETH"], default: "ETH" },
+            baseCurrency: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
             // quoteCurrency: { type: "string", enum: ["ETH"] },
             type: { type: "string", enum: ["option"], default: "option" },
             contractType: { type: "array", items: "string", default: ["call_option", "put_option"] },
             active: { type: "boolean", default: true },
             expirationDates: { type: "array", items: "string" }
-          },
-          rest: "/instruments",
-          // Enable caching to this action
-          cache: {
-            // These cache entries will be expired after 5 seconds instead of 30.
-            ttl: 30
           },
           async handler(
             this: InstrumentInfoService,

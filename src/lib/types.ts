@@ -8,7 +8,7 @@ export type Methodology = "mfiv"
 
 export type SymbolType = "option" | "perpetual" | "future" | "spot"
 
-export type BaseCurrency = "ETH"
+export type BaseCurrency = "ETH" | "BTC"
 
 export type ContractType = "call_option" | "put_option"
 

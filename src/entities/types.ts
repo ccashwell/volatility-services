@@ -1,5 +1,6 @@
 export enum BaseCurrencyEnum {
-  ETH = "ETH"
+  ETH = "ETH",
+  BTC = "BTC"
 }
 
 export enum MethodologyExchangeEnum {

@@ -10,11 +10,15 @@ import { IIndex, IRate } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
 import { optionSummariesLists } from "@service_helpers/ingest_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
+import { DbService } from "moleculer-db"
+import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
 import { Result } from "neverthrow"
 import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
 import { OptionSummary } from "tardis-dev"
 import { chainFrom } from "transducist"
 import { getRepository, Repository } from "typeorm"
+import OrmConfig from "../ormconfig"
+
 /* eslint-disable max-len */
 /**
  * VG.MethodologyParams = { exchange: 'deribit', baseCurrency: 'eth', type: 'option', methodology: 'mfiv', timestamp: Date }}
@@ -37,6 +41,7 @@ import { getRepository, Repository } from "typeorm"
  *
  */
 export default class IndexService extends Service {
+  adapter!: TypeOrmDbAdapter<MethodologyIndex>
   private risklessRate?: IRate.RisklessRateResponse
 
   public constructor(public broker: ServiceBroker) {
@@ -44,11 +49,25 @@ export default class IndexService extends Service {
     this.parseServiceSchema({
       name: "index",
 
-      // adapter: new TypeOrmDbAdapter<MethodologyIndex>(configuration.adapter),
+      adapter: new TypeOrmDbAdapter<MethodologyIndex>(OrmConfig),
 
-      // model: MethodologyIndex,
+      model: MethodologyIndex,
 
-      // mixins: [DbService],
+      mixins: [
+        DbService,
+        {
+          actions: {
+            get: { visibility: "private" },
+            list: { visibility: "private" },
+            find: { visibility: "private" },
+            count: { visibility: "private" },
+            create: { visibility: "private" },
+            insert: { visibility: "private" },
+            update: { visibility: "private" },
+            remove: { visibility: "private" }
+          }
+        }
+      ],
 
       settings: {
         $dependencyTimeout: 60000,
@@ -78,7 +97,7 @@ export default class IndexService extends Service {
             at: { type: "string" },
             exchange: { type: "enum", values: ["deribit"], default: "deribit" },
             methodology: { type: "enum", values: ["mfiv"], default: "mfiv" },
-            baseCurrency: { type: "enum", values: ["ETH"], default: "ETH" },
+            baseCurrency: { type: "enum", values: ["ETH", "BTC"], default: "ETH" },
             interval: { type: "enum", values: ["14d"], default: "14d" },
             symbolType: { type: "enum", values: ["option"], default: "option" },
             expiryType: { type: "string", default: "FridayT08:00:00Z" },
@@ -191,9 +210,10 @@ export default class IndexService extends Service {
       })
     }
 
-    const { intermediates, ...valObj } = mfivResult
-    this.logger.debug("estimate - intermediates", intermediates)
-    this.logger.info("estimate", { valObj, mfivContext })
+    this.logger.debug("estimate", mfivResult)
+    // const { intermediates, ...valObj } = mfivResult
+    // this.logger.debug("estimate - intermediates", intermediates)
+    // this.logger.info("estimate", { valObj, mfivContext })
     // this.logger.info("estimate.metrics", {
     //   input: { length: mfivParams.options.length, oldest: hud(oldest), newest: hud(mostRecent) },
     //   near: { final: mfivResult.intermediates?.finalNearBook.length },
@@ -213,11 +233,13 @@ export default class IndexService extends Service {
     extra: { requestId: string; iVal: string; near: string; next: string }
   ) {
     const ctx = evidence.context
-    //const index = this.adapter.getRepository<MethodologyIndex>(MethodologyIndex)
-    // const index = repository.create()
-    // const repository = getConnection().getRepository(MethodologyIndex)
+    const index: MethodologyIndex = this.adapter.repository.create() // ctx as DeepPartial<MethodologyIndex>
 
-    const index: MethodologyIndex = this.repository.create() // ctx as DeepPartial<MethodologyIndex>
+    /**
+     * This persists Mfiv values to the DB but should be refactored
+     *
+     * @deprecated
+     * */
     index.timestamp = new Date(evidence.params.at)
     index.value = evidence.result.dVol?.toString() ?? "undefined"
     index.baseCurrency = ctx.currency as BaseCurrencyEnum
