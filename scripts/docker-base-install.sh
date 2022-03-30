@@ -5,7 +5,7 @@
 ####
 echo $(cat /proc/version)
 
-if cat /proc/version | grep -q 'Ubuntu'; then
+if cat /proc/version | grep -q 'Ubuntu\|amzn2'; then
   apt-get update -y && \
   apt-get install -y \
           dumb-init && \

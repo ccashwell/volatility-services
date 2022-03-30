@@ -1,0 +1,5 @@
+logs:
+
+- name: ecs-app-logs # This value is only used to organize your config; it will not appear in log events.
+
+file: /var/lib/docker/containers/*/*.log

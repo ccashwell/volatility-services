@@ -83,3 +83,6 @@ build.out
 
 # Adding this temporarily while this branch exists
 node-volatility-mfiv-internal
+
+# Place to stash things you don't want added
+private

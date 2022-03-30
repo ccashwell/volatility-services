@@ -3,6 +3,8 @@
 FROM public.ecr.aws/docker/library/node:16.14.0 as base
 WORKDIR /usr/src/app
 EXPOSE 3000
+RUN mkdir -p /etc/newrelic-infra/logging.d/
+COPY ./etc/newrelic-infra/logging.d/logs.yaml /etc/newrelic-infra/logging.d/logs.yaml
 COPY newrelic.js .
 COPY ormconfig.js .
 COPY scripts/ scripts
@@ -25,13 +27,12 @@ FROM dependencies as ts-compile
 WORKDIR /usr/src/app
 # COPY --from=dependencies /usr/src/app/node_modules /usr/src/app/node_modules
 COPY moleculer.config.ts .
-COPY tsconfig*.json .
-COPY typings/ typings
-COPY mixins/ mixins
-COPY src/ src
-COPY services/ services
+COPY tsconfig*.json ./
+COPY typings/ ./typings
+COPY mixins/ ./mixins
+COPY src/ ./src
+COPY services/ ./services
 RUN npm run build && \
-    cp services/*.js dist/services/ && \
     rm -rf node_modules
 
 # Stage 2 compiles typescript
