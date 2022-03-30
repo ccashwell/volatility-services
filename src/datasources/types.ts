@@ -1,5 +1,5 @@
-import { Stream } from "stream"
 import { uploadInput, uploadOutput } from "@fleekhq/fleek-storage-js"
+import { Stream } from "stream"
 import { AbiItem } from "web3-utils"
 
 export interface GetAbiResponse {

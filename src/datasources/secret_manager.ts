@@ -1,6 +1,6 @@
+import { SecretKey } from "@clients/types"
 import * as aws from "aws-sdk"
 import { AWSError, SecretsManager } from "aws-sdk"
-import { SecretKey } from "@clients/types"
 
 export const FetchSecret = (secretName: string): Promise<Record<SecretKey, string>> =>
   new Promise((resolve, reject) =>

@@ -1,6 +1,6 @@
-import { upload as fleekUpload, uploadOutput } from "@fleekhq/fleek-storage-js"
-import { Bufferable } from "@datasources/types"
 import { IpfsClientConfig } from "@clients/types"
+import { Bufferable } from "@datasources/types"
+import { upload as fleekUpload, uploadOutput } from "@fleekhq/fleek-storage-js"
 
 export type IpfsUploadable = Bufferable | Bufferable[]
 

@@ -1,10 +1,10 @@
-import axios from "axios"
-import { AbiItem } from "web3-utils"
-import { ResultAsync } from "neverthrow"
-import { GetAbiResponse, ParsedAbiResponse } from "./types"
 import { DefaultClient as SecretsClient } from "@clients/secrets_client"
-import { handleAsMoleculerError } from "@lib/handlers/errors"
 import C from "@lib/constants"
+import { handleAsMoleculerError } from "@lib/handlers/errors"
+import axios from "axios"
+import { ResultAsync } from "neverthrow"
+import { AbiItem } from "web3-utils"
+import { GetAbiResponse, ParsedAbiResponse } from "./types"
 
 const provideAddressUrl = (apiKey: string) => (address: string) =>
   `${C.ETHERSCAN_API_URI}?module=contract&action=getabi&address=${address}&apikey=${apiKey}`
