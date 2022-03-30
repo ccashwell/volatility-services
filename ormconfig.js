@@ -1,6 +1,6 @@
 const nodeEnv = process.env.NODE_ENV ?? "test"
 const host = process.env.POSTGRESQL_HOST || process.env.POSTGRES_HOST || process.env.PG_HOST || "localhost"
-const type = process.env.DATASOURCE_TYPE || (host.includes("amazonaws.com") ? "aurora-postgres" : "postgres")
+const type = process.env.DATASOURCE_TYPE || (host.includes("amazonaws.com") ? "postgres" : "postgres")
 
 export default {
   type,
