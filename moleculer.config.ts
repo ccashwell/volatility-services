@@ -3,6 +3,7 @@ import { BrokerOptions, Errors, LogLevels, MetricRegistry } from "moleculer"
 import "reflect-metadata"
 
 const logLevel = (process.env.LOGLEVEL ?? "info") as LogLevels
+const colors = process.env.LOG_COLORS === "true" || false
 /**
  * Moleculer ServiceBroker configuration file
  *
@@ -42,9 +43,9 @@ const brokerConfig: BrokerOptions = {
     type: "Log4js",
     options: {
       // Using colors on the output
-      colors: true,
+      colors,
       // Print module names with different colors (like docker-compose for containers)
-      moduleColors: true,
+      moduleColors: colors,
       // Line formatter. It can be "json", "short", "simple", "full", a `Function` or a template string like "{timestamp} {level} {nodeID}/{mod}: {msg}"
       formatter: "full",
       // Custom object printer. If not defined, it uses the `util.inspect` method.
