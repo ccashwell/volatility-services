@@ -1,12 +1,19 @@
 /* eslint-disable camelcase */
 import { Context, Service, ServiceBroker } from "moleculer"
-import ApiGateway, { HttpResponse, us_socket_context_t } from "moleculer-web-uws"
+import {
+  default as ApiGateway,
+  DISABLED,
+  HttpResponse,
+  TemplatedApp,
+  us_socket_context_t,
+  WebSocket
+} from "moleculer-web-uws"
 import { MfivEvidence, OptionSummary } from "node-volatility-mfiv"
 import { TextDecoder, TextEncoder } from "util"
-import { DISABLED, WebSocket } from "uWebSockets.js"
 import { streamNormalizedWS } from "../src/ws/stream"
 
 const MESSAGE_ENUM = Object.freeze({
+  SUBSCRIBE: "SUBSCRIBE",
   SELF_CONNECTED: "SELF_CONNECTED",
   CLIENT_CONNECTED: "CLIENT_CONNECTED",
   CLIENT_DISCONNECTED: "CLIENT_DISCONNECTED",
@@ -17,6 +24,9 @@ const MESSAGE_ENUM = Object.freeze({
  * Compute index values from data produced by the ingest service
  */
 export default class WSService extends Service {
+  encoder = new TextEncoder()
+  decoder = new TextDecoder()
+  server!: TemplatedApp
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   readonly wsRoutes = {
     "/ws-stream-normalized": streamNormalizedWS
@@ -24,6 +34,7 @@ export default class WSService extends Service {
 
   public constructor(public broker: ServiceBroker) {
     super(broker)
+
     this.parseServiceSchema({
       name: "ws",
       mixins: [
@@ -42,7 +53,9 @@ export default class WSService extends Service {
         // })
       ],
       settings: {
-        encoder: new TextEncoder(),
+        logRequestParams: "info",
+
+        port: 3000,
 
         ws: {
           path: "/ws",
@@ -56,6 +69,27 @@ export default class WSService extends Service {
           maxBackpressure: 5 * 1024 * 1024,
 
           closeOnBackpressureLimit: true,
+
+          // authenticate: true,
+
+          // authorize(ctx: Context) {
+          //   console.log("***** HERE 1")
+          //   // const { req, res } = ctx.params
+          //   // let accessToken = req.query["api_key"]
+
+          //   // if (accessToken) {
+          //   //   if (accessToken === "12345") {
+          //   //     // valid credentials. It will be set to `ctx.meta.auth`
+          //   //     return { id: 1, username: "john.doe", name: "John Doe" }
+          //   //   }
+
+          //   //   // invalid credentials
+          //   //   throw new Error("Could not login user!")
+          //   // } else {
+          //   //   // anonymous user
+          //   //   return null
+          //   // }
+          // },
 
           // keepAlive: {
           //   // Amount of seconds after which a PING message is sent to the client
@@ -74,30 +108,38 @@ export default class WSService extends Service {
 
             let authHeader = ""
             let reqWithHeaders: { headers: Record<string, string> }
+            let authToken = ""
 
             try {
               reqWithHeaders = req as { headers: Record<string, string> }
               authHeader = reqWithHeaders.headers.authorization
+
+              // Browsers don't support setting the Authentication header so check query params
+              // if (!authHeader) {
+              //   const httpReq = req as HttpRequest
+              //   const queryObject = url.parse(httpReq.getUrl(), true).query
+              //   const maybeApiKey = queryObject.api_key as string | undefined
+
+              //   if (maybeApiKey) {
+              //     authToken = maybeApiKey
+              //   }
+              // } else {
+              if (authHeader && authHeader.startsWith("Bearer ")) {
+                authToken = authHeader.slice("Bearer ".length)
+              }
+              // }
             } catch (err) {
               this.logger.error("error:", err)
               throw err
             }
-
-            let authToken = ""
-
-            console.info("authHeader", authHeader)
-            if (authHeader && authHeader.startsWith("Bearer ")) {
-              authToken = authHeader.slice("Bearer ".length)
-            }
-            console.info("authTOken", authToken)
 
             const tokenCheck = await this.broker.call("tokens.check", {
               token: authToken,
               type: "api-key"
             })
 
-            console.info("tokenCheck", tokenCheck)
             if (!tokenCheck) {
+              this.logger.debug("Authorization failed")
               return res.writeStatus("401 Forbidden")
             }
 
@@ -113,11 +155,9 @@ export default class WSService extends Service {
 
           open: (ws: WebSocket) => {
             // Upon connecting, subscribe the socket to MFIV/14D/ETH
-            ws.subscribe("MFIV/14D/ETH")
-            ws.subscribe(MESSAGE_ENUM.CLIENT_CONNECTED)
-            ws.subscribe(MESSAGE_ENUM.CLIENT_DISCONNECTED)
-            ws.subscribe(MESSAGE_ENUM.CLIENT_MESSAGE)
-
+            // ws.subscribe(MESSAGE_ENUM.CLIENT_CONNECTED)
+            // ws.subscribe(MESSAGE_ENUM.CLIENT_DISCONNECTED)
+            // ws.subscribe(MESSAGE_ENUM.CLIENT_MESSAGE)
             ws.id = this.broker.generateUid()
 
             const selfMsg = {
@@ -128,35 +168,7 @@ export default class WSService extends Service {
             }
 
             ws.send(JSON.stringify(selfMsg))
-            // ws.subscribe("test/mfiv14dEth")
-            // this.logger.info("Opening")
-            // const encoder = new TextEncoder()
-            // eslint-disable-next-line no-debugger
-            // debugger
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-            // const path = ws.req.getUrl().toLocaleLowerCase() as string
-            // console.log(`Opening path ${path}`)
-            // ws.closed = false
-            // const matchingRoute = this.wsRoutes[path]
-            // const matchingRoute = streamNormalizedWS
-            // ws.send(
-            //   encoder.encode(
-            //     JSON.stringify({
-            //       topic: "MFIV.14D.ETH",
-            //       stream: {
-            //         id: "MFIV.14D.ETH",
-            //         type: "index:mfiv",
-            //         dVol: 42.0,
-            //         invdVol: 77.0,
-            //         methodology: "MFIV",
-            //         timePeriod: "14D",
-            //         asset: "ETH",
-            //         underlying: 2222.42,
-            //         timestamp: new Date()
-            //       }
-            //     })
-            //   )
-            // )
+
             // if (matchingRoute !== undefined) {
             //   // ws.subscribe("mfiv/14d/eth")
             //   // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -183,13 +195,10 @@ export default class WSService extends Service {
             isBinary: boolean,
             topic: string
           ) => {
-            const decoder = new TextDecoder()
-
-            const clientMsg = JSON.parse(decoder.decode(message))
+            const clientMsg = JSON.parse(this.decoder.decode(message))
+            const channel = clientMsg.channel
             let serverMsg = {}
-
-            console.log("clientMsg", clientMsg)
-
+            this.logger.debug("clientMsg", clientMsg)
             switch (clientMsg.type) {
               case MESSAGE_ENUM.CLIENT_MESSAGE:
                 serverMsg = {
@@ -199,27 +208,27 @@ export default class WSService extends Service {
 
                 app.publish(MESSAGE_ENUM.CLIENT_MESSAGE, JSON.stringify(serverMsg))
                 break
+              case MESSAGE_ENUM.SUBSCRIBE:
+                serverMsg = {
+                  type: MESSAGE_ENUM.SUBSCRIBE,
+                  body: clientMsg.body
+                }
+
+                if (channel === "MFIV/14D/ETH" || channel === "MFIV/14D/BTC") {
+                  this.logger.info("Subscribed")
+                  socket.subscribe(channel)
+                } else {
+                  socket.send(
+                    JSON.stringify({ error: "topic_not_found", message: `Topic ${topic} not found`, code: 400 })
+                  )
+                }
+
+                break
               default:
-                console.log("Unknown message type.")
+                this.logger.error("Unknown message type.", clientMsg)
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                socket.disconnect()
             }
-
-            // this.logger.info("topic", topic)
-            // this.logger.info("isBinary", isBinary)
-            // this.logger.info("** Message **", decoder.decode(message))
-
-            // const decodedMessage = JSON.parse(decoder.decode(message))
-
-            // if (decodedMessage.message === "SUBSCRIBE") {
-            //   this.logger.info("Subscribing")
-            //   socket.subscribe("test/mfiv14dEth")
-            // }
-            // //  else {
-            // //   const ok = socket.send(message, isBinary)
-            // // }
-            // // this.wsRoutes.publish()
-
-            // socket.publish("home/sensors/temperature", message)
-
             // if (socket.onmessage !== undefined) {
             //   this.logger.info("Calling onmessage")
             //   // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -236,42 +245,33 @@ export default class WSService extends Service {
               ws.onclose()
             }
           }
-
-          // open: (socket: uWS.WebSocket) => {
-          //   // eslint-disable-next-line no-debugger
-          //   // wsList.push(socket)
-          //   // socket.subscribe("mfiv.14d.eth.expiry")
-          //   //            wsList.push(socket)
-          //   socket.subscribe("mfiv/expiry")
-          //   socket.subscribe("mfiv/14d/eth")
-          // },
-
-          // message: (
-          //   app: { publish: (topic: string, data: any) => void },
-          //   socket: { publish: (topic: string, data: unknown) => void },
-          //   message: any,
-          //   isBinary: boolean,
-          //   topic: string
-          // ) => {
-          //   console.info("ws message received", message)
-          //   // eslint-disable-next-line no-debugger
-          //   socket.publish("mfiv/expiry", message)
-          //   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          // },
-
-          // close: (ws: uWS.WebSocket, code: number, message: ArrayBuffer) => {
-          //   console.info("CLOSING SOCKET")
-          //   // wsList.shift()
-          // }
         }
       },
       actions: {
+        // authorize(ctx: Context<unknown>) {
+        //   console.log("***** HERE 2")
+        // const { req, res } = ctx.params
+        // let accessToken = req.query["api_key"]
+
+        // if (accessToken) {
+        //   if (accessToken === "12345") {
+        //     // valid credentials. It will be set to `ctx.meta.auth`
+        //     return { id: 1, username: "john.doe", name: "John Doe" }
+        //   }
+
+        //   // invalid credentials
+        //   throw new Error("Could not login user!")
+        // } else {
+        //   // anonymous user
+        //   return null
+        // }
+        // },
+
         health: {
           rest: "GET /health",
 
-          handler(ctx: Context<void>) {
+          handler() {
             return { status: "OK" }
-            // return ctx.call("$node.health")
           }
         }
 
@@ -286,8 +286,6 @@ export default class WSService extends Service {
         //     // Optional
         //     condition: true // Should return a truthy result
         //   },
-
-        //   port: 3000,
 
         //   handler(context: Context<OptionSummary>) {
         //     const message = context.params
@@ -368,8 +366,7 @@ export default class WSService extends Service {
           }
         },
         "mfiv.14d.ETH.index.created": {
-          async handler(this: WSService, context: Context<MfivEvidence>) {
-            const encoder = new TextEncoder()
+          handler(this: WSService, context: Context<MfivEvidence>) {
             const result = context.params.result
             const { dVol, invdVol, currency, value } = result
             const methodology = context.params.context.methodology.toUpperCase()
@@ -393,7 +390,8 @@ export default class WSService extends Service {
               }
             }
 
-            await this.server.publish("MFIV/14D/ETH", encoder.encode(JSON.stringify(serverMsg)), false)
+            this.logger.info("Sending MFIV")
+            this.server.publish("MFIV/14D/ETH", this.encoder.encode(JSON.stringify(serverMsg)), false)
             // this.logger.info("index.created", index)
             // const payload = { topic: "MFIV/14D/ETH", message: index }
             // const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(payload))
@@ -408,4 +406,23 @@ export default class WSService extends Service {
       // }
     })
   }
+
+  // authenticate(ctx: Context<unknown>) {
+  //   debugger
+  //   console.log("***** HERE 10", ctx)
+  // }
+
+  // @ts-ignore
+  // authorize(ctx) {
+  //   console.log("***** ", ctx)
+  //   // @ts-ignore
+  //   try {
+  //     // @ts-ignoreHERE 4
+  //     const { req, res } = ctx.params
+  //     console.log("query", req.query)
+  //     const apiKey = req.query["api_key"]
+  //   } catch (err) {
+  //     console.error("err", err)
+  //   }
+  // }
 }

@@ -51,25 +51,24 @@ export default class IngestService extends Service {
         //   }
         // },
         stats: {
-          rest: "/stats",
+          visibility: "protected",
           handler(this: IngestService) {
             return this.stats()
           }
         },
         expiries: {
-          rest: "/expiries",
-
+          visibility: "protected",
           handler(this: IngestService) {
             return Array.from(this.expiryMap.entries())
           }
         },
         summaries: {
-          params: {
-            expiry: { type: "string" }
-          },
-          rest: "/summaries",
+          visibility: "protected",
           cache: {
             ttl: 120
+          },
+          params: {
+            expiry: { type: "string" }
           },
           async handler(
             this: IngestService,

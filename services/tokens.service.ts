@@ -27,7 +27,22 @@ export default class TokenService extends Service {
 
       model: AuthToken,
 
-      mixins: [Cron, DbService],
+      mixins: [
+        Cron,
+        DbService,
+        {
+          actions: {
+            get: { visibility: "private" },
+            list: { visibility: "private" },
+            find: { visibility: "private" },
+            count: { visibility: "private" },
+            create: { visibility: "private" },
+            insert: { visibility: "private" },
+            update: { visibility: "private" },
+            remove: { visibility: "private" }
+          }
+        }
+      ],
 
       settings: {
         $dependencyTimeout: 60000,
@@ -78,7 +93,7 @@ export default class TokenService extends Service {
             },
             expiry: {
               // Number of days from now that
-              type: "number",
+              type: "date",
               integer: true,
               positive: true,
               optional: true
@@ -121,25 +136,24 @@ export default class TokenService extends Service {
             this: TokenService,
             ctx: Context<Pick<AuthToken, "type" | "token" | "owner"> & { isUsed: boolean }>
           ) {
-            console.info("payload", {
-              type: ctx.params.type,
-              token: ctx.params.token /*this.secureToken(ctx.params.token) */
-            })
             const entity = await this.adapter.repository.findOne({
-              where: { type: ctx.params.type, token: ctx.params.token /* this.secureToken(ctx.params.token) */ }
+              where: { type: ctx.params.type, token: this.secureToken(ctx.params.token) }
             })
-            console.info("entity", entity)
+
             if (entity) {
               if (!ctx.params.owner || entity.owner === ctx.params.owner) {
-                if (!!entity.revokedAt || (entity.expiry && entity.expiry < Date.now())) {
-                  return false
-                }
-                if (ctx.params.isUsed) {
-                  await this.adapter.repository.update(entity.id, { lastUsedAt: Date.now() })
-                }
+                // if (entity.expiry && entity.expiry < new Date()) {
+                //   this.logger.debug("Token expired")
+                //   return false
+                // }
+                // if (ctx.params.isUsed) {
+
+                await this.adapter.repository.update(entity.id, { lastUsedAt: new Date().toISOString() })
+                // }
                 return entity
               }
             }
+
             return null
           }
         },
@@ -147,7 +161,6 @@ export default class TokenService extends Service {
          * Remove an invalidated token
          */
         remove: {
-          visibility: "public",
           params: {
             type: {
               type: "enum",
@@ -191,6 +204,7 @@ export default class TokenService extends Service {
        * Service created lifecycle event handler
        */
       created(this: TokenService) {
+        this.logger.info("Create token")
         if (!process.env.TOKEN_SALT) {
           if (TESTING || process.env.TEST_E2E) {
             process.env.TOKEN_SALT = crypto.randomBytes(32).toString("hex")
@@ -198,11 +212,11 @@ export default class TokenService extends Service {
             this.logger.fatal("Environment variable 'TOKEN_SALT' must be configured!")
           }
         }
-      },
-
-      async stopped(this: TokenService) {
-        return await this.adapter.connection.close()
       }
+
+      // async stopped(this: TokenService) {
+      //   // return await this.adapter.connection.close()
+      // }
     })
   }
 
@@ -223,7 +237,7 @@ export default class TokenService extends Service {
    * @returns {String}
    */
   secureToken(this: TokenService, token: string): string {
-    const hmac = crypto.createHmac("sha256", process.env.TOKEN_SALT as string)
+    const hmac = crypto.createHmac("sha256", Buffer.from(process.env.TOKEN_SALT as string))
     hmac.update(token)
     return hmac.digest("hex")
   }
