@@ -25,7 +25,7 @@ export class AuthToken {
   token!: string
 
   @Column({ type: "timestamptz", nullable: true })
-  expiry!: number
+  expiry!: Date
 
   @CreateDateColumn()
   createdAt!: Date
