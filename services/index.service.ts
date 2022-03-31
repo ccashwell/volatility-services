@@ -72,9 +72,9 @@ export default class IndexService extends Service {
       settings: {
         $dependencyTimeout: 60000,
 
-        // fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"],
+        fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"],
 
-        // idField: "timestamp",
+        idField: "timestamp",
 
         skipPersist: process.env.INDEX_SKIP_PERSIST === "true"
       },
@@ -129,10 +129,6 @@ export default class IndexService extends Service {
         //return await getConnection().close()
       }
     })
-  }
-
-  private get repository(): Repository<MethodologyIndex> {
-    return getRepository(MethodologyIndex)
   }
 
   private async indexOperation(context: Context<IIndex.EstimateParams>, params: IIndex.EstimateParams) {
@@ -248,7 +244,7 @@ export default class IndexService extends Service {
     index.interval = ctx.windowInterval as MethodologyWindowEnum
     index.symbolType = SymbolTypeEnum.Option
     index.extra = extra
-    await this.repository.save(index)
+    await this.adapter.repository.save(index)
   }
 
   private async announce(evidence: { version: string; context: MfivContext; params: MfivParams; result: MfivResult }) {
