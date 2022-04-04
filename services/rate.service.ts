@@ -1,5 +1,4 @@
 /* eslint-disable max-len */
-"use strict"
 import { provideRateResponse } from "@datasources/aave"
 import { Rate } from "@entities"
 import { IRate } from "@interfaces/services/rate"
@@ -24,7 +23,7 @@ export default class RateService extends Service {
       crons: [
         {
           name: "FetchAaveRateCron",
-          cronTime: process.env.RATE_RISKLESS_RATE_CRONTIME,
+          cronTime: process.env.RATE_RISKLESS_RATE_CRONTIME || "0 */1 0 * * *",
           onTick: async () => {
             const maybeRate: IRate.RisklessRateResponse | Errors.MoleculerError = await this.actions.risklessRate({
               source: this.settings.risklessRateSource as string

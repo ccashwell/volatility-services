@@ -2,6 +2,10 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  transform: {
+    "^.+\\.ts?$": "ts-jest",
+    "^.+\\.(js|jsx)$": "babel-jest"
+  },
   verbose: true,
   globals: {
     "ts-jest": {

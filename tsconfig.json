@@ -66,5 +66,5 @@
     "./test/**/*.ts",
     "./volatility-api/**/*.ts"
   ],
-  "exclude": ["node_modules", "src/graph.ts"]
+  "exclude": ["node_modules", "src/graph.ts", "ormconfig.js"]
 }
