@@ -1,4 +1,3 @@
-import { FetchSecret } from "@datasources/secret_manager"
 import { SecretClientError } from "@lib/errors/secret_error"
 import * as _ from "lodash"
 import { SecretClient, SecretKey } from "./types"
@@ -17,7 +16,16 @@ export interface ClientConfig {
 export const DefaultClient = ({ secretName }: ClientConfig = { secretName: "API_Keys" }): SecretClient => {
   const secretManagerSecretName = process.env.AWS_SECRET_MANAGER_SECRET_NAME ?? secretName
 
-  const dataSource = FetchSecret(secretManagerSecretName)
+  // TODO: Need to figure out why the ECS task can't use secretsmanager calls here
+  // const dataSource = FetchSecret(secretManagerSecretName)
+  const dataSource = Promise.resolve({
+    TARDIS_API_KEY: process.env.TARDIS_API_KEY,
+    INFURA_PROJ_ID: process.env.INFURA_PROJ_ID,
+    ETHERSCAN_API_KEY: process.env.ETHERSCAN_API_KEY,
+    NEW_RELIC_LICENSE_KEY: process.env.NEW_RELIC_LICENSE_KEY,
+    FLEEK_ID: "",
+    FLEEK_SECRET: ""
+  } as Record<SecretKey, string>)
 
   return new PrivateClient(dataSource, { secretName: secretManagerSecretName })
 }
