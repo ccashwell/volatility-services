@@ -1,4 +1,5 @@
 import { Errors } from "moleculer"
+import { InstrumentInfo } from "tardis-dev"
 import { VGError } from "./errors"
 import { Failure } from "./failure"
 
@@ -379,3 +380,8 @@ export type MfivWindow =
   | "364d"
 
 export type ErrorType = typeof Errors.MoleculerError | Failure<VGError> | Error
+
+export type PartialInstrumentInfo = Pick<
+  InstrumentInfo,
+  "id" | "exchange" | "type" | "baseCurrency" | "active" | "availableSince" | "availableTo" | "optionType" | "expiry"
+>

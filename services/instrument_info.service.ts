@@ -1,12 +1,17 @@
 import { initTardis } from "@datasources/tardis"
 import { tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"
 import { IInstrumentInfo } from "@interfaces/services/instrument_info"
+import { PartialInstrumentInfo } from "@lib/types"
+import * as _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
 // import * as Cron from "moleculer-cron"
 import { InstrumentInfo } from "tardis-dev"
 import { chainFrom } from "transducist"
 
 export default class InstrumentInfoService extends Service {
+  private instrumentInfos: PartialInstrumentInfo[] = []
+  private lastUpdatedAt?: Date
+
   public constructor(public broker: ServiceBroker) {
     super(broker)
     this.parseServiceSchema({
@@ -38,6 +43,22 @@ export default class InstrumentInfoService extends Service {
 
       // Actions
       actions: {
+        refresh: {
+          visibility: "public",
+          params: {
+            exchange: { type: "string", enum: ["deribit"], default: "deribit" },
+            baseCurrency: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
+            type: { type: "string", enum: ["option"], default: "option" },
+            contractType: { type: "array", items: "string", default: ["call_option", "put_option"] }
+          },
+          handler(
+            this: InstrumentInfoService,
+            ctx: Context<IInstrumentInfo.RefreshParams>
+          ): Promise<IInstrumentInfo.RefreshResponse> {
+            this.logger.info("/refresh called")
+            return Promise.resolve(this.fetchInstruments({ ...ctx.params, expirationDates: [] }))
+          }
+        },
         instrumentInfo: {
           visibility: "public",
           // TODO: Enable caching to this action
@@ -49,47 +70,78 @@ export default class InstrumentInfoService extends Service {
             timestamp: { type: "string" },
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
             baseCurrency: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
-            // quoteCurrency: { type: "string", enum: ["ETH"] },
             type: { type: "string", enum: ["option"], default: "option" },
             contractType: { type: "array", items: "string", default: ["call_option", "put_option"] },
             active: { type: "boolean", default: true },
-            expirationDates: { type: "array", items: "string" }
+            expirationDates: { type: "array", items: "string", minSize: 1 }
           },
-          async handler(
+          handler(
             this: InstrumentInfoService,
             ctx: Context<IInstrumentInfo.InstrumentInfoParams>
           ): Promise<IInstrumentInfo.InstrumentInfoResponse> {
             this.logger.info("/instruments called", ctx.params)
-            return await this.fetchInstruments(ctx.params)
+            return Promise.resolve(this.fetchAvailableInstruments(ctx.params))
           }
         }
       },
 
       async started() {
         initTardis()
+
         return Promise.resolve()
       }
     })
   }
 
-  public async fetchInstruments(
+  /**
+   * Refresh the internal collection of PartialInstrumentInfo
+   *
+   * @param params
+   * @returns
+   */
+  private async refresh(params: IInstrumentInfo.InstrumentInfoParams) {
+    return this.fetchInstruments(params)
+  }
+
+  private async fetchInstruments(
     this: InstrumentInfoService,
     params: IInstrumentInfo.InstrumentInfoParams
-  ): Promise<IInstrumentInfo.InstrumentInfoResponse> {
+  ): Promise<PartialInstrumentInfo[]> {
     this.logger.info("fetchInstruments()", params)
+    const toPartialInstrumentInfo = (info: InstrumentInfo): PartialInstrumentInfo => {
+      return _.pick(info, [
+        "id",
+        "exchange",
+        "baseCurrency",
+        "type",
+        "active",
+        "availableTo",
+        "availableSince",
+        "optionType",
+        "expiry"
+      ])
+    }
+    const instruments = await tardisOptionInstrumentDataSource(params)
+    this.instrumentInfos = chainFrom(instruments).map(toPartialInstrumentInfo).toArray()
+    this.lastUpdatedAt = new Date()
+    return instruments
+  }
 
-    const Available = (item: InstrumentInfo) =>
-      item.availableSince <= params.timestamp && item.availableTo ? item.availableTo > params.timestamp : true
+  /**
+   * Find the ids of the available InstrumentInfos based on the params context
+   * @param params
+   * @returns string[]
+   */
+  private fetchAvailableInstruments(params: IInstrumentInfo.InstrumentInfoParams): string[] {
+    const timestamp = params.timestamp as string
+    const Available = (item: PartialInstrumentInfo) =>
+      item.availableSince <= timestamp && item.availableTo ? item.availableTo > timestamp : true
 
     // chainFrom begins a transducer which reduces the instruments from the exchange
-    return chainFrom(await this.fetchActiveInstruments(params))
+    return chainFrom(this.instrumentInfos)
       .filter(Available)
       .filter(item => !!item.expiry && params.expirationDates.includes(item.expiry))
       .map(item => item.id)
       .toArray()
-  }
-
-  private async fetchActiveInstruments(params: IInstrumentInfo.InstrumentInfoParams) {
-    return await tardisOptionInstrumentDataSource(params)
   }
 }

@@ -1,11 +1,6 @@
-//#region Global Imports
-import { Context } from "moleculer"
-//#endregion Global Imports
-
-//#region Interface Imports
 import { IIPFS } from "@interfaces"
 import { IIPFSServiceMeta } from "@interfaces/meta"
-//#endregion Interface Imports
+import { Context } from "moleculer"
 
 const prefix = "ipfs"
 

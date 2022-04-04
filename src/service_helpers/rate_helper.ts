@@ -1,10 +1,5 @@
-//#region Global Imports
-import { Context } from "moleculer"
-//#endregion Global Imports
-
-//#region Interface Imports
 import { IRate } from "@interfaces"
-//#endregion Interface Imports
+import { Context } from "moleculer"
 
 const prefix = "rate"
 

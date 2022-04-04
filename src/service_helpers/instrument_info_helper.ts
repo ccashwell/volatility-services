@@ -1,10 +1,5 @@
-//#region Global Imports
-import { Context } from "moleculer"
-//#endregion Global Imports
-
-//#region Interface Imports
 import { IInstrumentInfo } from "@interfaces"
-//#endregion Interface Imports
+import { Context } from "moleculer"
 
 const prefix = "instrument_info"
 
