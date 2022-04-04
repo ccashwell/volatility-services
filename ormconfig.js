@@ -10,7 +10,7 @@ export default {
   username: process.env.POSTGRESQL_USERNAME || "volatility",
   password: process.env.POSTGRESQL_PASSWORD || "supersecretpassword", // "i4EYumRSwTJltme",
   logging: process.env.TYPEORM_LOGGING || false,
-  database: `volatility_${nodeEnv}`,
+  database: process.env.POSTGRESQL_DATABASE || `volatility_${nodeEnv}`,
   entities: ["./src/entities/**/*.ts"],
   migrations: ["./src/migrations/**/*.ts"],
   subscribers: ["./src/subscribers/**/*.ts"],
