@@ -10,7 +10,7 @@ import { IIndex, IRate } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
 import { optionSummariesLists } from "@service_helpers/ingest_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
-import { DbService } from "moleculer-db"
+import * as DbService from "moleculer-db"
 import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
 import { Result } from "neverthrow"
 import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
@@ -48,7 +48,7 @@ export default class IndexService extends Service {
     this.parseServiceSchema({
       name: "index",
 
-      adapter: new TypeOrmDbAdapter<MethodologyIndex>(OrmConfig),
+      adapter: new TypeOrmDbAdapter<MethodologyIndex>(OrmConfig("index")),
 
       model: MethodologyIndex,
 

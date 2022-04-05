@@ -23,7 +23,7 @@ export default class RateService extends Service {
       crons: [
         {
           name: "FetchAaveRateCron",
-          cronTime: process.env.RATE_RISKLESS_RATE_CRONTIME || "0 */1 0 * * *",
+          cronTime: process.env.RATE_RISKLESS_RATE_CRONTIME || "0 */1 * * * *",
           onTick: async () => {
             const maybeRate: IRate.RisklessRateResponse | Errors.MoleculerError = await this.actions.risklessRate({
               source: this.settings.risklessRateSource as string
@@ -59,7 +59,7 @@ export default class RateService extends Service {
       },
 
       // adapter: new TypeOrmDbAdapter<Rate>(configuration.adapter),
-      adapter: new TypeOrmDbAdapter<Rate>(OrmConfig),
+      adapter: new TypeOrmDbAdapter<Rate>(OrmConfig("rate")),
 
       model: Rate,
 

@@ -89,3 +89,12 @@ Date.prototype.toISOString = function () {
   }
   return oldToISOString.apply(this)
 }
+
+/**
+ * Expects a string set in the environment in the form of:
+ * INGEST_CONTRACT_TYPE=call_option,put_option
+ * @param contractType csv string
+ * @returns an array of contractType strings
+ */
+export const parseContractType = (contractType?: string, defaultContractType = ["call_option", "put_option"]) =>
+  contractType ? contractType.split(",") : defaultContractType

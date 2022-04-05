@@ -47,7 +47,7 @@ export default class IPFSService extends Moleculer.Service<IpfsSettingsSchema> {
       // Dependencies
       dependencies: [],
 
-      adapter: new TypeOrmDbAdapter<FleekTransaction>(OrmConfig),
+      adapter: new TypeOrmDbAdapter<FleekTransaction>(OrmConfig("ipfs")),
 
       model: FleekTransaction,
 

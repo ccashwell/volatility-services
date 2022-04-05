@@ -1,9 +1,17 @@
 import { IInstrumentInfo } from "@interfaces"
-import { Context } from "moleculer"
+import { Context, Errors, Service } from "moleculer"
 
 const prefix = "instrument_info"
 
-export const instrumentInfo = async (
-  ctx: Context,
+export async function instrumentInfos(
+  ctx: Context | Service,
   params: IInstrumentInfo.InstrumentInfoParams
-): Promise<IInstrumentInfo.InstrumentInfoResponse> => await ctx.call(`${prefix}.instrumentInfo`, params)
+): Promise<IInstrumentInfo.InstrumentInfoResponse> {
+  if (ctx instanceof Context) {
+    return await ctx.call(`${prefix}.instrumentInfo`, params)
+  } else if (ctx instanceof Service) {
+    return await ctx.broker.call(`${prefix}.instrumentInfo`, params)
+  }
+
+  throw new Errors.MoleculerClientError(`Expected Context or Broker but received ${ctx}`, 500, "VG_HELPER_ERROR")
+}

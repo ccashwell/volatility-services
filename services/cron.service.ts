@@ -35,7 +35,9 @@ export default class CronService extends Service {
           contractType: ["call_option", "put_option"]
         } as Omit<IIndex.EstimateParams, "at">
       },
-      dependencies: ["index"],
+
+      dependencies: process.env.ONLY_SERVICE ? [] : ["index"],
+
       crons: [
         // {
         //   name: "mfiv.14d.ETH.estimate",
@@ -57,9 +59,9 @@ export default class CronService extends Service {
         // },
         {
           name: "mfiv.14d.ETH.estimate",
-          cronTime: process.env.CRON_MFIV_UPDATE_CRONTIME,
+          cronTime: process.env.CRON_MFIV_UPDATE_CRONTIME || "0 */5 * * * *",
           onTick: () => {
-            this.logger.info("Cron Job", "MFIV.14d.ETH")
+            this.logger.info("CronJob: mfiv.14d.ETH.estimate", "MFIV.14d.ETH")
             const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "at">
             const provider = paramsProvider({
               requestId: this.broker.generateUid(),
@@ -80,8 +82,6 @@ export default class CronService extends Service {
           timeZone: "UTC"
         }
       ]
-
-      // methods: {}
     })
   }
 }

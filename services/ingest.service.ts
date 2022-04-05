@@ -4,9 +4,12 @@ import { MethodologyExpiryEnum } from "@entities"
 import { IIngest, IInstrumentInfo } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
 import { handleError } from "@lib/handlers/errors"
+import { parseContractType } from "@lib/utils/helpers"
+import { instrumentInfos } from "@service_helpers/instrument_info_helper"
 import _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { ResultAsync } from "neverthrow"
+import { noticeError } from "newrelic"
 import { Exchange, OptionSummary, StreamNormalizedOptions } from "tardis-dev"
 import configuration from "../src/configuration"
 export default class IngestService extends Service {
@@ -29,7 +32,15 @@ export default class IngestService extends Service {
       settings: {
         $dependencyTimeout: 60000 * 5,
 
-        expiryType: MethodologyExpiryEnum.FridayT08
+        expiryType: MethodologyExpiryEnum.FridayT08,
+
+        instrumentInfoDefaults: {
+          exchange: process.env.INGEST_EXCHANGE || "deribit",
+          baseCurrency: process.env.INGEST_BASE_CURRENCY || "ETH",
+          type: process.env.INGEST_TYPE || "option",
+          interval: process.env.INGEST_TIME_PERIOD || "14d",
+          contractType: parseContractType(process.env.INGEST_CONTRACT_TYPE)
+        }
       },
 
       // Metadata
@@ -91,23 +102,39 @@ export default class IngestService extends Service {
       // Service methods
       started(this: IngestService) {
         initTardis()
-        this.ingest()
-        return Promise.resolve()
+        return new Promise((resolve, reject) => {
+          this.ingest(resolve, reject)
+        })
       }
     })
   }
 
-  ingest(this: IngestService) {
+  ingest(this: IngestService, resolve: (value: void | Promise<void>) => void, reject: (reason?: unknown) => void) {
     // Construct the parameters necessary to get the instrument's ids for the call to streamNormalized
     const expiries = mfivDates(new Date(), "14d", MethodologyExpiryEnum.FridayT08)
+
     return void ResultAsync.fromPromise(this.fetchInstruments(expiries), handleError)
       .map(streamNormalizedOptions({ exchange: configuration.tardis.exchange }))
       .map(stream)
-      .map(messages => this.process(messages))
-      .mapErr(console.error)
+      .mapErr(err => {
+        this.logger.fatal(err)
+        reject(err)
+        return err
+      })
+      .map(messages => {
+        resolve() // Let the service know we can start
+        return this.process(messages)
+      })
+      .mapErr(err => {
+        this.logger.fatal(err)
+        if (err instanceof Error) {
+          noticeError(err, { serviceName: "ingest", expiries: JSON.stringify(expiries) })
+        }
+        return err
+      })
   }
 
-  private async process(messages: AsyncIterableIterator<OptionSummary>) {
+  private async process(messages: AsyncIterableIterator<OptionSummary>): Promise<boolean> {
     for await (const message of messages) {
       // Track the latest message
       this.latestMessage = message
@@ -149,6 +176,8 @@ export default class IngestService extends Service {
   private async fetchOptionSummaries(params: IIngest.OptionSummariesParams) {
     const symbolList = this.expiryMap.get(params.expiry)
     const symbols = Array.from(symbolList?.values() ?? [])
+
+    this.logger.info("Fetching symbols:", symbols)
 
     const promises = symbols.map(sym => {
       if (this.broker.cacher) {
@@ -253,11 +282,13 @@ export default class IngestService extends Service {
 
   private async fetchInstruments(expiries: { nearExpiration: string; nextExpiration: string }): Promise<string[]> {
     const expirationDates = [expiries.nearExpiration, expiries.nextExpiration]
-    return this.broker.call("instrument_info.instrumentInfo", {
+    this.logger.info("Fetching instruments with expiries", expirationDates)
+
+    return instrumentInfos(this, {
       expirationDates,
       timestamp: new Date().toISOString(),
-      ...this.settings.mfiv
-    })
+      ...this.settings.instrumentInfoDefaults
+    } as IInstrumentInfo.InstrumentInfoParams)
   }
 
   /**
@@ -277,11 +308,13 @@ export function streamNormalizedOptions<E extends Exchange>({
   exchange,
   onError = err => console.error(err)
 }: StreamNormalizedOptions<E>) {
-  return (symbols: IInstrumentInfo.InstrumentInfoResponse) => ({
-    exchange,
-    symbols,
-    onError
-  })
+  return (symbols: IInstrumentInfo.InstrumentInfoResponse) => {
+    return {
+      exchange,
+      symbols,
+      onError
+    }
+  }
 }
 
 /**

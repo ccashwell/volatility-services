@@ -14,5 +14,11 @@ phases:
       - docker build -t $IMAGE_URI:$IMAGE_TAG --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
   post_build:
     commands:
-      - echo Pushing the Docker image...
+      - echo Tag docker image
+      - PACKAGE_VERSION=$(npm -s run env echo '$npm_package_version')
+      - docker tag $IMAGE_URI:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$ACCOUNT_REGION.amazonaws.com/$IMAGE_NAME:$PACKAGE_VERSION",
+      - docker tag $IMAGE_URI:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$ACCOUNT_REGION.amazonaws.com/$IMAGE_NAME:latest",
+      - echo Push docker image
       - docker push $IMAGE_URI:$IMAGE_TAG
+      - docker push $IMAGE_URI:$PACKAGE_VERSION
+      - docker push $IMAGE_URI:latest

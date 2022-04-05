@@ -2,6 +2,7 @@ import { initTardis } from "@datasources/tardis"
 import { tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"
 import { IInstrumentInfo } from "@interfaces/services/instrument_info"
 import { PartialInstrumentInfo } from "@lib/types"
+import { parseContractType } from "@lib/utils/helpers"
 import * as _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
 // import * as Cron from "moleculer-cron"
@@ -19,7 +20,19 @@ export default class InstrumentInfoService extends Service {
       name: "instrument_info",
 
       // Settings
-      settings: {},
+      settings: {
+        refreshDefaults: {
+          exchange: process.env.INSTRUMENT_INFO_REFRESH_EXCHANGE || "deribit",
+          baseCurrency: process.env.INSTRUMENT_INFO_REFRESH_BASE_CURRENCY || "ETH",
+          type: process.env.INSTRUMENT_INFO_REFRESH_TYPE || "option",
+          contractType: parseContractType(process.env.INSTRUMENT_INFO_REFRESH_CONTRACT_TYPE, [
+            "call_option",
+            "put_option"
+          ]),
+          expirationDates: [],
+          timestamp: undefined
+        } as IInstrumentInfo.InstrumentInfoParams
+      },
       // Metadata
       metadata: {},
       // Dependencies
@@ -43,7 +56,7 @@ export default class InstrumentInfoService extends Service {
 
       // Actions
       actions: {
-        refresh: {
+        refreshInstrumentInfos: {
           visibility: "public",
           params: {
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
@@ -64,7 +77,7 @@ export default class InstrumentInfoService extends Service {
           // TODO: Enable caching to this action
           cache: {
             // These cache entries will be expired after 5 seconds instead of 30.
-            ttl: 30
+            ttl: 60 * 5
           },
           params: {
             timestamp: { type: "string" },
@@ -79,16 +92,28 @@ export default class InstrumentInfoService extends Service {
             this: InstrumentInfoService,
             ctx: Context<IInstrumentInfo.InstrumentInfoParams>
           ): Promise<IInstrumentInfo.InstrumentInfoResponse> {
-            this.logger.info("/instruments called", ctx.params)
             return Promise.resolve(this.fetchAvailableInstruments(ctx.params))
           }
         }
       },
 
-      async started() {
+      started(this: InstrumentInfoService) {
         initTardis()
 
-        return Promise.resolve()
+        if (this.settings?.refreshDefaults === undefined) {
+          throw new Error("Settings have not been set yet. Check that `refreshDefaults` has been declared in settings.")
+        }
+
+        const refreshDefaults = this.settings.refreshDefaults as IInstrumentInfo.InstrumentInfoParams
+
+        /**
+         * Prime the cache with a fresh request
+         */
+        return new Promise<void>((resolve, reject) => {
+          this.refresh(refreshDefaults)
+            .then(() => resolve())
+            .catch(reject)
+        })
       }
     })
   }
@@ -121,10 +146,12 @@ export default class InstrumentInfoService extends Service {
         "expiry"
       ])
     }
-    const instruments = await tardisOptionInstrumentDataSource(params)
-    this.instrumentInfos = chainFrom(instruments).map(toPartialInstrumentInfo).toArray()
+    this.instrumentInfos = chainFrom(await tardisOptionInstrumentDataSource(params))
+      .map(toPartialInstrumentInfo)
+      .toArray()
     this.lastUpdatedAt = new Date()
-    return instruments
+    this.logger.info(`found ${this.instrumentInfos.length} instruments`)
+    return this.instrumentInfos
   }
 
   /**
@@ -137,11 +164,16 @@ export default class InstrumentInfoService extends Service {
     const Available = (item: PartialInstrumentInfo) =>
       item.availableSince <= timestamp && item.availableTo ? item.availableTo > timestamp : true
 
-    // chainFrom begins a transducer which reduces the instruments from the exchange
-    return chainFrom(this.instrumentInfos)
+    this.logger.info(`fetching available instruments for ${timestamp}`, params)
+
+    const availableInstruments = chainFrom(this.instrumentInfos)
       .filter(Available)
       .filter(item => !!item.expiry && params.expirationDates.includes(item.expiry))
       .map(item => item.id)
       .toArray()
+
+    this.logger.info(`Found ${availableInstruments.length} available instruments`, availableInstruments)
+
+    return availableInstruments
   }
 }
