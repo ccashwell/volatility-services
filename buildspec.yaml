@@ -2,23 +2,28 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo Logging in to Amazon ECR...
+      - echo Get package.json version from npm
+      - PACKAGE_VERSION=$(npm -s run env echo '$npm_package_version')
+      - echo Authenticate to Amazon ECR
       - aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
-  build:
-    commands:
-      - echo Building the Docker image...
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - echo $IMAGE_TAG
+      - echo Authenticate to codeartifact private npm
       - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain artifacts --domain-owner 061573364520 --query authorizationToken --output text)
       - echo @volatility-group:registry=https://artifacts-061573364520.d.codeartifact.us-east-2.amazonaws.com/npm/npm-store/ > .npmrc
       - echo //artifacts-061573364520.d.codeartifact.us-east-2.amazonaws.com/npm/npm-store/:always-auth=true >> .npmrc
       - echo //artifacts-061573364520.d.codeartifact.us-east-2.amazonaws.com/npm/npm-store/:_authToken=${CODEARTIFACT_AUTH_TOKEN} >> .npmrc
+  build:
+    commands:
+      - echo Build docker image
       - docker build -t $IMAGE_URI:$IMAGE_TAG --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} .
   post_build:
     commands:
       - echo Tag docker image
-      - PACKAGE_VERSION=$(npm -s run env echo '$npm_package_version')
-      - docker tag $IMAGE_URI:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$ACCOUNT_REGION.amazonaws.com/$IMAGE_NAME:$PACKAGE_VERSION,
-      - docker tag $IMAGE_URI:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$ACCOUNT_REGION.amazonaws.com/$IMAGE_NAME:latest,
+      - echo Skip tagging of $IMAGE_TAG
+      - docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest
+      - docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:$PACKAGE_VERSION
       - echo Push docker image
-      - docker push $IMAGE_URI:$IMAGE_TAG
-      - docker push $IMAGE_URI:$PACKAGE_VERSION
       - docker push $IMAGE_URI:latest
+      - docker push $IMAGE_URI:$PACKAGE_VERSION
