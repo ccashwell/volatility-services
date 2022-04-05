@@ -40,7 +40,7 @@ const brokerConfig: BrokerOptions = {
   // Enable/disable logging or use custom logger. More info: https://moleculer.services/docs/0.14/logging.html
   // Available logger types: "Console", "File", "Pino", "Winston", "Bunyan", "debug", "Log4js", "Datadog"
   logger: {
-    type: "Log4js",
+    type: "Console",
     options: {
       // Using colors on the output
       colors,
@@ -51,17 +51,17 @@ const brokerConfig: BrokerOptions = {
       // Custom object printer. If not defined, it uses the `util.inspect` method.
       objectPrinter: null,
       // Auto-padding the module name in order to messages begin at the same column.
-      autoPadding: true,
+      autoPadding: process.env.NODE_ENV !== "production"
 
-      log4js: {
-        appenders: { app: { type: "stdout" } },
-        // appenders: {
-        //   app: { type: "file", filename: "./logs/application.log" }
-        // },
-        categories: {
-          default: { appenders: ["app"], level: logLevel }
-        }
-      }
+      // log4js: {
+      //   appenders: { app: { type: "stdout" } },
+      //   // appenders: {
+      //   //   app: { type: "file", filename: "./logs/application.log" }
+      //   // },
+      //   categories: {
+      //     default: { appenders: ["app"], level: logLevel }
+      //   }
+      // }
     }
   },
 

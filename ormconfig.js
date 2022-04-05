@@ -8,7 +8,7 @@ export default {
   host,
   port: process.env.POSTGRESQL_PORT || 5432,
   username: process.env.POSTGRESQL_USERNAME || "volatility",
-  password: process.env.POSTGRESQL_PASSWORD || "supersecretpassword", // "i4EYumRSwTJltme",
+  password: process.env.POSTGRESQL_PASSWORD || "supersecretpassword",
   logging: process.env.TYPEORM_LOGGING || false,
   database: process.env.POSTGRESQL_DATABASE || `volatility_${nodeEnv}`,
   entities: ["./src/entities/**/*.ts"],

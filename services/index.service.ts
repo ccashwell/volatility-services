@@ -16,7 +16,6 @@ import { Result } from "neverthrow"
 import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
 import { OptionSummary } from "tardis-dev"
 import { chainFrom } from "transducist"
-import { getRepository, Repository } from "typeorm"
 import OrmConfig from "../ormconfig"
 
 /* eslint-disable max-len */

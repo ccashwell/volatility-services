@@ -1,4 +1,3 @@
-"use strict"
 import { IRate } from "@interfaces/services/rate"
 import { risklessRateError } from "@lib/errors"
 import RateService from "@services/rate.service"

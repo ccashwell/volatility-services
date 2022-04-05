@@ -48,7 +48,12 @@ export const config: EnvConfig = {
     type: "postgres",
     name: "default",
     database: process.env.POSTGRES_DB as string,
-    entities: ["./src/entities/fleek_transaction.ts", "./src/entities/methodology_index.ts", "./src/entities/rate.ts"],
+    entities: [
+      "./src/entities/fleek_transaction.ts",
+      "./src/entities/methodology_index.ts",
+      "./src/entities/rate.ts",
+      "./src/entities/auth_token.ts"
+    ],
     // entities: [__dirname + "/*"],
     port: parseInt(process.env.POSTGRES_PORT ?? "5432", 10),
     host: process.env.POSTGRES_HOST as string,

@@ -22,7 +22,6 @@ export default class TokenService extends Service {
     this.parseServiceSchema({
       name: "tokens",
 
-      //adapter: DataSource.default,
       adapter: new TypeOrmDbAdapter<AuthToken>(OrmConfig),
 
       model: AuthToken,
@@ -63,10 +62,11 @@ export default class TokenService extends Service {
       crons: [
         {
           name: "ClearExpiredTokens",
-          cronTime: "0 0 * * * *",
+          cronTime: "0 0 * * *",
           onTick: {
             action: "tokens.clearExpired"
-          }
+          },
+          timeZone: "UTC"
         }
       ],
 
