@@ -21,7 +21,6 @@ phases:
   post_build:
     commands:
       - echo Tag docker image
-      - echo Skip tagging of $IMAGE_TAG
       - docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest
       - docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:$PACKAGE_VERSION
       - echo Push docker image
