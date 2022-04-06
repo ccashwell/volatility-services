@@ -26,3 +26,11 @@ phases:
       - echo Push docker image
       - docker push $IMAGE_URI:latest
       - docker push $IMAGE_URI:$PACKAGE_VERSION
+      - printf \'{"ImageURI":"%s"}\' $ECR_REPO:latest > imageDetail.json
+      - printf \'[{"name":"volatility-services","imageUri":"%s"}]\' $ECR_REPO:latest > imagedefinitions.json
+artifacts:
+  files:
+    - imageDetail.json
+    - imagedefinitions.json
+    - appspec.yaml
+    - taskdef.json
