@@ -3,14 +3,13 @@
 FROM node:16.14-alpine3.14 as base
 WORKDIR /usr/src/app
 EXPOSE 3000
-RUN apk add --no-cache --virtual .builds-deps build-base python3
-RUN mkdir -p /etc/newrelic-infra/logging.d/
-COPY ./etc/newrelic-infra/logging.d/logs.yaml /etc/newrelic-infra/logging.d/logs.yaml
-COPY newrelic.js .
-COPY ormconfig.js .
 COPY scripts/ scripts
 RUN sh scripts/docker-base-install.sh
-COPY package.json .
+COPY newrelic.js \
+     ormconfig.js \
+     package.json \
+     ./
+COPY ./etc/newrelic-infra/logging.d/logs.yaml /etc/newrelic-infra/logging.d/logs.yaml
 
 # Stage 1 compiles typescript
 FROM base as dependencies
@@ -18,10 +17,10 @@ WORKDIR /usr/src/app
 COPY package*.json .npmrc ./
 ARG CODEARTIFACT_AUTH_TOKEN
 RUN npm set progress=false && \
-    npm config set depth
-RUN npm install --only=production && npm prune --production
-RUN cp -R node_modules prod_node_modules
-RUN npm install && \
+    npm config set depth && \
+    npm install --only=production && npm prune --production && \
+    cp -R node_modules prod_node_modules && \
+    npm install && \
     rm -f .npmrc
 
 FROM dependencies as ts-compile
@@ -57,11 +56,10 @@ ENV TS_NODE_PROJECT=tsconfig.production.json
 WORKDIR /usr/src/app
 RUN touch newrelic_agent.log && mkdir -p /etc/newrelic-infra/logging.d/
 COPY --from=dependencies /usr/src/app/prod_node_modules /usr/src/app/node_modules
-COPY --from=base /usr/src/app/dumb-init-1.2.5/dumb-init /usr/local/bin/dumb-init
+COPY --from=base /usr/src/app/dumb-init /usr/local/bin/dumb-init
 COPY --from=ts-remover /usr/src/app /usr/src/app
 COPY --from=base /etc/newrelic-infra/logging.d/logs.yaml /etc/newrelic-infra/logging.d/logs.yaml
-RUN rm -rf src mixins scripts services prod_node_modules v1.2.5.tar.gz
-RUN ls -ltrha
+RUN rm -rf src mixins scripts services prod_node_modules
 CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "--env", "--config", "dist/moleculer.config.js", "dist/services"]
 
 # FROM node:16.14-alpine3.14 as base

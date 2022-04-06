@@ -11,9 +11,9 @@ echo Check OS versions...
 OS_VERSION=$(cat /proc/version)
 echo $OS_VERSION
 
-if echo $OS_VERSION | grep -q 'Ubuntu\|amzn2';
+if echo $OS_VERSION | grep -q 'Ubuntu';
 then
-  echo OS is Ubuntu/amzn2 && \
+  echo OS is Ubuntu && \
   apt-get update -y && \
   apt-get install -y \
           dumb-init && \
@@ -21,12 +21,30 @@ then
 elif echo $OS_VERSION | grep -q 'Alpine';
 then
   echo OS is Alphine/Debian && \
-  apk -U upgrade && \
-  apk add --no-cache bash && \
+  apk add --no-cache --virtual .builds-deps build-base python3 bash && \
   wget https://github.com/Yelp/dumb-init/archive/refs/tags/v1.2.5.tar.gz && \
   tar -xvf v1.2.5.tar.gz && \
   cd dumb-init-1.2.5 && \
   make && \
+  mv dumb-init .. && \
+  cd .. && \
+  rm -rf .builds-deps && \
+  rm -rf v1.2.5.tar.gz && \
+  rm -rf dumb-init-1.2.5 && \
+  echo cp $PWD/dumb-init ...
+elif echo $OS_VERSION | grep -q 'amzn2';
+then
+  echo OS is Amazon Linux 2 && \
+  mkdir -p /etc/newrelic-infra/logging.d/ && \
+  yum update -y && \
+  yum group install "Development Tools" && \
+  yum install build-base python3 bash && \
+  wget https://github.com/Yelp/dumb-init/archive/refs/tags/v1.2.5.tar.gz && \
+  tar -xvf v1.2.5.tar.gz && \
+  cd dumb-init-1.2.5 && \
+  make && \
+  yum clean all && \
+  rm -rf /var/cache/yum && \
   echo cp $PWD/dumb-init ...
 else
   echo OS is other && \
