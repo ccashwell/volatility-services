@@ -22,14 +22,17 @@ DOCKER_IMAGE_NAME ?= $(ECR_REPO_URL)/$(GITHUB_REPO):$(DOCKER_TAG)
 
 CODEARTIFACT_DOMAIN ?= artifacts
 CODEARTIFACT_DOMAIN_OWNER ?= $(AUTOMATION)
-CODEARTIFACT_REPO ?= npm/npm-store
+CODEARTIFACT_REPO ?= npm-store
 CODEARTIFACT_URL ?= artifacts-$(CODEARTIFACT_DOMAIN_OWNER).d.codeartifact.$(AWS_REGION).amazonaws.com
 CODEARTIFACT_TOOL ?= npm
 
 CODEDEPLOY_S3_BUCKET ?= compose-pipeline-sourcebucket-flkosb1nynzo
 
 ECR_REPO_URL = $(AWS_ACCOUNT).dkr.ecr.$(AWS_REGION).amazonaws.com
-
+PGPASSWORD := supersecretpassword
+DBHOST := localhost
+DBUSERNAME := volatility
+DBNAME := volatility_development
 
 # TS_SOURCES := $(wildcard *.ts src/*.ts src/datasources/*.ts src/clients/*.ts src/configuration/*.ts src/lib/*.ts src/lib/errors/*.ts)
 TYPESCRIPT_SOURCES = $(shell find . -name "*.ts" -not -path "./infrastructure/*" -not -path "./node_modules/*" -not -path "./infra/*" -not -path "./test/*" -not -path "./dist/*")
@@ -68,8 +71,11 @@ clean:
 	echo "//$(CODEARTIFACT_URL)/npm/$(CODEARTIFACT_REPO)/:_authToken=$(CODEARTIFACT_AUTH_TOKEN)" >> .npmrc
 
 docker/build: docker Dockerfile .env .npmrc package.json package-lock.json .dockerignore
-	docker build -t $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} . && \
+	docker build -t $(DOCKER_IMAGE_NAME) --build-arg CODEARTIFACT_AUTH_TOKEN=${CODEARTIFACT_AUTH_TOKEN} . && \
 	touch docker/build
+
+docker/slim: docker Dockerfile .env .npmrc package.json package-lock.json .dockerignore
+	docker-slim build --show-clogs --http-probe-cmd /ws/health  $(DOCKER_IMAGE_NAME)
 
 # aws/ecr/tag: aws/ecr/login docker/build
 # 	docker tag $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) $(ECR_REPO_URL)/$(DOCKER_IMAGE_NAME):$(DOCKER_TAG) && \
@@ -231,3 +237,12 @@ setup-local-certs:
 	@echo - https://mkcert.dev for other platforms
 	@echo ---------------
 endif
+
+edit-pipeline:
+	aws codepipeline get-pipeline --name PipelineV2-staging >pipeline.json
+
+update-pipeline:
+	aws codepipeline update-pipeline --cli-input-json file://pipeline.json
+
+connect-db:
+	PGPASSWORD=$(DBPASSWORD) psql -h $(DBHOST) -U $(DBUSERNAME) -d $(DBNAME)

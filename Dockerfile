@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 
-FROM public.ecr.aws/docker/library/node:16.14.0 as base
+FROM node:16.14-alpine3.14 as base
 WORKDIR /usr/src/app
 EXPOSE 3000
+RUN apk add --no-cache --virtual .builds-deps build-base python3
 RUN mkdir -p /etc/newrelic-infra/logging.d/
 COPY ./etc/newrelic-infra/logging.d/logs.yaml /etc/newrelic-infra/logging.d/logs.yaml
 COPY newrelic.js .
@@ -18,7 +19,7 @@ COPY package*.json .npmrc ./
 ARG CODEARTIFACT_AUTH_TOKEN
 RUN npm set progress=false && \
     npm config set depth
-RUN npm install --only=production
+RUN npm install --only=production && npm prune --production
 RUN cp -R node_modules prod_node_modules
 RUN npm install && \
     rm -f .npmrc
@@ -41,7 +42,6 @@ WORKDIR /usr/src/app
 COPY --from=dependencies /usr/src/app/package*.json ./
 COPY --from=ts-compile /usr/src/app/tsconfig*.json ./
 COPY --from=ts-compile /usr/src/app/dist ./dist
-# COPY .npmrc /usr/src/app/
 # ARG CODEARTIFACT_AUTH_TOKEN
 # RUN npm set-script prepare "" && \
 #     npm install --production && \
@@ -50,14 +50,29 @@ COPY --from=ts-compile /usr/src/app/dist ./dist
 
 # FROM gcr.io/distroless/nodejs:16
 # FROM gcr.io/distroless/nodejs:16
-FROM base as production
+
+FROM node:16.14-stretch-slim as production
+EXPOSE 3000
 ENV TS_NODE_PROJECT=tsconfig.production.json
 WORKDIR /usr/src/app
-RUN touch newrelic_agent.log
+RUN touch newrelic_agent.log && mkdir -p /etc/newrelic-infra/logging.d/
 COPY --from=dependencies /usr/src/app/prod_node_modules /usr/src/app/node_modules
+COPY --from=base /usr/src/app/dumb-init-1.2.5/dumb-init /usr/local/bin/dumb-init
 COPY --from=ts-remover /usr/src/app /usr/src/app
+COPY --from=base /etc/newrelic-infra/logging.d/logs.yaml /etc/newrelic-infra/logging.d/logs.yaml
+RUN rm -rf src mixins scripts services prod_node_modules v1.2.5.tar.gz
 RUN ls -ltrha
 CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "--env", "--config", "dist/moleculer.config.js", "dist/services"]
+
+# FROM node:16.14-alpine3.14 as base
+# FROM base as production
+# ENV TS_NODE_PROJECT=tsconfig.production.json
+# WORKDIR /usr/src/app
+# RUN touch newrelic_agent.log
+# COPY --from=dependencies /usr/src/app/prod_node_modules /usr/src/app/node_modules
+# COPY --from=ts-remover /usr/src/app /usr/src/app
+# RUN ls -ltrha
+# CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "--env", "--config", "dist/moleculer.config.js", "dist/services"]
 
 # ENV NODE_ENV=production
 # RUN apt-get update -y && apt-get install -y dumb-init
