@@ -11,8 +11,8 @@ import { ContractType } from "tardis-dev"
 export interface EstimateParams {
   at: string
   methodology: MethodologyEnum
-  interval: MethodologyWindowEnum
-  baseCurrency: BaseCurrencyEnum
+  timePeriod: MethodologyWindowEnum
+  asset: BaseCurrencyEnum
   exchange: MethodologyExchangeEnum
   symbolType: SymbolTypeEnum
   contractType: ContractType | ContractType[]

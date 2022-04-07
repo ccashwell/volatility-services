@@ -1,13 +1,13 @@
 import { initTardis } from "@datasources/tardis"
 import { tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"
 import { IInstrumentInfo } from "@interfaces/services/instrument_info"
-import { PartialInstrumentInfo } from "@lib/types"
 import { parseContractType } from "@lib/utils/helpers"
 import * as _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
 // import * as Cron from "moleculer-cron"
 import { InstrumentInfo } from "tardis-dev"
 import { chainFrom } from "transducist"
+import { PartialInstrumentInfo } from "./../src/lib/types"
 
 export default class InstrumentInfoService extends Service {
   private instrumentInfos: PartialInstrumentInfo[] = []
@@ -23,7 +23,7 @@ export default class InstrumentInfoService extends Service {
       settings: {
         refreshDefaults: {
           exchange: process.env.INSTRUMENT_INFO_REFRESH_EXCHANGE || "deribit",
-          baseCurrency: process.env.INSTRUMENT_INFO_REFRESH_BASE_CURRENCY || "ETH",
+          asset: process.env.INSTRUMENT_INFO_REFRESH_BASE_CURRENCY || "ETH",
           type: process.env.INSTRUMENT_INFO_REFRESH_TYPE || "option",
           contractType: parseContractType(process.env.INSTRUMENT_INFO_REFRESH_CONTRACT_TYPE, [
             "call_option",
@@ -60,7 +60,7 @@ export default class InstrumentInfoService extends Service {
           visibility: "public",
           params: {
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
-            baseCurrency: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
+            asset: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
             type: { type: "string", enum: ["option"], default: "option" },
             contractType: { type: "array", items: "string", default: ["call_option", "put_option"] }
           },
@@ -82,7 +82,7 @@ export default class InstrumentInfoService extends Service {
           params: {
             timestamp: { type: "string" },
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
-            baseCurrency: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
+            asset: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
             type: { type: "string", enum: ["option"], default: "option" },
             contractType: { type: "array", items: "string", default: ["call_option", "put_option"] },
             active: { type: "boolean", default: true },
@@ -134,17 +134,20 @@ export default class InstrumentInfoService extends Service {
   ): Promise<PartialInstrumentInfo[]> {
     this.logger.info("fetchInstruments()", params)
     const toPartialInstrumentInfo = (info: InstrumentInfo): PartialInstrumentInfo => {
-      return _.pick(info, [
+      const { baseCurrency, ...partial } = info
+      const transformed = { ...partial, asset: baseCurrency }
+
+      return _.pick(transformed, [
         "id",
         "exchange",
-        "baseCurrency",
+        "asset",
         "type",
         "active",
         "availableTo",
         "availableSince",
         "optionType",
         "expiry"
-      ])
+      ]) as PartialInstrumentInfo
     }
     this.instrumentInfos = chainFrom(await tardisOptionInstrumentDataSource(params))
       .map(toPartialInstrumentInfo)

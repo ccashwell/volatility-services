@@ -1,13 +1,13 @@
-import C from "./constants"
 import { MethodologyExpiryEnum } from "@entities"
+import C from "./constants"
 
-export const mfivDates = (now: Date, interval: string, expiryType = MethodologyExpiryEnum.FridayT08) => {
+export const mfivDates = (now: Date, timePeriod: string, expiryType = MethodologyExpiryEnum.FridayT08) => {
   // TODO: Remove guard once we need to support other time ranges.
-  if (interval !== "14d") {
-    throw Error(`An interval of ${interval} is not allowed. Only '14d' is currently supported.`)
+  if (timePeriod !== "14d") {
+    throw Error(`An time period of ${timePeriod} is not allowed. Only '14d' is currently supported.`)
   }
 
-  const nextExpirationDate = nextExpiration(now.valueOf(), interval, expiryType)
+  const nextExpirationDate = nextExpiration(now.valueOf(), timePeriod, expiryType)
   const nearExpirationDate = new Date(nextExpirationDate.valueOf() - 7 * C.MILLISECONDS_PER_DAY)
   const rollover = new Date(nextExpirationDate.valueOf() - 14 * C.MILLISECONDS_PER_DAY)
 
@@ -18,9 +18,9 @@ export const mfivDates = (now: Date, interval: string, expiryType = MethodologyE
   }
 }
 
-const nextExpiration = (dateMs: number, interval: string, expiryType: string) => {
+const nextExpiration = (dateMs: number, timePeriod: string, expiryType: string) => {
   const expiryMatch = expiryTypeToOrdinals(expiryType)
-  const targetDate = new Date(dateMs + C.MILLISECONDS_PER_DAY * parseInt(interval, 10))
+  const targetDate = new Date(dateMs + C.MILLISECONDS_PER_DAY * parseInt(timePeriod, 10))
   const targetDay = targetDate.getUTCDay()
   const targetHour = targetDate.getUTCHours()
   let nextDate: Date

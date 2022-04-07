@@ -1,7 +1,4 @@
 "use strict"
-import { ServiceBroker } from "moleculer"
-import IndexService from "@services/index.service"
-import { IIndex } from "@interfaces/services/index"
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -10,6 +7,9 @@ import {
   MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities"
+import { IIndex } from "@interfaces/services/index"
+import IndexService from "@services/index.service"
+import { ServiceBroker } from "moleculer"
 
 // jest.mock("@secrets", () => {
 //   const originalModule = jest.requireActual("@secrets")
@@ -49,8 +49,8 @@ describe("index.service api", () => {
         exchange: MethodologyExchangeEnum.Deribit,
         contractType: ["call_option", "put_option"],
         symbolType: SymbolTypeEnum.Option,
-        interval: MethodologyWindowEnum.Day14,
-        baseCurrency: BaseCurrencyEnum.ETH,
+        timePeriod: MethodologyWindowEnum.Day14,
+        asset: BaseCurrencyEnum.ETH,
         expiryType: MethodologyExpiryEnum.FridayT08
       }
 
@@ -77,8 +77,8 @@ describe("index.service api", () => {
         exchange: MethodologyExchangeEnum.Deribit,
         contractType: ["call_option", "put_option"],
         symbolType: SymbolTypeEnum.Option,
-        interval: MethodologyWindowEnum.Day14,
-        baseCurrency: BaseCurrencyEnum.ETH,
+        timePeriod: MethodologyWindowEnum.Day14,
+        asset: BaseCurrencyEnum.ETH,
         expiryType: MethodologyExpiryEnum.FridayT08
       }
 

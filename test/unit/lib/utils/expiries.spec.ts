@@ -3,14 +3,14 @@
 import { mfivDates } from "@lib/expiries"
 
 describe("Test mfivDates()", () => {
-  describe("interval = 14d", () => {
-    const interval = "14d"
+  describe("timePeriod = 14d", () => {
+    const timePeriod = "14d"
 
     describe("when the date is 2021-01-01T07:00:00.000Z", () => {
       const now = "2021-01-01T07:00:00.000Z"
 
       it("returns near, next, and rollover", done => {
-        const subject = mfivDates(new Date(now), interval)
+        const subject = mfivDates(new Date(now), timePeriod)
 
         expect(subject).toMatchObject({
           nearExpiration: "2021-01-08T08:00:00.000Z",
@@ -26,7 +26,7 @@ describe("Test mfivDates()", () => {
       const now = "2021-01-01T09:00:00.000Z"
 
       it("returns near, next, and rollover", done => {
-        const subject = mfivDates(new Date(now), interval)
+        const subject = mfivDates(new Date(now), timePeriod)
 
         expect(subject).toMatchObject({
           nearExpiration: "2021-01-15T08:00:00.000Z",

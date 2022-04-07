@@ -136,25 +136,34 @@ export default class TokenService extends Service {
             this: TokenService,
             ctx: Context<Pick<AuthToken, "type" | "token" | "owner"> & { isUsed: boolean }>
           ) {
+            this.logger.info("Checking token", ctx.params)
             const entity = await this.adapter.repository.findOne({
               where: { type: ctx.params.type, token: this.secureToken(ctx.params.token) }
             })
 
+            this.logger.info("entity found", entity)
+
             if (entity) {
+              this.logger.info("entity found")
+
               if (!ctx.params.owner || entity.owner === ctx.params.owner) {
-                // if (entity.expiry && entity.expiry < new Date()) {
-                //   this.logger.debug("Token expired")
-                //   return false
-                // }
+                if (entity.expiry && entity.expiry < new Date()) {
+                  this.logger.debug("Token expired")
+                  return false
+                }
                 // if (ctx.params.isUsed) {
+
+                this.logger.info("Token last used", entity.lastUsedAt)
 
                 await this.adapter.repository.update(entity.id, { lastUsedAt: new Date().toISOString() })
                 // }
-                return entity
+
+                // this.logger.info("entity", entity)
+                return true
               }
             }
 
-            return null
+            return false
           }
         },
         /**

@@ -2,7 +2,7 @@ export default {
   version: "2022-01-01",
   metadata: {
     "uma.priceId": "mf4.ETH.14d",
-    uri: "/indices/methodology=mfiv/interval=14d/baseCurrency=ETH/exchange=deribit/instrument=option/ts=2021-01-03T07:02:00.543Z/evidence.json"
+    uri: "/indices/methodology=mfiv/timePeriod=14d/asset=ETH/exchange=deribit/instrument=option/ts=2021-01-03T07:02:00.543Z/evidence.json"
   },
   eventType: "mfiv.eth.14d.index.created",
   // topic: "com.volatility.indices.estimate.mfiv.14d.eth.option",

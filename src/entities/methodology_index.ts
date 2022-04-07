@@ -8,8 +8,8 @@ import {
 } from "./types"
 
 @Entity("methodology_indices")
-@Index(["methodology", "interval", "baseCurrency", "exchange", "symbolType"])
-@Unique(["timestamp", "methodology", "interval", "baseCurrency", "symbolType"])
+@Index(["methodology", "timePeriod", "asset", "exchange", "symbolType"])
+@Unique(["timestamp", "methodology", "timePeriod", "asset", "symbolType"])
 export class MethodologyIndex {
   // @PrimaryColumn({ nullable: false })
   // hash!: string
@@ -28,11 +28,11 @@ export class MethodologyIndex {
 
   @Column({ nullable: false, type: "enum", enum: MethodologyWindowEnum })
   @PrimaryColumn()
-  interval!: MethodologyWindowEnum
+  timePeriod!: MethodologyWindowEnum
 
   @Column({ nullable: false, type: "enum", enum: BaseCurrencyEnum })
   @PrimaryColumn()
-  baseCurrency!: BaseCurrencyEnum
+  asset!: BaseCurrencyEnum
 
   @Column({ nullable: false, type: "enum", enum: MethodologyExchangeEnum })
   exchange!: MethodologyExchangeEnum

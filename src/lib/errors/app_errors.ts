@@ -54,7 +54,7 @@ export const fetchInstrumentsError = (
   type: VGError.FetchInstrumentsFailure,
   reason: "Unhandled fetchInstruments Error",
   envVars: ["TARDIS_API_KEY"],
-  configVars: ["tardis.exchange", "mfiv.baseCurrency"],
+  configVars: ["tardis.exchange", "mfiv.asset"],
   wrappedError
 })
 

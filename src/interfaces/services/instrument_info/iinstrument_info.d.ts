@@ -2,8 +2,8 @@ import { PartialInstrumentInfo } from "@lib/types"
 
 export interface InstrumentInfoParams {
   exchange: Exchange
-  baseCurrency: BaseCurrency
-  interval?: MfivWindow
+  asset: BaseCurrency
+  timePeriod?: MfivWindow
   type: "option"
   contractType: ContractType | ContractType[]
   timestamp?: string
@@ -14,7 +14,7 @@ export type InstrumentInfoResponse = string[]
 
 export interface RefreshParams {
   exchange: Exchange
-  baseCurrency: BaseCurrency
+  asset: BaseCurrency
   type: "option"
   contractType: ContractType | ContractType[]
 }

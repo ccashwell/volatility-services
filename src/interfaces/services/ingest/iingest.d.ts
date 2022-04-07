@@ -1,6 +1,6 @@
 export interface OptionSummariesParams {
   expiry: string
-  baseCurrency: "BTC" | "ETH"
+  asset: "BTC" | "ETH"
 }
 
 export type OptionSummariesResponse = OptionSummary[]

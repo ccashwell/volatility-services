@@ -182,20 +182,31 @@ const brokerConfig: BrokerOptions = {
   validator: true,
 
   errorHandler: (err: Error, info: unknown) => {
+    const message = "Unhandled exception in volatility-services/moleculer.config"
+    const type = "mol:unhandled_exception"
+
     // Emit a structured error so it can be easily ingested
     const payload = {
-      type: "mol:unhandled_exception",
-      message: "Unhandled exception in volatility-services/moleculer.config",
+      type,
+      message,
       error: {
         name: err.name,
         message: err.message,
         details: err.stack
-      }
+      },
+      info
       // info,
       // git: pkg.repository as string
     }
 
-    console.error(payload)
+    console.error("unhandled exception", payload)
+    if (info) {
+      console.error("extra info:", info)
+    }
+
+    // noticeError(err, { message, type })
+
+    // console.error(payload)
     // console.error(JSON.stringify(payload, null, 2))
     // console.error(`*** NOTICE ***: ${err.name} ***\n`, err.stack)
     // console.error(`*** message: ${err.message}`)

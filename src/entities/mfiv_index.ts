@@ -1,9 +1,9 @@
-import { Entity, Column, CreateDateColumn, Index, PrimaryColumn, Unique } from "typeorm"
-import { MethodologyEnum, MethodologyWindowEnum, BaseCurrencyEnum, MethodologyExchangeEnum, SymbolTypeEnum } from "."
+import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, Unique } from "typeorm"
+import { BaseCurrencyEnum, MethodologyEnum, MethodologyExchangeEnum, MethodologyWindowEnum, SymbolTypeEnum } from "."
 
 @Entity("mfiv_indices")
-@Index(["methodology", "interval", "baseCurrency", "exchange", "symbolType"])
-@Unique(["timestamp", "methodology", "interval", "baseCurrency", "symbolType"])
+@Index(["methodology", "timePeriod", "asset", "exchange", "symbolType"])
+@Unique(["timestamp", "methodology", "interval", "asset", "symbolType"])
 export class MfivIndex {
   @Column({ nullable: false })
   @Index()
@@ -22,11 +22,11 @@ export class MfivIndex {
 
   @Column({ nullable: false, type: "enum", enum: MethodologyWindowEnum })
   @PrimaryColumn()
-  interval!: MethodologyWindowEnum
+  timePeriod!: MethodologyWindowEnum
 
   @Column({ nullable: false, type: "enum", enum: BaseCurrencyEnum })
   @PrimaryColumn()
-  baseCurrency!: BaseCurrencyEnum
+  asset!: BaseCurrencyEnum
 
   @Column({ nullable: false, type: "enum", enum: MethodologyExchangeEnum })
   exchange!: MethodologyExchangeEnum

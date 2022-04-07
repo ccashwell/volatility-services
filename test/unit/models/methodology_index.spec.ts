@@ -1,6 +1,4 @@
 "use strict"
-import { getRepository, DeepPartial, QueryFailedError, getConnection } from "typeorm"
-
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -10,6 +8,7 @@ import {
 } from "@entities"
 import connectionInstance from "@entities/connection"
 import { MethodologyIndex } from "@entities/methodology_index"
+import { DeepPartial, getConnection, getRepository, QueryFailedError } from "typeorm"
 
 describe("Test 'MethodologyIndex' model", () => {
   beforeAll(async () => await connectionInstance())
@@ -19,10 +18,10 @@ describe("Test 'MethodologyIndex' model", () => {
     const params = {
       timestamp: new Date(),
       value: "42",
-      baseCurrency: BaseCurrencyEnum.ETH,
+      asset: BaseCurrencyEnum.ETH,
       exchange: MethodologyExchangeEnum.Deribit,
       methodology: MethodologyEnum.MFIV,
-      interval: MethodologyWindowEnum.Day14,
+      timePeriod: MethodologyWindowEnum.Day14,
       symbolType: SymbolTypeEnum.Option,
       extra: { requestId: "1234" }
     }

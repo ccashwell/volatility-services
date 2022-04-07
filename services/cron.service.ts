@@ -28,8 +28,8 @@ export default class CronService extends Service {
         estimate: {
           exchange: process.env.CRON_ESTIMATE_EXCHANGE as MethodologyExchangeEnum,
           methodology: process.env.CRON_METHODOLOGY as MethodologyEnum,
-          baseCurrency: process.env.CRON_BASE_CURRENCY as BaseCurrencyEnum,
-          interval: process.env.CRON_INTERVAL as MethodologyWindowEnum,
+          asset: process.env.CRON_BASE_CURRENCY as BaseCurrencyEnum,
+          timePeriod: process.env.CRON_INTERVAL as MethodologyWindowEnum,
           symbolType: process.env.CRON_SYMBOL_TYPE as SymbolTypeEnum,
           expiryType: process.env.CRON_EXPIRY_TYPE as MethodologyExpiryEnum,
           contractType: ["call_option", "put_option"]
@@ -99,8 +99,8 @@ const paramsProvider = ({
 }) => {
   const at = new Date()
   const fleekKeyBuilder = () => {
-    const { methodology, interval, baseCurrency } = settingsEstimate
-    return `/indices/methodology=${methodology}/interval=${interval}/currency=${baseCurrency}/at=${toUnixTimestamp(
+    const { methodology, timePeriod, asset } = settingsEstimate
+    return `/indices/methodology=${methodology}/timePeriod=${timePeriod}/asset=${asset}/at=${toUnixTimestamp(
       at
     )}/evidence.json`
   }

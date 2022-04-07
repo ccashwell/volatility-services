@@ -36,9 +36,9 @@ export default class IngestService extends Service {
 
         instrumentInfoDefaults: {
           exchange: process.env.INGEST_EXCHANGE || "deribit",
-          baseCurrency: process.env.INGEST_BASE_CURRENCY || "ETH",
+          asset: process.env.INGEST_BASE_CURRENCY || "ETH",
           type: process.env.INGEST_TYPE || "option",
-          interval: process.env.INGEST_TIME_PERIOD || "14d",
+          timePeriod: process.env.INGEST_TIME_PERIOD || "14d",
           contractType: parseContractType(process.env.INGEST_CONTRACT_TYPE)
         }
       },
@@ -177,7 +177,7 @@ export default class IngestService extends Service {
     const symbolList = this.expiryMap.get(params.expiry)
     const symbols = Array.from(symbolList?.values() ?? [])
 
-    this.logger.info("Fetching symbols:", symbols)
+    // this.logger.info("Fetching symbols:", symbols)
 
     const promises = symbols.map(sym => {
       if (this.broker.cacher) {

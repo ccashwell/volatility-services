@@ -21,7 +21,7 @@ export default class MfivService extends Service {
       settings: {
         $dependencyTimeout: 30000,
 
-        fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"],
+        fields: ["timestamp", "value", "methodology", "timePeriod", "asset", "exchange", "symbolType", "extra"],
 
         idField: "timestamp"
       },

@@ -71,7 +71,7 @@ export default class IndexService extends Service {
       settings: {
         $dependencyTimeout: 60000,
 
-        fields: ["timestamp", "value", "methodology", "interval", "baseCurrency", "exchange", "symbolType", "extra"],
+        fields: ["timestamp", "value", "methodology", "timePeriod", "asset", "exchange", "symbolType", "extra"],
 
         idField: "timestamp",
 
@@ -96,8 +96,8 @@ export default class IndexService extends Service {
             at: { type: "string" },
             exchange: { type: "enum", values: ["deribit"], default: "deribit" },
             methodology: { type: "enum", values: ["mfiv"], default: "mfiv" },
-            baseCurrency: { type: "enum", values: ["ETH", "BTC"], default: "ETH" },
-            interval: { type: "enum", values: ["14d"], default: "14d" },
+            asset: { type: "enum", values: ["ETH", "BTC"], default: "ETH" },
+            timePeriod: { type: "enum", values: ["14d"], default: "14d" },
             symbolType: { type: "enum", values: ["option"], default: "option" },
             expiryType: { type: "string", default: "FridayT08:00:00Z" },
             contractType: { type: "array", items: "string", enum: ["call_option", "put_option"] }
@@ -124,6 +124,11 @@ export default class IndexService extends Service {
         }
       },
 
+      started() {
+        this.logger.info("settings.skipPersist:", process.env.INDEX_SKIP_PERSIST)
+        return Promise.resolve()
+      },
+
       async stopped() {
         //return await getConnection().close()
       }
@@ -133,7 +138,7 @@ export default class IndexService extends Service {
   private async indexOperation(context: Context<IIndex.EstimateParams>, params: IIndex.EstimateParams) {
     const indexAtDate = new Date(params.at)
 
-    const methodologyDates = mfivDates(new Date(params.at), params.interval, params.expiryType)
+    const methodologyDates = mfivDates(new Date(params.at), params.timePeriod, params.expiryType)
 
     const options = await optionSummariesLists(context, methodologyDates)
 
@@ -145,8 +150,8 @@ export default class IndexService extends Service {
 
     const mfivContext: MfivContext = {
       ...params,
-      windowInterval: params.interval,
-      currency: params.baseCurrency,
+      windowInterval: params.timePeriod,
+      currency: params.asset,
       ...risklessRate
     }
 
@@ -176,12 +181,13 @@ export default class IndexService extends Service {
     const maybeMfivResult = Result.fromThrowable(
       () => compute(mfivContext, mfivParams),
       err => {
-        console.error("compute failed", err)
+        this.logger.error("compute failed", err)
         return new Error("No index")
       }
     )()
 
     if (maybeMfivResult.isErr()) {
+      this.logger.error("err", maybeMfivResult.error)
       return maybeMfivResult.error
     }
 
@@ -237,10 +243,10 @@ export default class IndexService extends Service {
      * */
     index.timestamp = new Date(evidence.params.at)
     index.value = evidence.result.dVol?.toString() ?? "undefined"
-    index.baseCurrency = ctx.currency as BaseCurrencyEnum
+    index.asset = ctx.currency as BaseCurrencyEnum
     index.exchange = ctx.exchange as MethodologyExchangeEnum
     index.methodology = ctx.methodology as MethodologyEnum
-    index.interval = ctx.windowInterval as MethodologyWindowEnum
+    index.timePeriod = ctx.windowInterval as MethodologyWindowEnum
     index.symbolType = SymbolTypeEnum.Option
     index.extra = extra
     await this.adapter.repository.save(index)

@@ -1,7 +1,18 @@
 import { DataSource } from "typeorm"
 import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions"
-import * as ormConfig from "../../ormconfig"
+import OrmConfig from "../../ormconfig"
 
-const { ...dataSourceOptions } = ormConfig.default
+//const { ...dataSourceOptions } = ormConfig.default
 
-export default new DataSource(dataSourceOptions as PostgresConnectionOptions)
+const datasource = new DataSource(OrmConfig("default") as PostgresConnectionOptions)
+export default datasource
+
+datasource
+  .initialize()
+  .then(() => {
+    console.log("Data Source has been initialized!")
+    return
+  })
+  .catch(err => {
+    console.error("Error during Data Source initialization", err)
+  })
