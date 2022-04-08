@@ -386,6 +386,8 @@ export type PartialInstrumentInfo = Pick<
   "id" | "exchange" | "type" | "active" | "availableSince" | "availableTo" | "optionType" | "expiry"
 > & { asset: BaseCurrency }
 
-export const SYMBOLS = ["ETHUSDT", "ETHUSD", "ETH/USD", "ETH/USDC", "ETH/USDT", "ETH-USD"] as const
+const ETH_SYMBOLS = ["ETHUSDT", "ETHUSD", "ETH/USD", "ETH/USDC", "ETH/USDT", "ETH-USD"] as const
+const BTC_SYMBOLS = ["BTCUSDT", "BTCUSD", "BTC/USD", "BTC/USDC", "BTC/USDT", "BTC-USD"] as const
+export const SYMBOLS = [...ETH_SYMBOLS, ...BTC_SYMBOLS] as const
 
 export type TradePairSymbol = typeof SYMBOLS[number]

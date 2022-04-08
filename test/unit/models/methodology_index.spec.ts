@@ -6,13 +6,12 @@ import {
   MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities"
-import connectionInstance from "@entities/connection"
 import { MethodologyIndex } from "@entities/methodology_index"
-import { DeepPartial, getConnection, getRepository, QueryFailedError } from "typeorm"
+import { DeepPartial, getRepository, QueryFailedError } from "typeorm"
 
 describe("Test 'MethodologyIndex' model", () => {
-  beforeAll(async () => await connectionInstance())
-  afterAll(() => getConnection().close())
+  // beforeAll(async () => await connectionInstance())
+  // afterAll(() => getConnection().close())
 
   describe("when creating with valid params", () => {
     const params = {

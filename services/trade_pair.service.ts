@@ -39,7 +39,9 @@ export default class TradePairService extends Service {
       settings: {
         $dependencyTimeout: 60000,
 
-        skipPersist: process.env.TRADE_PAIRS_SKIP_PERSIST === "true"
+        skipPersist: process.env.TRADE_PAIRS_SKIP_PERSIST === "true",
+
+        tradePairAssets: process.env.TRADE_PAIRS_ASSETS
       },
 
       dependencies: [],
@@ -77,9 +79,10 @@ export default class TradePairService extends Service {
        */
       started(this: TradePairService) {
         const onError = (err: Error) => this.onStreamError(err)
-        let computedMessages: AsyncIterableIterator<Trade | TradeBucket>
 
         initTardis()
+
+        const exchangePairs = this.selectTradePairs()
 
         /**
          * This promise will be used to resolve the `started` event in moleculer.service
@@ -92,15 +95,6 @@ export default class TradePairService extends Service {
             })
 
         return new Promise<void>((resolve, reject) => {
-          const exchangePairs: { exchange: Exchange; symbols: TradePairSymbol[] }[] = [
-            { exchange: "binance", symbols: ["ETHUSDT"] },
-            { exchange: "bitstamp", symbols: ["ETHUSD"] },
-            { exchange: "coinbase", symbols: ["ETH-USD"] },
-            { exchange: "ftx", symbols: ["ETH-USD"] },
-            { exchange: "gemini", symbols: ["ETHUSD"] },
-            { exchange: "kraken", symbols: ["ETH/USD"] }
-          ]
-
           const realTimeStreams = exchangePairs.map(options =>
             compute(streamNormalized(options, normalizeTrades), computeTradeBucket({ kind: "time", interval: 1000 }))
           )
@@ -151,7 +145,7 @@ export default class TradePairService extends Service {
 
   private async captureMessage(message: Trade | TradeBucket) {
     const { timestamp, exchange, symbol, id, price, localTimestamp } = message
-    this.logger.info(message)
+    // this.logger.info(message)
     this.lastMessage = message
 
     await this.executeInsert({
@@ -174,6 +168,10 @@ export default class TradePairService extends Service {
 
   private async executeInsert(tradePair: TradePair) {
     await this.dbWriter.values([tradePair]).execute()
+  }
+
+  private selectTradePairs() {
+    return tradePairAssets[this.settings.tradePairAssets as "BTC" | "ETH"]
   }
 }
 
@@ -329,3 +327,22 @@ const computeTradeBucket =
   (options: TradeBucketComputableOptions): (() => Computable<TradeBucket>) =>
   () =>
     new TradeBucketComputable(options)
+
+const tradePairAssets: Record<"BTC" | "ETH", { exchange: Exchange; symbols: TradePairSymbol[] }[]> = {
+  ETH: [
+    { exchange: "binance", symbols: ["ETHUSDT"] },
+    { exchange: "bitstamp", symbols: ["ETHUSD"] },
+    { exchange: "coinbase", symbols: ["ETH-USD"] },
+    { exchange: "ftx", symbols: ["ETH-USD"] },
+    { exchange: "gemini", symbols: ["ETHUSD"] },
+    { exchange: "kraken", symbols: ["ETH/USD"] }
+  ],
+  BTC: [
+    { exchange: "binance", symbols: ["BTCUSDT"] },
+    { exchange: "bitstamp", symbols: ["BTCUSD"] },
+    { exchange: "coinbase", symbols: ["BTC-USD"] },
+    { exchange: "ftx", symbols: ["BTC-USD"] },
+    { exchange: "gemini", symbols: ["BTCUSD"] },
+    { exchange: "kraken", symbols: ["BTC/USD"] }
+  ]
+}

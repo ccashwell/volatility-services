@@ -215,7 +215,7 @@ export default class WSService extends Service {
                 }
 
                 if (channel === "MFIV/14D/ETH" || channel === "MFIV/14D/BTC") {
-                  this.logger.info("Subscribed")
+                  this.logger.info("Subscribed", channel)
                   socket.subscribe(channel)
                 } else {
                   socket.send(
@@ -365,6 +365,7 @@ export default class WSService extends Service {
             //await this.server.publish("mfiv.14d.eth.expiry", message, true, false)
           }
         },
+
         "mfiv.14d.ETH.index.created": {
           handler(this: WSService, context: Context<MfivEvidence>) {
             const result = context.params.result
@@ -392,6 +393,40 @@ export default class WSService extends Service {
 
             this.logger.info("Sending MFIV")
             this.server.publish("MFIV/14D/ETH", this.encoder.encode(JSON.stringify(serverMsg)), false)
+            // this.logger.info("index.created", index)
+            // const payload = { topic: "MFIV/14D/ETH", message: index }
+            // const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(payload))
+            // /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+            // await this.server.publish("MFIV/14D/ETH", message, false)
+          }
+        },
+        "mfiv.14d.BTC.index.created": {
+          handler(this: WSService, context: Context<MfivEvidence>) {
+            const result = context.params.result
+            const { dVol, invdVol, currency, value } = result
+            const methodology = context.params.context.methodology.toUpperCase()
+            const timePeriod = context.params.context.windowInterval.toUpperCase()
+            const serverMsg = {
+              channel: "MFIV/14D/BTC",
+              data: {
+                id: `${methodology}.${timePeriod}.${currency}`,
+                type: "index",
+                dVol,
+                invdVol,
+                value,
+                underlying: context.params.params.underlyingPrice,
+                methodology,
+                timePeriod,
+                asset: currency,
+                risklessRate: context.params.context.risklessRate,
+                risklessRateAt: context.params.context.risklessRateAt,
+                risklessRateSource: context.params.context.risklessRateSource,
+                timestamp: context.params.params.at
+              }
+            }
+
+            this.logger.info("Sending MFIV")
+            this.server.publish("MFIV/14D/BTC", this.encoder.encode(JSON.stringify(serverMsg)), false)
             // this.logger.info("index.created", index)
             // const payload = { topic: "MFIV/14D/ETH", message: index }
             // const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(payload))

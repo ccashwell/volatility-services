@@ -7,7 +7,6 @@ export async function instrumentInfos(
   ctx: Context | Service,
   params: IInstrumentInfo.InstrumentInfoParams
 ): Promise<IInstrumentInfo.InstrumentInfoResponse> {
-  console.info("**** PARAMS", params)
   if (ctx instanceof Context) {
     return await ctx.call(`${prefix}.instrumentInfo`, params)
   } else if (ctx instanceof Service) {

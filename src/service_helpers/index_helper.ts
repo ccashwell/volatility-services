@@ -10,6 +10,10 @@ export async function estimate(
   if (ctx instanceof Context) {
     return await ctx.call(`${prefix}.estimate`, params)
   } else {
-    return await ctx.broker.call<never, IIndex.EstimateParams>(`${prefix}.estimate`, params)
+    const { at, ...rest } = params
+    return await ctx.broker.call<never, IIndex.EstimateParams>(`${prefix}.estimate`, {
+      at: at instanceof Date ? at.toISOString() : at,
+      ...rest
+    })
   }
 }
