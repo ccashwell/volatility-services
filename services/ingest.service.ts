@@ -9,7 +9,7 @@ import { instrumentInfos } from "@service_helpers/instrument_info_helper"
 import _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { ResultAsync } from "neverthrow"
-import { noticeError } from "newrelic"
+import newrelic from "newrelic"
 import { Exchange, OptionSummary, StreamNormalizedOptions } from "tardis-dev"
 import configuration from "../src/configuration"
 
@@ -129,7 +129,7 @@ export default class IngestService extends Service {
       .mapErr(err => {
         this.logger.fatal(err)
         if (err instanceof Error) {
-          noticeError(err, { serviceName: "ingest", expiries: JSON.stringify(expiries) })
+          newrelic.noticeError(err, { serviceName: "ingest", expiries: JSON.stringify(expiries) })
         }
         return err
       })

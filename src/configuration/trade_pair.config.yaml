@@ -1,0 +1,31 @@
+trade_pair:
+  eth:
+    binance:
+      - ETHUSDT
+    bitstamp:
+      - ETHUSD
+    coinbase:
+      - ETHUSD
+    ftx:
+      - ETHUSD
+    gemini:
+      - ETHUSD
+    kraken:
+      - ETHUSD
+  btc:
+    bitstamp:
+      - BTCUSD
+    coinbase:
+      - BTCUSD
+    ftx:
+      - BTCUSD
+    gemini:
+      - BTCUSD
+    kraken:
+      - BTCUSD
+
+# Bittrex: BTC-USD
+# CoinbasePro: BTC-USD
+# FTX: BTC-USD
+# Gemini: BTC-USD
+# Kraken: BTC-USD

@@ -12,7 +12,14 @@ const config = (name = "default") => {
     password: process.env.POSTGRESQL_PASSWORD || "supersecretpassword",
     logging: process.env.TYPEORM_LOGGING || false,
     database: process.env.POSTGRESQL_DATABASE || `volatility_${nodeEnv}`,
-    entities: ["./src/entities/**/*.ts"],
+    // entities: ["./src/entities/**/*.ts"],
+    entities: [
+      "./src/entities/fleek_transaction.ts",
+      "./src/entities/methodology_index.ts",
+      "./src/entities/rate.ts",
+      "./src/entities/trade_pair.ts"
+    ],
+
     migrations: ["./src/migrations/**/*.ts"],
     subscribers: ["./src/subscribers/**/*.ts"],
     cli: {
