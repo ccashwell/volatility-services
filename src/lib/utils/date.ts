@@ -10,4 +10,4 @@ export const toIsoNoMs = (date: Date) => date.toISOString().replace(milliseconds
  * @param date to convert to unix timestamp
  * @returns integer in seconds
  */
-export const toUnixTimestamp = (date: Date) => dayjs(date).unix()
+export const toUnixTimestamp = (date: Date | string) => dayjs(date).unix()

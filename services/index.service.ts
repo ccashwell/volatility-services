@@ -96,7 +96,7 @@ export default class IndexService extends Service {
             at: { type: "string" },
             exchange: { type: "enum", values: ["deribit"], default: "deribit" },
             methodology: { type: "enum", values: ["mfiv"], default: "mfiv" },
-            asset: { type: "enum", values: ["ETH", "BTC"], default: "ETH" },
+            asset: { type: "enum", values: ["ETH", "BTC"] },
             timePeriod: { type: "enum", values: ["14d"], default: "14d" },
             symbolType: { type: "enum", values: ["option"], default: "option" },
             expiryType: { type: "string", default: "FridayT08:00:00Z" },

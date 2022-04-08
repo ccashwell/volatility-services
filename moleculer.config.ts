@@ -193,8 +193,8 @@ const brokerConfig: BrokerOptions = {
         name: err.name,
         message: err.message,
         details: err.stack
-      },
-      info
+      }
+      // info
       // info,
       // git: pkg.repository as string
     }

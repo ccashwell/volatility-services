@@ -12,6 +12,7 @@ import { ResultAsync } from "neverthrow"
 import { noticeError } from "newrelic"
 import { Exchange, OptionSummary, StreamNormalizedOptions } from "tardis-dev"
 import configuration from "../src/configuration"
+
 export default class IngestService extends Service {
   private latestMessage?: OptionSummary
 
@@ -36,7 +37,7 @@ export default class IngestService extends Service {
 
         instrumentInfoDefaults: {
           exchange: process.env.INGEST_EXCHANGE || "deribit",
-          asset: process.env.INGEST_BASE_CURRENCY || "ETH",
+          asset: process.env.INGEST_BASE_CURRENCY,
           type: process.env.INGEST_TYPE || "option",
           timePeriod: process.env.INGEST_TIME_PERIOD || "14d",
           contractType: parseContractType(process.env.INGEST_CONTRACT_TYPE)

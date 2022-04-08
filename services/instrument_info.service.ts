@@ -23,7 +23,7 @@ export default class InstrumentInfoService extends Service {
       settings: {
         refreshDefaults: {
           exchange: process.env.INSTRUMENT_INFO_REFRESH_EXCHANGE || "deribit",
-          asset: process.env.INSTRUMENT_INFO_REFRESH_BASE_CURRENCY || "ETH",
+          asset: process.env.INSTRUMENT_INFO_REFRESH_BASE_CURRENCY,
           type: process.env.INSTRUMENT_INFO_REFRESH_TYPE || "option",
           contractType: parseContractType(process.env.INSTRUMENT_INFO_REFRESH_CONTRACT_TYPE, [
             "call_option",
@@ -60,7 +60,7 @@ export default class InstrumentInfoService extends Service {
           visibility: "public",
           params: {
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
-            asset: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
+            asset: { type: "string", enum: ["ETH", "BTC"] },
             type: { type: "string", enum: ["option"], default: "option" },
             contractType: { type: "array", items: "string", default: ["call_option", "put_option"] }
           },
@@ -82,7 +82,7 @@ export default class InstrumentInfoService extends Service {
           params: {
             timestamp: { type: "string" },
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
-            asset: { type: "string", enum: ["ETH", "BTC"], default: "ETH" },
+            asset: { type: "string", enum: ["ETH", "BTC"] },
             type: { type: "string", enum: ["option"], default: "option" },
             contractType: { type: "array", items: "string", default: ["call_option", "put_option"] },
             active: { type: "boolean", default: true },

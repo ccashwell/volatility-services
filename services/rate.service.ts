@@ -33,7 +33,7 @@ export default class RateService extends Service {
               this.logger.error("error requesting interest rate from aave", maybeRate)
             } else {
               this.logger.info("aave rate", maybeRate)
-              await this.broker.broadcast("rate.updated", maybeRate, ["index"])
+              await this.broker.broadcast("rate.updated", maybeRate, ["index", "index-eth", "index-btc"])
             }
           },
           timeZone: "UTC"

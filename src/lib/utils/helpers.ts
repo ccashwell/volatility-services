@@ -98,3 +98,11 @@ Date.prototype.toISOString = function () {
  */
 export const parseContractType = (contractType?: string, defaultContractType = ["call_option", "put_option"]) =>
   contractType ? contractType.split(",") : defaultContractType
+
+export function hasOwnProperty<X extends Record<string, unknown>, Y extends PropertyKey>(
+  obj: X,
+  prop: Y
+): obj is X & Record<Y, unknown> {
+  // eslint-disable-next-line no-prototype-builtins
+  return obj.hasOwnProperty(prop)
+}

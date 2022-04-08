@@ -28,7 +28,6 @@ export default class CronService extends Service {
         estimate: {
           exchange: process.env.CRON_ESTIMATE_EXCHANGE as MethodologyExchangeEnum,
           methodology: process.env.CRON_METHODOLOGY as MethodologyEnum,
-          asset: process.env.CRON_BASE_CURRENCY as BaseCurrencyEnum,
           timePeriod: process.env.CRON_INTERVAL as MethodologyWindowEnum,
           symbolType: process.env.CRON_SYMBOL_TYPE as SymbolTypeEnum,
           expiryType: process.env.CRON_EXPIRY_TYPE as MethodologyExpiryEnum,
@@ -58,32 +57,67 @@ export default class CronService extends Service {
         //   timeZone: "UTC"
         // },
         {
-          name: "mfiv.14d.ETH.estimate",
-          cronTime: process.env.CRON_MFIV_UPDATE_CRONTIME || "0 */5 * * * *",
-          onTick: () => {
-            this.logger.info("CronJob: mfiv.14d.ETH.estimate", "MFIV.14d.ETH")
-            const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "at">
-            const provider = paramsProvider({
-              requestId: this.broker.generateUid(),
-              settingsEstimate
-            })
-            // Patch when we report `at` since this isn't dependent on IPFS
-            provider.estimate = {
-              params: () => {
-                const at = new Date()
-                return { ...settingsEstimate, at: at.toISOString() } as IIndex.EstimateParams
-              }
-            }
-
-            const createIdx = (): Promise<IIndex.EstimateResponse> =>
-              IndexHelper.estimate(this, provider.estimate.params())
-            return ResultAsync.fromPromise(createIdx(), handleError).map(JSON.stringify)
+          name: "MFIV.14D.ETH.ESTIMATE",
+          cronTime: process.env.CRON_MFIV_ETH_UPDATE_CRONTIME || "0 */5 * * * *",
+          onTick: async () => {
+            this.logger.info("CronJob: MFIV.14D.ETH.ESTIMATE", "MFIV.14D.ETH")
+            const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "asset" | "at">
+            await this.computeAndStoreEstimate({
+              at: new Date(),
+              asset: BaseCurrencyEnum.ETH,
+              ...settingsEstimate
+            }).mapErr(err => this.logger.error(err))
+          },
+          timeZone: "UTC"
+        },
+        {
+          name: "MFIV.14D.BTC.ESTIMATE",
+          cronTime: process.env.CRON_MFIV_BTC_UPDATE_CRONTIME || "0 */5 * * * *",
+          onTick: async () => {
+            this.logger.info("CronJob: MFIV.14D.BTC.ESTIMATE", "MFIV.14D.BTC")
+            const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "asset" | "at">
+            await this.computeAndStoreEstimate({
+              at: new Date(),
+              asset: BaseCurrencyEnum.BTC,
+              ...settingsEstimate
+            }).mapErr(err => this.logger.error(err))
           },
           timeZone: "UTC"
         }
       ]
     })
   }
+
+  /**
+   * Compute an index value based on settingsEstimate and write it to the DB and IPFS
+   * @param settingsEstimate
+   * @returns stringified JSON for sending to IPFS
+   */
+  private computeAndStoreEstimate(settingsEstimate: IIndex.EstimateParams) {
+    //const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "asset" | "at">
+    const provider = paramsProvider({
+      requestId: this.broker.generateUid(),
+      settingsEstimate: { ...settingsEstimate, asset: BaseCurrencyEnum.ETH }
+    })
+    // Patch when we report `at` since this isn't dependent on IPFS
+    provider.estimate = {
+      params: () => settingsEstimate
+    }
+
+    const createIdx = (): Promise<IIndex.EstimateResponse> => IndexHelper.estimate(this, provider.estimate.params())
+    return ResultAsync.fromPromise(createIdx(), handleError).map(JSON.stringify)
+  }
+}
+
+const fleekKeyBuilder = ({
+  methodology,
+  timePeriod,
+  asset,
+  at
+}: Pick<IIndex.EstimateParams, "methodology" | "timePeriod" | "asset" | "at">) => {
+  return `/indices/methodology=${methodology}/timePeriod=${timePeriod}/asset=${asset}/at=${toUnixTimestamp(
+    at
+  )}/evidence.json`
 }
 
 /**
@@ -98,13 +132,8 @@ const paramsProvider = ({
   settingsEstimate: Omit<IIndex.EstimateParams, "at">
 }) => {
   const at = new Date()
-  const fleekKeyBuilder = () => {
-    const { methodology, timePeriod, asset } = settingsEstimate
-    return `/indices/methodology=${methodology}/timePeriod=${timePeriod}/asset=${asset}/at=${toUnixTimestamp(
-      at
-    )}/evidence.json`
-  }
-  const fleekUri = fleekKeyBuilder()
+  const fleekUri = fleekKeyBuilder({ at, ...settingsEstimate })
+  const { methodology, timePeriod, asset } = settingsEstimate
 
   return {
     estimate: {
@@ -124,7 +153,7 @@ const paramsProvider = ({
             fileSize: buffer.length,
             mimeType: "application/json",
             requestId,
-            priceId: "mfiv.14d.eth"
+            priceId: `${methodology}.${timePeriod}.${asset}`
           }
         }
       }

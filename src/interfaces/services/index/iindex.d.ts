@@ -9,7 +9,7 @@ import {
 import { ContractType } from "tardis-dev"
 
 export interface EstimateParams {
-  at: string
+  at: string | Date
   methodology: MethodologyEnum
   timePeriod: MethodologyWindowEnum
   asset: BaseCurrencyEnum
