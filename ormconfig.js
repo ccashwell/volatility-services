@@ -13,7 +13,7 @@ const config = (name = "default") => {
     logging: process.env.TYPEORM_LOGGING || false,
     database: process.env.POSTGRESQL_DATABASE || `volatility_${nodeEnv}`,
     // entities: ["./src/entities/**/*.ts"],
-    entities: [
+    entities: process.env.TYPEORM_ENTITIES || [
       "./src/entities/fleek_transaction.ts",
       "./src/entities/methodology_index.ts",
       "./src/entities/rate.ts",
