@@ -5,6 +5,17 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Launch via NPM",
+      "request": "launch",
+      "runtimeArgs": ["run", "dev:ws-prod"],
+      "runtimeExecutable": "npm",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    {
       "name": "Graph Demo",
       "program": "${workspaceFolder}/src/graph.ts",
       "type": "node",
