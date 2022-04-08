@@ -124,11 +124,6 @@ export default class IndexService extends Service {
         }
       },
 
-      started() {
-        this.logger.info("settings.skipPersist:", process.env.INDEX_SKIP_PERSIST)
-        return Promise.resolve()
-      },
-
       async stopped() {
         //return await getConnection().close()
       }
