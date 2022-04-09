@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 // eslint-disable-next-line max-classes-per-file
-import { AppDataSourceFactory } from "@datasources/datasource"
+import { AppDataSource } from "@datasources/datasource"
 import { initTardis } from "@datasources/tardis"
 import { TradePair } from "@entities/trade_pair"
 import { TradePairSymbol } from "@lib/types"
@@ -70,8 +70,8 @@ export default class TradePairService extends Service {
        */
       methods: {},
 
-      created() {
-        this.datasource = AppDataSourceFactory("trade_pairs")
+      created(this: TradePairService) {
+        this.datasource = AppDataSource
       },
 
       /**
@@ -83,16 +83,17 @@ export default class TradePairService extends Service {
         initTardis()
 
         const exchangePairs = this.selectTradePairs()
+        this.logger.info("processing", exchangePairs)
 
         /**
          * This promise will be used to resolve the `started` event in moleculer.service
          */
-        const dbInitPromise = this.datasource.isInitialized
-          ? Promise.resolve()
-          : this.datasource.initialize().then(datasource => {
-              this.dbWriter = datasource.manager.createQueryBuilder().insert().into(TradePair)
-              return
-            })
+        // const dbInitPromise = this.datasource.isInitialized
+        //   ? Promise.resolve()
+        //   : this.datasource.initialize().then(datasource => {
+        //       this.dbWriter = datasource.manager.createQueryBuilder().insert().into(TradePair)
+        //       return
+        //     })
 
         return new Promise<void>((resolve, reject) => {
           const realTimeStreams = exchangePairs.map(options =>
@@ -115,7 +116,8 @@ export default class TradePairService extends Service {
           /**
            * When this promise resolves, it signals that the service is started.
            */
-          dbInitPromise.then(resolve).catch(reject)
+          // dbInitPromise.then(resolve).catch(reject)
+          resolve()
 
           this.processMessages(/*computedMessages*/ combinedMessageStream)
             .then(() => this.logger.info("Finished"))
@@ -167,10 +169,11 @@ export default class TradePairService extends Service {
   // }
 
   private async executeInsert(tradePair: TradePair) {
-    await this.dbWriter.values([tradePair]).execute()
+    await this.datasource.manager.createQueryBuilder().insert().into(TradePair).values([tradePair]).execute()
   }
 
   private selectTradePairs() {
+    this.logger.info("assets", this.settings.tradePairAssets)
     return tradePairAssets[this.settings.tradePairAssets as "BTC" | "ETH"]
   }
 }

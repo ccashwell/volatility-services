@@ -1,6 +1,8 @@
+/* eslint-disable prettier/prettier */
 "use strict"
-import { BrokerOptions, Errors, LogLevels } from "moleculer"
 import "reflect-metadata"
+import { AppDataSource } from "@datasources/datasource"
+import { BrokerOptions, Errors, LogLevels } from "moleculer"
 
 const logLevel = (process.env.LOGLEVEL ?? "info") as LogLevels
 const colors = process.env.LOG_COLORS === "true" || false
@@ -275,19 +277,25 @@ const brokerConfig: BrokerOptions = {
 
   // Register custom REPL commands.
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  replCommands: undefined // require("./repl-commands")
+  replCommands: undefined, // require("./repl-commands")
   // Called after broker created.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // created: (broker: Moleculer.ServiceBroker): void => {},
   // Called after broker started.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
-  // async started(broker) {
-  //   // createConnection method will automatically read connection options
-  //   // from your ormconfig file or environment variables
-  //   // const connection = await createConnection()
-  //   // this.connection = connection
-  // }
+  started(broker) {
+    AppDataSource.initialize()
+      .then(datasource => {
+        console.info("Database initialized")
+      })
+      .catch(err => console.error("Database initialization failed", err))
+
+    // createConnection method will automatically read connection options
+    // from your ormconfig file or environment variables
+    // const connection = await createConnection()
+    // this.connection = connection
+  }
   // started: async (broker: Moleculer.ServiceBroker): Promise<void> => {},
   // Called after broker stopped.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
