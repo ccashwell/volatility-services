@@ -25,7 +25,7 @@ export default class TradePairService extends Service {
     super(broker)
 
     this.parseServiceSchema({
-      name: "trade_pairs",
+      name: ensure("SERVICE_NAME", "tradepair"),
 
       settings: {
         $dependencyTimeout: 60000,

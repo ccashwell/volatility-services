@@ -4,6 +4,7 @@ import { MethodologyExpiryEnum } from "@entities"
 import { IIngest, IInstrumentInfo } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
 import { handleError } from "@lib/handlers/errors"
+import { ensure } from "@lib/utils/ensure"
 import { parseContractType } from "@lib/utils/helpers"
 import { instrumentInfos } from "@service_helpers/instrument_info_helper"
 import _ from "lodash"
@@ -28,7 +29,7 @@ export default class IngestService extends Service {
     super(broker)
     this.parseServiceSchema({
       // Name
-      name: "ingest",
+      name: ensure("SERVICE_NAME", "ingest"),
 
       // Settings
       settings: {
@@ -51,14 +52,7 @@ export default class IngestService extends Service {
       },
 
       // Dependencies
-      dependencies: [
-        {
-          name: "instrument_info-eth"
-        },
-        {
-          name: "instrument_info-btc"
-        }
-      ],
+      dependencies: ["instrument_info-eth", "instrument_info-btc"],
 
       actions: {
         // cached: {

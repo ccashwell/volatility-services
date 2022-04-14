@@ -18,7 +18,7 @@ export default class InstrumentInfoService extends Service {
     super(broker)
     this.parseServiceSchema({
       // Name
-      name: "instrument_info",
+      name: ensure("SERVICE_NAME", "instrument_info"),
 
       // Settings
       settings: {

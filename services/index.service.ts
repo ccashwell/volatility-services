@@ -9,6 +9,7 @@ import {
 } from "@entities"
 import { IIndex, IRate } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
+import { ensure } from "@lib/utils/ensure"
 import { optionSummariesLists } from "@service_helpers/ingest_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { Result } from "neverthrow"
@@ -44,7 +45,7 @@ export default class IndexService extends Service {
   public constructor(public broker: ServiceBroker) {
     super(broker)
     this.parseServiceSchema({
-      name: "index",
+      name: ensure("SERVICE_NAME", "index"),
 
       model: MethodologyIndex,
 
@@ -56,14 +57,7 @@ export default class IndexService extends Service {
         skipPersist: process.env.INDEX_SKIP_PERSIST === "true"
       },
 
-      dependencies: [
-        {
-          name: "ingest-eth"
-        },
-        {
-          name: "ingest-btc"
-        }
-      ],
+      dependencies: ["ingest-eth", "ingest-btc"],
 
       metadata: {
         scalable: true
