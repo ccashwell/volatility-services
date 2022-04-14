@@ -139,9 +139,9 @@ const brokerConfig: BrokerOptions = {
   // Tracking requests and waiting for running requests before shuting down. More info: https://moleculer.services/docs/0.14/context.html#Context-tracking
   tracking: {
     // Enable feature
-    enabled: false,
+    enabled: true,
     // Number of milliseconds to wait before shuting down the process.
-    shutdownTimeout: 5000
+    shutdownTimeout: 10000
   },
 
   // Disable built-in request & emit balancer. (Transporter must support it, as well.). More info: https://moleculer.services/docs/0.14/networking.html#Disabled-balancer

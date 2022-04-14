@@ -5,11 +5,16 @@ import { computeTradeBucket, TradeBucket } from "@computables/trade_bucket"
 import { AppDataSource } from "@datasources/datasource"
 import { initTardis } from "@datasources/tardis"
 import { TradePair } from "@entities/trade_pair"
+import { DataSourceError } from "@lib/errors"
+import { handleTypeOrmError } from "@lib/handlers/errors"
 import { TradePairSymbol } from "@lib/types"
 import { ensure } from "@lib/utils/ensure"
 import { Context, Service, ServiceBroker } from "moleculer"
+import { ResultAsync } from "neverthrow"
 import newrelic from "newrelic"
 import { combine, compute, Exchange, normalizeTrades, streamNormalized, Trade } from "tardis-dev"
+import { InsertResult } from "typeorm"
+
 export default class TradePairService extends Service {
   //state: ProcessingStateEnum = ProcessingStateEnum.Idle
   readonly BATCH_SIZE = 300
@@ -19,6 +24,7 @@ export default class TradePairService extends Service {
   // private datasource!: DataSource
   // private dbWriter!: InsertQueryBuilder<TradePair>
   private lastMessage?: Trade | TradeBucket
+  // private cancellable?: Promise<AsyncIterableIterator<Trade | TradeBucket>> & { cancel: () => void }
 
   // @ts-ignore
   public constructor(public broker: ServiceBroker) {
@@ -95,6 +101,10 @@ export default class TradePairService extends Service {
             .then(() => this.logger.info("Finished"))
             .catch((err: unknown) => this.onStreamError(err as Error))
         }).catch(onError)
+      },
+
+      stopped(this: TradePairService) {
+        return Promise.resolve()
       }
     })
   }
@@ -105,20 +115,46 @@ export default class TradePairService extends Service {
   }
 
   async processMessages(messages: AsyncIterableIterator<Trade | TradeBucket>) {
+    const onTypeOrmError = this.onTypeOrmError
+
+    // this.cancellable = this.createCancellable(messages)
+
     for await (const message of messages) {
       if (message.type === "trade_bucket") {
-        await this.captureMessage(message)
+        await ResultAsync.fromPromise(this.captureMessage(message), handleTypeOrmError).mapErr(
+          (err: DataSourceError) => {
+            newrelic.incrementMetric("/TradePair/executeInsert#QueryFailedError")
+            this.logger.warn("ignoring insert for", message)
+            this.logger.error("captureMessage Error", err)
+          }
+        )
       }
       // this.emitTradeOfLastSecond(message)
     }
   }
 
-  private async captureMessage(message: Trade | TradeBucket) {
+  // private createCancellable(messages: AsyncIterableIterator<Trade | TradeBucket>) {
+  //   const state = { cancel: (err: Error) => {} }
+  //   const cancelToken = new Promise<AsyncIterableIterator<Trade | TradeBucket>>((_, reject) => {
+  //     state.cancel = reject
+  //   })
+  //   const p: Promise<AsyncIterableIterator<Trade | TradeBucket>> = Promise.race([messages, cancelToken])
+  //   // let cancellable: Promise<void | AsyncIterableIterator<Trade | TradeBucket>> & { cancel: (err: Error) => void }
+  //   const cancellable = _.extend(p, {
+  //     cancel: () => {
+  //       state.cancel(new Error("cancelled"))
+  //     }
+  //   })
+
+  //   return cancellable
+  // }
+
+  private async captureMessage(message: Trade | TradeBucket): Promise<InsertResult> {
     const { timestamp, exchange, symbol, id, price, localTimestamp } = message
     // this.logger.info(message)
     this.lastMessage = message
 
-    await this.executeInsert({
+    return this.executeInsert({
       timestamp: message.type === "trade_bucket" ? message.closeTimestamp : timestamp,
       exchange,
       symbol: symbol as TradePairSymbol,
@@ -126,6 +162,15 @@ export default class TradePairService extends Service {
       price: price.toString(),
       localTimestamp
     })
+    // .catch(err => {
+    //   if (err instanceof QueryFailedError) {
+    //     if (err.message === "duplicate key value violates unique constraint") {
+    //       this.logger.info("ignore db constraint violation")
+    //       newrelic.incrementMetric("/TradePair/executeInsert#QueryFailedError")
+    //     }
+    //   }
+    //   // QueryFailedError: duplicate key value violates unique constraint
+    // })
   }
   // batch() {
   //   if (this.batchedOffset > this.HIGH_WATERMARK && this.state === ProcessingStateEnum.Batch) {
@@ -136,9 +181,13 @@ export default class TradePairService extends Service {
   //   }
   // }
 
-  private async executeInsert(tradePair: TradePair) {
-    await AppDataSource.manager.createQueryBuilder().insert().into(TradePair).values([tradePair]).execute()
+  private async executeInsert(tradePair: TradePair): Promise<InsertResult> {
+    return await AppDataSource.manager.createQueryBuilder().insert().into(TradePair).values([tradePair]).execute()
   }
+
+  // private async executeUpdate(tradePair: TradePair): Promise<InsertResult> {
+  //   return await AppDataSource.manager.update(TradePair, [tradePair])
+  // }
 
   private selectTradePairs() {
     this.logger.info("assets", this.settings.tradePairAssets)

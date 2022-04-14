@@ -1,10 +1,25 @@
 import { Errors, LoggerInstance } from "moleculer"
-import { ErrorType } from "../types"
+import { QueryFailedError, TypeORMError } from "typeorm"
+import { DataSourceError, FatalDataSourceError, VGError, VGIgnorableError } from "../errors"
 import { Failure } from "../failure"
-import { VGError } from "../errors"
+import { ErrorType } from "../types"
+
+export const handleTypeOrmError = (err: unknown): DataSourceError => {
+  switch (err) {
+    case QueryFailedError:
+      const maybeConstraintError = err as QueryFailedError
+      if (maybeConstraintError.message === "duplicate key value violates unique constraint") {
+        return new VGIgnorableError(maybeConstraintError)
+      }
+      return new FatalDataSourceError(err as TypeORMError)
+    case TypeORMError:
+      return new FatalDataSourceError(err as TypeORMError)
+    default:
+      throw err
+  }
+}
 
 export const handleError = (err: unknown) => {
-  debugger
   switch (err) {
     case Errors.MoleculerClientError:
       return err as Errors.MoleculerClientError

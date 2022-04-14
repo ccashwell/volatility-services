@@ -1,4 +1,5 @@
 import { Errors } from "moleculer"
+import { QueryFailedError, TypeORMError } from "typeorm"
 import { Failure } from "../failure"
 
 export enum VGError {
@@ -78,3 +79,17 @@ export const risklessRateError = (
   wrappedError: error,
   retryable: error.retryable
 })
+
+export class VGIgnorableError extends Errors.MoleculerError {
+  constructor(err: QueryFailedError) {
+    super(err.message, 200, "ERROR_IGNORED", { parameters: err.parameters, query: err.query })
+  }
+}
+
+export class FatalDataSourceError extends Errors.MoleculerError {
+  constructor(err: TypeORMError) {
+    super(err.message, 500, "ERROR_TYPEORM", { stack: err.stack, name: err.name })
+  }
+}
+
+export type DataSourceError = VGIgnorableError | FatalDataSourceError
