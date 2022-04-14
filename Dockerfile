@@ -60,7 +60,7 @@ COPY --from=base /usr/src/app/dumb-init /usr/local/bin/dumb-init
 COPY --from=ts-remover /usr/src/app /usr/src/app
 COPY --from=base /etc/newrelic-infra/logging.d/logs.yaml /etc/newrelic-infra/logging.d/logs.yaml
 RUN rm -rf src mixins scripts services prod_node_modules
-CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "--env", "--config", "dist/moleculer.config.js", "dist/services"]
+CMD ["dumb-init", "node", "-r", "newrelic", "-r", "tsconfig-paths/register", "./node_modules/moleculer/bin/moleculer-runner.js", "--config", "dist/moleculer.config.js", "dist/services"]
 
 # FROM node:16.14-alpine3.14 as base
 # FROM base as production
