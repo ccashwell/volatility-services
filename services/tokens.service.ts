@@ -1,20 +1,15 @@
+import { AppDataSource } from "@datasources/datasource"
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-
 import { AuthToken } from "@entities/auth_token"
 import C from "@lib/constants"
 import crypto from "crypto"
 import { Context, Service, ServiceBroker } from "moleculer"
 import * as Cron from "moleculer-cron"
-import * as DbService from "moleculer-db"
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
-import OrmConfig from "../ormconfig"
 
 const TESTING = process.env.NODE_ENV === "test"
 
 export default class TokenService extends Service {
-  adapter!: TypeOrmDbAdapter<AuthToken>
-
   // @ts-ignore
   public constructor(public broker: ServiceBroker) {
     super(broker)
@@ -22,35 +17,12 @@ export default class TokenService extends Service {
     this.parseServiceSchema({
       name: "tokens",
 
-      adapter: new TypeOrmDbAdapter<AuthToken>(OrmConfig("tokens")),
-
-      model: AuthToken,
-
-      mixins: [
-        Cron,
-        DbService,
-        {
-          actions: {
-            get: { visibility: "private" },
-            list: { visibility: "private" },
-            find: { visibility: "private" },
-            count: { visibility: "private" },
-            create: { visibility: "private" },
-            insert: { visibility: "private" },
-            update: { visibility: "private" },
-            remove: { visibility: "private" }
-          }
-        }
-      ],
+      mixins: [Cron],
 
       settings: {
         $dependencyTimeout: 60000,
 
-        skipPersist: process.env.TOKENS_SKIP_PERSIST === "true",
-
-        fields: ["id", "type", "name", "token", "expiry", "owner", "createdAt", "lastUsedAt", "revokedAt"],
-
-        idField: "id"
+        skipPersist: process.env.TOKENS_SKIP_PERSIST === "true"
       },
 
       dependencies: [],
@@ -62,7 +34,7 @@ export default class TokenService extends Service {
       crons: [
         {
           name: "ClearExpiredTokens",
-          cronTime: "00 00 00 * * *",
+          cronTime: "0 0 0 * * *",
           onTick: {
             action: "tokens.clearExpired"
           },
@@ -112,10 +84,19 @@ export default class TokenService extends Service {
 
             const { token, secureToken } = this.generateToken(C.TOKEN_LENGTH)
 
-            const res = await this.adapter.create({ ...ctx.params, expiry: expiryTimestamp, token: secureToken })
+            const resource = AppDataSource.manager.create(AuthToken, {
+              ...ctx.params,
+              expiry: expiryTimestamp,
+              token: secureToken
+            })
             if (ctx.params.owner === "volatility") {
               this.logger.warn("Generating a volatility owned token", ctx.params)
             }
+            const res = await AppDataSource.manager.save(resource)
+
+            //
+            // Return pre-hashed token to be viewed one-time by user
+            //
             return { ...res, token }
           }
         },
@@ -137,8 +118,9 @@ export default class TokenService extends Service {
             ctx: Context<Pick<AuthToken, "type" | "token" | "owner"> & { isUsed: boolean }>
           ) {
             this.logger.info("Checking token", ctx.params)
-            const entity = await this.adapter.repository.findOne({
-              where: { type: ctx.params.type, token: this.secureToken(ctx.params.token) }
+            const entity = await AppDataSource.manager.findOneBy(AuthToken, {
+              type: ctx.params.type,
+              token: this.secureToken(ctx.params.token)
             })
 
             this.logger.info("entity found", entity)
@@ -154,8 +136,9 @@ export default class TokenService extends Service {
                 // if (ctx.params.isUsed) {
 
                 this.logger.info("Token last used", entity.lastUsedAt)
+                entity.lastUsedAt = new Date()
 
-                await this.adapter.repository.update(entity.id, { lastUsedAt: new Date().toISOString() })
+                await AppDataSource.manager.save(entity)
                 // }
 
                 // this.logger.info("entity", entity)
@@ -178,14 +161,12 @@ export default class TokenService extends Service {
             token: { type: "string" }
           },
           async handler(this: TokenService, ctx: Context<{ type: string; token: string }>) {
-            const entity = await this.adapter.findOne({
-              where: {
-                type: ctx.params.type,
-                token: this.secureToken(ctx.params.token)
-              }
+            const entity = await AppDataSource.manager.findOneBy(AuthToken, {
+              type: ctx.params.type,
+              token: this.secureToken(ctx.params.token)
             })
             if (entity) {
-              await this.adapter.repository.remove([entity])
+              await AppDataSource.manager.remove([entity])
             }
             return null
           }
@@ -198,8 +179,14 @@ export default class TokenService extends Service {
           async handler(this: TokenService) {
             const now = new Date()
             const nowDate = [now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate()].join("-")
-            const result = await this.adapter.removeMany(`expiry < '${nowDate}'::date + '1 day'::interval`)
-            this.logger.info(`Removed ${result?.affected ?? 0} expired token(s).`)
+            const entities = await AppDataSource.manager
+              .createQueryBuilder()
+              .select()
+              .from(AuthToken, "auth_tokens")
+              .where("auth_tokens.expiry < ':now_date'::interval", { nowDate })
+              .getMany()
+            const result = await AppDataSource.manager.remove(AuthToken, entities)
+            this.logger.info(`Remove ${result.length} expired token(s).`)
           }
         }
       },

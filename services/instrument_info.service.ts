@@ -1,6 +1,7 @@
 import { initTardis } from "@datasources/tardis"
-import { tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"
+import { TardisInstrumentInfoFilter, tardisOptionInstrumentDataSource } from "@datasources/tardis_instrument_datasource"
 import { IInstrumentInfo } from "@interfaces/services/instrument_info"
+import { ensure } from "@lib/utils/ensure"
 import { parseContractType } from "@lib/utils/helpers"
 import * as _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
@@ -22,15 +23,16 @@ export default class InstrumentInfoService extends Service {
       // Settings
       settings: {
         refreshDefaults: {
-          exchange: process.env.INSTRUMENT_INFO_REFRESH_EXCHANGE || "deribit",
-          asset: process.env.INSTRUMENT_INFO_REFRESH_BASE_CURRENCY,
-          type: process.env.INSTRUMENT_INFO_REFRESH_TYPE || "option",
+          exchange: ensure("INSTRUMENT_INFO_REFRESH_EXCHANGE", "deribit"),
+          asset: ensure("INSTRUMENT_INFO_REFRESH_BASE_CURRENCY"),
+          type: ensure("INSTRUMENT_INFO_REFRESH_TYPE ", "option"),
           contractType: parseContractType(process.env.INSTRUMENT_INFO_REFRESH_CONTRACT_TYPE, [
             "call_option",
             "put_option"
           ]),
           expirationDates: [],
-          timestamp: undefined
+          timestamp: undefined,
+          active: true
         } as IInstrumentInfo.InstrumentInfoParams
       },
       // Metadata
@@ -68,7 +70,7 @@ export default class InstrumentInfoService extends Service {
             this: InstrumentInfoService,
             ctx: Context<IInstrumentInfo.RefreshParams>
           ): Promise<IInstrumentInfo.RefreshResponse> {
-            this.logger.info("/refresh called")
+            this.logger.info("refresh", ctx.params)
             return Promise.resolve(this.fetchInstruments({ ...ctx.params, expirationDates: [] }))
           }
         },
@@ -92,7 +94,27 @@ export default class InstrumentInfoService extends Service {
             this: InstrumentInfoService,
             ctx: Context<IInstrumentInfo.InstrumentInfoParams>
           ): Promise<IInstrumentInfo.InstrumentInfoResponse> {
+            this.logger.info("instrumentInfo", ctx.params)
             return Promise.resolve(this.fetchAvailableInstruments(ctx.params))
+          }
+        },
+        available: {
+          visibility: "public",
+          // TODO: Enable caching to this action
+          cache: {
+            // These cache entries will be expired after 5 seconds instead of 30.
+            ttl: 60 * 5
+          },
+          params: {
+            exchange: { type: "string", enum: ["deribit"], default: "deribit" },
+            asset: { type: "string", enum: ["ETH", "BTC"] }
+          },
+          handler(
+            this: InstrumentInfoService,
+            ctx: Context<IInstrumentInfo.AvailableParams>
+          ): Promise<IInstrumentInfo.AvailableResponse> {
+            this.logger.info("available", ctx.params)
+            return this.fetchAvailable(ctx.params)
           }
         }
       },
@@ -132,7 +154,7 @@ export default class InstrumentInfoService extends Service {
     this: InstrumentInfoService,
     params: IInstrumentInfo.InstrumentInfoParams
   ): Promise<PartialInstrumentInfo[]> {
-    this.logger.info("fetchInstruments()", params)
+    this.logger.info("fetchInstruments", params)
     const toPartialInstrumentInfo = (info: InstrumentInfo): PartialInstrumentInfo => {
       const { baseCurrency, ...partial } = info
       const transformed = { ...partial, asset: baseCurrency }
@@ -149,7 +171,7 @@ export default class InstrumentInfoService extends Service {
         "expiry"
       ]) as PartialInstrumentInfo
     }
-    this.instrumentInfos = chainFrom(await tardisOptionInstrumentDataSource(params))
+    this.instrumentInfos = chainFrom(await tardisOptionInstrumentDataSource({ ...params, baseCurrency: params.asset }))
       .map(toPartialInstrumentInfo)
       .toArray()
     this.lastUpdatedAt = new Date()
@@ -178,5 +200,23 @@ export default class InstrumentInfoService extends Service {
     this.logger.info(`Found ${availableInstruments.length} available instruments`, availableInstruments)
 
     return availableInstruments
+  }
+
+  private async fetchAvailable(params: IInstrumentInfo.AvailableParams): Promise<string[]> {
+    this.logger.info("fetch available instruments", params)
+    const tardisParams: TardisInstrumentInfoFilter = {
+      exchange: params.exchange,
+      baseCurrency: params.asset,
+      active: true,
+      contractType: ["call_option", "put_option"],
+      type: "option"
+    }
+    const available = chainFrom(await tardisOptionInstrumentDataSource(tardisParams))
+      .map(item => item.id)
+      .toArray()
+
+    this.logger.info(`Found ${available.length} available instruments`, available)
+
+    return available
   }
 }

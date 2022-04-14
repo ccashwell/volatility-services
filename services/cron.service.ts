@@ -9,6 +9,7 @@ import {
 import { IIndex } from "@interfaces"
 import { handleError } from "@lib/handlers/errors"
 import { toUnixTimestamp } from "@lib/utils/date"
+import { ensure } from "@lib/utils/ensure"
 import * as IndexHelper from "@service_helpers"
 import { Service, ServiceBroker } from "moleculer"
 import * as Cron from "moleculer-cron"
@@ -35,7 +36,7 @@ export default class CronService extends Service {
         } as Omit<IIndex.EstimateParams, "at">
       },
 
-      dependencies: process.env.ONLY_SERVICE ? [] : ["index"],
+      dependencies: process.env.ONLY_SERVICE ? [] : ["index-eth", "index-btc"],
 
       crons: [
         // {
@@ -58,7 +59,7 @@ export default class CronService extends Service {
         // },
         {
           name: "MFIV.14D.ETH.ESTIMATE",
-          cronTime: process.env.CRON_MFIV_ETH_UPDATE_CRONTIME || "0 */5 * * * *",
+          cronTime: ensure("CRON_MFIV_ETH_UPDATE_CRONTIME"),
           onTick: async () => {
             this.logger.info("CronJob: MFIV.14D.ETH.ESTIMATE", "MFIV.14D.ETH")
             const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "asset" | "at">
@@ -72,7 +73,7 @@ export default class CronService extends Service {
         },
         {
           name: "MFIV.14D.BTC.ESTIMATE",
-          cronTime: process.env.CRON_MFIV_BTC_UPDATE_CRONTIME || "0 */5 * * * *",
+          cronTime: ensure("CRON_MFIV_BTC_UPDATE_CRONTIME"),
           onTick: async () => {
             this.logger.info("CronJob: MFIV.14D.BTC.ESTIMATE", "MFIV.14D.BTC")
             const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "asset" | "at">

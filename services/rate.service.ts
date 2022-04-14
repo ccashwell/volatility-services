@@ -1,19 +1,17 @@
 /* eslint-disable max-len */
 import { provideRateResponse } from "@datasources/aave"
+import { AppDataSource } from "@datasources/datasource"
 import { Rate } from "@entities"
 import { IRate } from "@interfaces/services/rate"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
 import { Mappers } from "@lib/utils/mappers"
 import { Context, Errors, Service, ServiceBroker } from "moleculer"
 import * as Cron from "moleculer-cron"
-import * as DbService from "moleculer-db"
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
 import { ResultAsync } from "neverthrow"
+import newrelic from "newrelic"
 import { DeepPartial } from "typeorm"
-import OrmConfig from "../ormconfig"
-
 export default class RateService extends Service {
-  adapter!: TypeOrmDbAdapter<Rate>
+  lastRate?: Rate
 
   public constructor(public broker: ServiceBroker) {
     super(broker)
@@ -43,10 +41,6 @@ export default class RateService extends Service {
       settings: {
         $dependencyTimeout: 30000,
 
-        fields: ["id", "value", "sourceValue", "source", "rateAt"],
-
-        idField: ["id"],
-
         skipPersist: process.env.RATE_SKIP_PERSIST === "true",
 
         risklessRateSource: process.env.RATE_RISKLESS_RATE_SOURCE ?? "AAVE"
@@ -58,28 +52,7 @@ export default class RateService extends Service {
         scalable: true
       },
 
-      // adapter: new TypeOrmDbAdapter<Rate>(configuration.adapter),
-      adapter: new TypeOrmDbAdapter<Rate>(OrmConfig("rate")),
-
-      model: Rate,
-
-      mixins: [
-        Cron,
-        DbService,
-        {
-          actions: {
-            get: { visibility: "private" },
-            list: { visibility: "private" },
-            find: { visibility: "private" },
-            count: { visibility: "private" },
-            create: { visibility: "private" },
-            insert: { visibility: "private" },
-            update: { visibility: "private" },
-            remove: { visibility: "private" }
-          }
-        }
-      ],
-      // mixins: [DbService],
+      mixins: [Cron],
 
       actions: {
         /**
@@ -94,15 +67,7 @@ export default class RateService extends Service {
             this: RateService,
             ctx: Context<IRate.RisklessRateParams>
           ): Promise<IRate.RisklessRateResponse | Errors.MoleculerError> {
-            const result = await ResultAsync.fromPromise(
-              this.fetchRisklessRate(ctx.params),
-              handleAsMoleculerError
-            ).map(async response => {
-              if (!this.settings.skipPersist) {
-                await this.persist(response)
-              }
-              return response
-            })
+            const result = await this.fetchRate(ctx.params)
 
             if (result.isOk()) {
               return result.value
@@ -113,11 +78,29 @@ export default class RateService extends Service {
         }
       },
 
-      async stopped() {
-        // if (!this.settings.skipPersist) {
-        //   return await getConnection().close()
+      started(this: RateService): Promise<void> {
+        newrelic.addCustomAttribute("Service", this.name)
+        return Promise.resolve()
+        // const params: IRate.RisklessRateParams = { risklessRateSource: this.settings.risklessRateSource }
+        // const result = await this.fetchRate(params)
+        // if (result.isOk()) {
+        //   return Promise.resolve()
+        // } else {
+        //   return Promise.reject(result.error)
         // }
       }
+    })
+  }
+
+  async fetchRate(params: IRate.RisklessRateParams) {
+    return await ResultAsync.fromPromise(this.fetchRisklessRate(params), handleAsMoleculerError).map(async response => {
+      if (!this.settings.skipPersist) {
+        this.logger.info("Comparing", { sourceValue: this.lastRate?.value, risklessRate: response.risklessRate })
+        if (this.lastRate?.value !== response.risklessRate.toString()) {
+          this.lastRate = await this.persist(response)
+        }
+      }
+      return response
     })
   }
 
@@ -128,7 +111,7 @@ export default class RateService extends Service {
   }
 
   private persist(response: IRate.RisklessRateResponse & { contractValue: number }) {
-    const entity = this.adapter.repository.create(Mappers.Rate.from(response) as DeepPartial<Rate>)
-    return this.adapter.repository.save(entity)
+    const entity = AppDataSource.manager.create(Rate, Mappers.Rate.from(response) as DeepPartial<Rate>)
+    return AppDataSource.manager.save(entity)
   }
 }

@@ -1,8 +1,10 @@
 /* eslint-disable prettier/prettier */
 "use strict"
-import "reflect-metadata"
-import { AppDataSource } from "@datasources/datasource"
+import { ensure } from "@lib/utils/ensure"
 import { BrokerOptions, Errors, LogLevels } from "moleculer"
+import newrelic from "newrelic"
+import "reflect-metadata"
+import { AppDataSource } from "./src/datasources/datasource"
 
 const logLevel = (process.env.LOGLEVEL ?? "info") as LogLevels
 const colors = process.env.LOG_COLORS === "true" || false
@@ -282,24 +284,27 @@ const brokerConfig: BrokerOptions = {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // created: (broker: Moleculer.ServiceBroker): void => {},
   // Called after broker started.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
-  started(broker) {
-    AppDataSource.initialize()
-      .then(datasource => {
-        console.info("Database initialized")
-      })
-      .catch(err => console.error("Database initialization failed", err))
-
-    // createConnection method will automatically read connection options
-    // from your ormconfig file or environment variables
-    // const connection = await createConnection()
-    // this.connection = connection
-  }
   // started: async (broker: Moleculer.ServiceBroker): Promise<void> => {},
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // Called after broker stopped.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // stopped: async (broker: Moleculer.ServiceBroker): Promise<void> => {}
+  started() {
+    newrelic.addCustomAttribute("Stage", ensure("stage"))
+    newrelic.addCustomAttribute("Environment", ensure("environment"))
+
+    AppDataSource.initialize()
+      .then(datasource => {
+        console.info("Database initialized")
+        return
+      })
+      .catch(err => console.error("Database initialization failed", err))
+  },
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+  stopped(): void {
+    return void AppDataSource.destroy().catch(err => console.error("Database Destroy Error", err))
+  }
 }
 
 export = brokerConfig

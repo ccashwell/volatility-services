@@ -12,6 +12,7 @@ import { ResultAsync } from "neverthrow"
 import newrelic from "newrelic"
 import { Exchange, OptionSummary, StreamNormalizedOptions } from "tardis-dev"
 import configuration from "../src/configuration"
+import { BaseCurrency } from "./../src/lib/types"
 
 export default class IngestService extends Service {
   private latestMessage?: OptionSummary
@@ -52,7 +53,10 @@ export default class IngestService extends Service {
       // Dependencies
       dependencies: [
         {
-          name: "instrument_info"
+          name: "instrument_info-eth"
+        },
+        {
+          name: "instrument_info-btc"
         }
       ],
 
@@ -102,19 +106,25 @@ export default class IngestService extends Service {
 
       // Service methods
       started(this: IngestService) {
+        const { asset } = this.settings.instrumentInfoDefaults as { asset: BaseCurrency }
         initTardis()
         return new Promise((resolve, reject) => {
-          this.ingest(resolve, reject)
+          this.ingest({ asset }, resolve, reject)
         })
       }
     })
   }
 
-  ingest(this: IngestService, resolve: (value: void | Promise<void>) => void, reject: (reason?: unknown) => void) {
+  ingest(
+    this: IngestService,
+    { asset }: { asset: BaseCurrency },
+    resolve: (value: void | Promise<void>) => void,
+    reject: (reason?: unknown) => void
+  ) {
     // Construct the parameters necessary to get the instrument's ids for the call to streamNormalized
     const expiries = mfivDates(new Date(), "14d", MethodologyExpiryEnum.FridayT08)
 
-    return void ResultAsync.fromPromise(this.fetchInstruments(expiries), handleError)
+    return void ResultAsync.fromPromise(this.fetchInstruments(expiries, { asset }), handleError)
       .map(streamNormalizedOptions({ exchange: configuration.tardis.exchange }))
       .map(stream)
       .mapErr(err => {
@@ -281,14 +291,18 @@ export default class IngestService extends Service {
     // )
   }
 
-  private async fetchInstruments(expiries: { nearExpiration: string; nextExpiration: string }): Promise<string[]> {
+  private async fetchInstruments(
+    expiries: { nearExpiration: string; nextExpiration: string },
+    { asset }: { asset: BaseCurrency }
+  ): Promise<string[]> {
     const expirationDates = [expiries.nearExpiration, expiries.nextExpiration]
     this.logger.info("Fetching instruments with expiries", expirationDates)
 
     return instrumentInfos(this, {
       expirationDates,
       timestamp: new Date().toISOString(),
-      ...this.settings.instrumentInfoDefaults
+      ...this.settings.instrumentInfoDefaults,
+      asset
     } as IInstrumentInfo.InstrumentInfoParams)
   }
 

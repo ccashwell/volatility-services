@@ -1,3 +1,4 @@
+import { IIndex } from "@interfaces"
 import { Context } from "moleculer"
 import { OptionSummary } from "tardis-dev"
 
@@ -9,11 +10,14 @@ interface MethodologyDates {
   rollover: string
 }
 
-export const optionSummariesLists = async (ctx: Context, params: MethodologyDates) => {
+export const optionSummariesLists = async (ctx: Context<IIndex.EstimateParams>, params: MethodologyDates) => {
+  const { asset } = ctx.params
+  const suffix = asset.toLowerCase()
+
   const expiries: { status: string; value: OptionSummary[] }[] = await ctx.mcall(
     [
-      { action: `${prefix}.summaries`, params: { expiry: params.nearExpiration } },
-      { action: `${prefix}.summaries`, params: { expiry: params.nextExpiration } }
+      { action: `${prefix}-${suffix}.summaries`, params: { expiry: params.nearExpiration, asset } },
+      { action: `${prefix}-${suffix}.summaries`, params: { expiry: params.nextExpiration, asset } }
     ],
     { settled: true }
   )

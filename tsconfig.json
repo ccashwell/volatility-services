@@ -31,6 +31,8 @@
       "moleculer-web-uws": ["typings/moleculer-web-uws/index.d.ts"],
       "@clients/*": ["src/clients/*"],
       "@clients": ["src/clients"],
+      "@computables/*": ["src/computables/*"],
+      "@computables": ["src/computables"],
       "@configuration/*": ["src/configuration/*"],
       "@configuration": ["src/configuration/index.ts"],
       "@contracts/*": ["src/contracts/*"],

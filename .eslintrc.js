@@ -123,6 +123,13 @@ module.exports = {
       "undefined"
     ],
     "id-match": "error",
+    "import/order": [
+      'builtin', // Built-in types are first
+      ['sibling', 'parent'], // Then sibling and parent types. They can be mingled together
+      'index', // Then the index file
+      'object',
+      // Then the rest: internal and external type
+    ],
     // "import/order": [
     //   "error",
     //   {
@@ -171,6 +178,7 @@ module.exports = {
     "prefer-const": "error",
     // "quote-props": ["error", "consistent-as-needed"],
     radix: "error",
+    "sort-imports": ["error", {"allowSeparatedGroups": true}]
     // "space-before-function-paren": [
     // 	"error",
     // 	{

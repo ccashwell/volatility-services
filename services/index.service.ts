@@ -1,3 +1,4 @@
+import { AppDataSource } from "@datasources/datasource"
 import {
   BaseCurrencyEnum,
   MethodologyEnum,
@@ -10,13 +11,11 @@ import { IIndex, IRate } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
 import { optionSummariesLists } from "@service_helpers/ingest_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
-import * as DbService from "moleculer-db"
-import { TypeOrmDbAdapter } from "moleculer-db-adapter-typeorm"
 import { Result } from "neverthrow"
+import newrelic from "newrelic"
 import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
 import { OptionSummary } from "tardis-dev"
 import { chainFrom } from "transducist"
-import OrmConfig from "../ormconfig"
 
 /* eslint-disable max-len */
 /**
@@ -40,7 +39,6 @@ import OrmConfig from "../ormconfig"
  *
  */
 export default class IndexService extends Service {
-  adapter!: TypeOrmDbAdapter<MethodologyIndex>
   private risklessRate?: IRate.RisklessRateResponse
 
   public constructor(public broker: ServiceBroker) {
@@ -48,39 +46,22 @@ export default class IndexService extends Service {
     this.parseServiceSchema({
       name: "index",
 
-      adapter: new TypeOrmDbAdapter<MethodologyIndex>(OrmConfig("index")),
-
       model: MethodologyIndex,
 
-      mixins: [
-        DbService,
-        {
-          actions: {
-            get: { visibility: "private" },
-            list: { visibility: "private" },
-            find: { visibility: "private" },
-            count: { visibility: "private" },
-            create: { visibility: "private" },
-            insert: { visibility: "private" },
-            update: { visibility: "private" },
-            remove: { visibility: "private" }
-          }
-        }
-      ],
+      mixins: [],
 
       settings: {
         $dependencyTimeout: 60000,
-
-        fields: ["timestamp", "value", "methodology", "timePeriod", "asset", "exchange", "symbolType", "extra"],
-
-        idField: "timestamp",
 
         skipPersist: process.env.INDEX_SKIP_PERSIST === "true"
       },
 
       dependencies: [
         {
-          name: "ingest"
+          name: "ingest-eth"
+        },
+        {
+          name: "ingest-btc"
         }
       ],
 
@@ -105,6 +86,7 @@ export default class IndexService extends Service {
           handler(this: IndexService, ctx: Context<IIndex.EstimateParams>): Promise<IIndex.EstimateResponse> {
             return this.indexOperation(ctx, ctx.params)
               .then(evidence => {
+                newrelic.incrementMetric("/Index/estimate")
                 this.logger.trace(JSON.stringify(evidence))
                 return evidence
               })
@@ -119,13 +101,15 @@ export default class IndexService extends Service {
       events: {
         "rate.updated": {
           handler(this: IndexService, context: Context<IRate.RisklessRateResponse>) {
+            newrelic.incrementMetric("/Index/rate.updated")
             this.risklessRate = context.params
           }
         }
       },
 
-      async stopped() {
-        //return await getConnection().close()
+      started(): Promise<void> {
+        newrelic.addCustomAttribute("Service", this.name)
+        return Promise.resolve()
       }
     })
   }
@@ -171,7 +155,14 @@ export default class IndexService extends Service {
       underlyingPrice
     }
 
-    this.logger.info("optionLists", options.length)
+    this.logger.info("optionLists", {
+      length: options.length,
+      asset: params.asset,
+      exchange: params.exchange,
+      first: options[0].symbol,
+      last: options[options.length - 1].symbol
+    })
+    newrelic.recordMetric("/Index/options#length", options.length)
 
     const maybeMfivResult = Result.fromThrowable(
       () => compute(mfivContext, mfivParams),
@@ -229,22 +220,38 @@ export default class IndexService extends Service {
     extra: { requestId: string; iVal: string; near: string; next: string }
   ) {
     const ctx = evidence.context
-    const index: MethodologyIndex = this.adapter.repository.create() // ctx as DeepPartial<MethodologyIndex>
+
+    const index = AppDataSource.manager.create(MethodologyIndex, {
+      symbolType: SymbolTypeEnum.Option,
+      timestamp: new Date(evidence.params.at),
+      asset: ctx.currency as BaseCurrencyEnum,
+      exchange: ctx.exchange as MethodologyExchangeEnum,
+      methodology: ctx.methodology as MethodologyEnum,
+      timePeriod: ctx.windowInterval as MethodologyWindowEnum,
+      value: evidence.result.dVol?.toString() ?? "undefined",
+      extra
+    })
+
+    await AppDataSource.manager
+      .save([index])
+      .then(models => newrelic.incrementMetric("/MethodologyIndex/save", 1))
+      .catch(err => this.logger.error("Database save error", err))
+    // const index: MethodologyIndex = this.adapter.repository.create() // ctx as DeepPartial<MethodologyIndex>
 
     /**
      * This persists Mfiv values to the DB but should be refactored
      *
      * @deprecated
      * */
-    index.timestamp = new Date(evidence.params.at)
-    index.value = evidence.result.dVol?.toString() ?? "undefined"
-    index.asset = ctx.currency as BaseCurrencyEnum
-    index.exchange = ctx.exchange as MethodologyExchangeEnum
-    index.methodology = ctx.methodology as MethodologyEnum
-    index.timePeriod = ctx.windowInterval as MethodologyWindowEnum
-    index.symbolType = SymbolTypeEnum.Option
-    index.extra = extra
-    await this.adapter.repository.save(index)
+    //    index.timestamp = new Date(evidence.params.at)
+    // index.value = evidence.result.dVol?.toString() ?? "undefined"
+    // index.asset = ctx.currency as BaseCurrencyEnum
+    // index.exchange = ctx.exchange as MethodologyExchangeEnum
+    // index.methodology = ctx.methodology as MethodologyEnum
+    // index.timePeriod = ctx.windowInterval as MethodologyWindowEnum
+    // index.symbolType = SymbolTypeEnum.Option
+    // index.extra = extra
+    // await this.adapter.repository.save(index)
   }
 
   private async announce(evidence: { version: string; context: MfivContext; params: MfivParams; result: MfivResult }) {

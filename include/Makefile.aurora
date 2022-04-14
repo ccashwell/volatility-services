@@ -20,7 +20,7 @@ create-token:
 	PGPASSWORD=${PGPASSWORD} psql ${CONNECTION} < create-token.sql
 
 postgres-proxy:
-        aws ssm start-session --target i-0569c3818f19a3283 --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["5432"], "localPortNumber":["5432"]}'
+	aws ssm start-session --target i-0569c3818f19a3283 --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["5432"], "localPortNumber":["5432"]}'
 
 connect-proxy:
-	PGPASSWORD=$(PGPASSWORD) psql $(PROXY_CONNECTION)
+	PGPASSWORD=$(PGPASSWORD) psql $(CONNECTION)
