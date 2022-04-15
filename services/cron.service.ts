@@ -97,7 +97,7 @@ export default class CronService extends Service {
           //const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "asset" | "at">
           const provider = paramsProvider({
             requestId: this.broker.generateUid(),
-            settingsEstimate: { ...settingsEstimate, asset: BaseCurrencyEnum.ETH }
+            settingsEstimate
           })
           // Patch when we report `at` since this isn't dependent on IPFS
           provider.estimate = {
