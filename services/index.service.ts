@@ -135,17 +135,7 @@ export default class IndexService extends Service {
       at: indexAtDate.toISOString(),
       nearDate: methodologyDates.nearExpiration,
       nextDate: methodologyDates.nextExpiration,
-      options: options as {
-        expirationDate: Date
-        strikePrice: number
-        underlyingPrice: number
-        bestBidPrice: number
-        bestAskPrice: number
-        markPrice: number
-        timestamp: Date
-        symbol: string
-        optionType: "put" | "call"
-      }[],
+      options: options as RequiredOptionSummary[],
       underlyingPrice
     }
 
@@ -161,7 +151,8 @@ export default class IndexService extends Service {
     const maybeMfivResult = Result.fromThrowable(
       () => compute(mfivContext, mfivParams),
       err => {
-        this.logger.error("compute failed", err)
+        this.logger.error("compute(mfivContext, mfivParams)", { mfivContext, mfivParams })
+        newrelic.noticeError(err as Error)
         return new Error("No index")
       }
     )()
@@ -255,6 +246,32 @@ export default class IndexService extends Service {
     await this.broker.broadcast(event, evidence, ["ws"])
   }
 }
+
+type RequiredOptionSummary = {
+  expirationDate: Date
+  strikePrice: number
+  underlyingPrice: number
+  bestBidPrice: number
+  bestAskPrice: number
+  markPrice: number
+  timestamp: Date
+  symbol: string
+  optionType: "put" | "call"
+}
+// type RequiredOptionSummary = Required<
+//   Pick<
+//     OptionSummary,
+//     | "expirationDate"
+//     | "strikePrice"
+//     | "underlyingPrice"
+//     | "bestBidPrice"
+//     | "bestAskPrice"
+//     | "markPrice"
+//     | "timestamp"
+//     | "symbol"
+//     | "optionType"
+//   >
+// >
 
 function cmpMostRecent(a: OptionSummary, b: OptionSummary): number {
   return a.timestamp > b.timestamp
