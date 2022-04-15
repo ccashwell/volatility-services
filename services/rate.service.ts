@@ -59,7 +59,7 @@ export default class RateService extends Service {
          * Get the liquidity rate from AAVE via the LendingPools contract
          */
         risklessRate: {
-          visibility: "private",
+          visibility: "public",
           params: {
             source: { type: "enum", values: ["AAVE"], default: "AAVE" }
           },

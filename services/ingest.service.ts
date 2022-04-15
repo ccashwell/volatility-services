@@ -61,19 +61,19 @@ export default class IngestService extends Service {
         //   }
         // },
         stats: {
-          visibility: "protected",
+          visibility: "public",
           handler(this: IngestService) {
             return this.stats()
           }
         },
         expiries: {
-          visibility: "protected",
+          visibility: "public",
           handler(this: IngestService) {
             return Array.from(this.expiryMap.entries())
           }
         },
         summaries: {
-          visibility: "protected",
+          visibility: "public",
           cache: {
             ttl: 120
           },
