@@ -149,7 +149,7 @@ export default class IndexService extends Service {
     const maybeMfivResult = Result.fromThrowable(
       () => compute(mfivContext, mfivParams),
       err => {
-        this.logger.error("compute(mfivContext, mfivParams)", { mfivContext, mfivParams })
+        this.logger.error("compute(mfivContext, mfivParams)", { mfivContext, mfivParams: JSON.stringify(mfivParams) })
         newrelic.noticeError(err as Error)
         return new Error("No index")
       }
