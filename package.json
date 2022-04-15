@@ -1,6 +1,6 @@
 {
   "name": "volatility-services",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "services to emit mfiv",
   "repository": "github:VolatilityGroup/volatility-services.git",
   "bugs": "https://github.com/VolatilityGroup/volatility-services/issues",
@@ -142,7 +142,7 @@
     "nats": "^2.6.1",
     "neverthrow": "^4.3.1",
     "newrelic": "^8.9.1",
-    "node-volatility-mfiv": "npm:@volatility-group/node-volatility-mfiv-internal@^0.2.3-alpha.13",
+    "node-volatility-mfiv": "npm:@volatility-group/node-volatility-mfiv-internal@^0.2.3-alpha.14",
     "pg": "^8.7.3",
     "reflect-metadata": "^0.1.13",
     "tardis-dev": "^13.1.13",
