@@ -10,7 +10,10 @@ interface MethodologyDates {
   rollover: string
 }
 
-export const optionSummariesLists = async (ctx: Context<IIndex.EstimateParams>, params: MethodologyDates) => {
+export const optionSummariesLists = async (
+  ctx: Context<IIndex.EstimateParams>,
+  params: MethodologyDates
+): Promise<OptionSummary[]> => {
   const { asset } = ctx.params
   const suffix = asset.toLowerCase()
 
