@@ -1,6 +1,6 @@
 {
   "name": "volatility-services",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "services to emit mfiv",
   "repository": "github:VolatilityGroup/volatility-services.git",
   "bugs": "https://github.com/VolatilityGroup/volatility-services/issues",
@@ -37,7 +37,7 @@
     "dev:auth": "node --inspect -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --env --config moleculer.config.ts --hot ./services/ws.service.ts ./services/tokens.service.ts",
     "dev:ws": "node --inspect -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts --hot ./services/ws.service.ts",
     "dev:ws-test:eth": "NODE_ENV=production node --inspect -r newrelic -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts --env --repl --hot ./services/instrument_info.service.ts ./services/ws.service.ts ./services/index.service.ts ./services/ingest.service.ts ./services/rate.service.ts ./services/cron.service.ts ./services/tokens.service.ts",
-    "dev:ws-test:btc": "NODE_ENV=production node --inspect -r newrelic -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts --envfile .env.btc --hot ./services/instrument_info.service.ts ./services/ws.service.ts ./services/index.service.ts ./services/ingest.service.ts ./services/rate.service.ts ./services/cron.service.ts ./services/tokens.service.ts",
+    "dev:ws-test:btc": "NODE_ENV=production TRADE_PAIRS_ASSETS=BTC node --inspect -r newrelic -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts --envfile .env.btc --hot ./services/instrument_info.service.ts ./services/ws.service.ts ./services/index.service.ts ./services/ingest.service.ts ./services/rate.service.ts ./services/cron.service.ts ./services/tokens.service.ts ./services/trade_pair.service.ts",
     "dev:trade_pair": "NODE_ENV=production node --inspect -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts --hot ./services/trade_pair.service.ts",
     "dev:ws-prod": "NODE_ENV=production SERVICEDIR=dist/services TS_NODE_PROJECT=tsconfig.production.json node -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --env --config dist/moleculer.config.js dist/services",
     "docker:dev": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/moleculer/bin/moleculer-runner.js --hot --config moleculer.config.ts",

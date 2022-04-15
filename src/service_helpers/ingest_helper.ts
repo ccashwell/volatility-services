@@ -1,6 +1,7 @@
 import { IIndex } from "@interfaces"
 import { Context } from "moleculer"
 import { OptionSummary } from "tardis-dev"
+import { chainFrom } from "transducist"
 
 const prefix = "ingest"
 
@@ -26,8 +27,11 @@ export const optionSummariesLists = async (
   )
 
   // TODO: mapErr if one of the promises was rejected
-  return expiries
+  return chainFrom(expiries)
     .filter((e: { status: string; value: OptionSummary[] }) => e.status === "fulfilled")
-    .map(e => e.value)
-    .flat()
+    .flatMap(e => e.value)
+    .map(o => {
+      return { ...o, timestamp: o.timestamp instanceof Date ? o.timestamp : new Date(o.timestamp) }
+    })
+    .toArray()
 }

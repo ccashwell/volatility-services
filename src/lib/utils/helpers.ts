@@ -1,3 +1,4 @@
+import { AppDataSource } from "@datasources/datasource"
 import {
   Disconnect,
   MapperFactory,
@@ -105,4 +106,22 @@ export function hasOwnProperty<X extends Record<string, unknown>, Y extends Prop
 ): obj is X & Record<Y, unknown> {
   // eslint-disable-next-line no-prototype-builtins
   return obj.hasOwnProperty(prop)
+}
+
+export function waitForDatasourceReady(timeout = 15000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let counter = timeout / 1000.0
+
+    const timer = setInterval(() => {
+      if (AppDataSource.isInitialized) {
+        clearInterval(timer)
+        resolve()
+      } else if (counter === 0) {
+        clearInterval(timer)
+        reject("AppDataSource.isInitialized never became true")
+      } else {
+        counter--
+      }
+    }, 1000)
+  })
 }

@@ -10,6 +10,7 @@ import {
 import { IIndex, IRate } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
 import { ensure } from "@lib/utils/ensure"
+import { waitForDatasourceReady } from "@lib/utils/helpers"
 import { optionSummariesLists } from "@service_helpers/ingest_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { Result } from "neverthrow"
@@ -103,7 +104,7 @@ export default class IndexService extends Service {
 
       started(): Promise<void> {
         newrelic.addCustomAttribute("Service", this.name)
-        return Promise.resolve()
+        return waitForDatasourceReady()
       }
     })
   }

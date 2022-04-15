@@ -4,6 +4,7 @@ import { AppDataSource } from "@datasources/datasource"
 import { Rate } from "@entities"
 import { IRate } from "@interfaces/services/rate"
 import { handleAsMoleculerError } from "@lib/handlers/errors"
+import { waitForDatasourceReady } from "@lib/utils/helpers"
 import { Mappers } from "@lib/utils/mappers"
 import { Context, Errors, Service, ServiceBroker } from "moleculer"
 import * as Cron from "moleculer-cron"
@@ -80,7 +81,7 @@ export default class RateService extends Service {
 
       started(this: RateService): Promise<void> {
         newrelic.addCustomAttribute("Service", this.name)
-        return Promise.resolve()
+        return waitForDatasourceReady()
         // const params: IRate.RisklessRateParams = { risklessRateSource: this.settings.risklessRateSource }
         // const result = await this.fetchRate(params)
         // if (result.isOk()) {

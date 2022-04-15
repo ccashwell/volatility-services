@@ -9,6 +9,7 @@ import { DataSourceError } from "@lib/errors"
 import { handleTypeOrmError } from "@lib/handlers/errors"
 import { TradePairSymbol } from "@lib/types"
 import { ensure } from "@lib/utils/ensure"
+import { waitForDatasourceReady } from "@lib/utils/helpers"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { ResultAsync } from "neverthrow"
 import newrelic from "newrelic"
@@ -67,10 +68,6 @@ export default class TradePairService extends Service {
        */
       methods: {},
 
-      // created(this: TradePairService) {
-      //   this.datasource = AppDataSource
-      // },
-
       /**
        * Service created lifecycle event handler
        */
@@ -85,22 +82,28 @@ export default class TradePairService extends Service {
         /**
          * This promise will be used to resolve the `started` event in moleculer.service
          */
-        return new Promise<void>((resolve, reject) => {
-          const realTimeStreams = exchangePairs.map(options =>
-            compute(streamNormalized(options, normalizeTrades), computeTradeBucket({ kind: "time", interval: 1000 }))
-          )
+        let deferredResolve: () => void
+        return new Promise<void>(resolve => {
+          deferredResolve = resolve
+          return waitForDatasourceReady()
+        })
+          .then(() => {
+            const realTimeStreams = exchangePairs.map(options =>
+              compute(streamNormalized(options, normalizeTrades), computeTradeBucket({ kind: "time", interval: 1000 }))
+            )
 
-          const combinedMessageStream = combine(...realTimeStreams)
+            const combinedMessageStream = combine(...realTimeStreams)
 
-          /**
-           * When this promise resolves, it signals that the service is started.
-           */
-          resolve()
+            /**
+             * When this promise resolves, it signals that the service is started.
+             */
+            deferredResolve()
 
-          this.processMessages(/*computedMessages*/ combinedMessageStream)
-            .then(() => this.logger.info("Finished"))
-            .catch((err: unknown) => this.onStreamError(err as Error))
-        }).catch(onError)
+            this.processMessages(/*computedMessages*/ combinedMessageStream)
+              .then(() => this.logger.info("Finished"))
+              .catch((err: unknown) => this.onStreamError(err as Error))
+          })
+          .catch(onError)
       },
 
       stopped(this: TradePairService) {

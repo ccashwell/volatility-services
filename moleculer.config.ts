@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 "use strict"
 import { ensure } from "@lib/utils/ensure"
-import { BrokerOptions, Errors, LogLevels } from "moleculer"
+import Moleculer, { BrokerOptions, Errors, LogLevels } from "moleculer"
 import newrelic from "newrelic"
 import "reflect-metadata"
 import { AppDataSource } from "./src/datasources/datasource"
@@ -282,23 +282,33 @@ const brokerConfig: BrokerOptions = {
   replCommands: undefined, // require("./repl-commands")
   // Called after broker created.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
-  // created: (broker: Moleculer.ServiceBroker): void => {},
+  created: (broker: Moleculer.ServiceBroker): void => {
+    newrelic.addCustomAttribute("Stage", ensure("stage"))
+    newrelic.addCustomAttribute("Environment", ensure("environment"))
+
+    AppDataSource.initialize()
+      .then(() => {
+        broker.logger.info("DB initialized")
+      })
+      .catch((err: unknown) => {
+        broker.fatal("DB bootstrap failed", err as Error, true)
+      })
+  },
   // Called after broker started.
   // started: async (broker: Moleculer.ServiceBroker): Promise<void> => {},
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // Called after broker stopped.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   // stopped: async (broker: Moleculer.ServiceBroker): Promise<void> => {}
-  started() {
-    newrelic.addCustomAttribute("Stage", ensure("stage"))
-    newrelic.addCustomAttribute("Environment", ensure("environment"))
-
-    AppDataSource.initialize()
-      .then(datasource => {
-        console.info("Database initialized")
-        return
-      })
-      .catch(err => console.error("Database initialization failed", err))
+  started(broker: Moleculer.ServiceBroker): Promise<void> {
+    broker.logger.info("Broker started")
+    return Promise.resolve()
+    //   // AppDataSource.initialize()
+    //   //   .then(datasource => {
+    //   //     console.info("Database initialized")
+    //   //     return
+    //   //   })
+    //   //   .catch(err => console.error("Database initialization failed", err))
   },
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
