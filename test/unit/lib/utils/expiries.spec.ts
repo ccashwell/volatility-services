@@ -3,8 +3,8 @@
 import { mfivDates } from "@lib/expiries"
 
 describe("Test mfivDates()", () => {
-  describe("timePeriod = 14d", () => {
-    const timePeriod = "14d"
+  describe("timePeriod = 14D", () => {
+    const timePeriod = "14D"
 
     describe("when the date is 2021-01-01T07:00:00.000Z", () => {
       const now = "2021-01-01T07:00:00.000Z"

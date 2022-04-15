@@ -1,10 +1,10 @@
-import { BaseCurrency, ContractType, MfivWindow, PartialInstrumentInfo } from "@lib/types"
+import { BaseCurrency, ContractType, PartialInstrumentInfo } from "@lib/types"
 import { Exchange } from "tardis-dev"
 
 export interface InstrumentInfoParams {
   exchange: Exchange
-  asset: BaseCurrency
-  timePeriod?: MfivWindow
+  asset: Asset
+  timePeriod?: TimePeriod
   type: "option"
   contractType: ContractType | ContractType[]
   timestamp?: string

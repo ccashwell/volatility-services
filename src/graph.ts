@@ -102,7 +102,7 @@ ws.on("open", () => {
   .on("message", message => {
     const buffer = message as ArrayBuffer
     const index = JSON.parse(decoder.decode(buffer)) as { topic: string; data: unknown }
-    if (index.topic === "mfiv/14d/eth") {
+    if (index.topic === "MFIV/14D/ETH") {
       const payload = index.data as {
         type: string
         at: string
@@ -144,7 +144,7 @@ const table = grid.set(6, 6, 6, 6, contrib.table, {
   fg: "green",
   selectedFg: "green",
   selectedBg: "black",
-  label: "MFIV.14d.ETH",
+  label: "MFIV.14D.ETH",
   width: "30%",
   height: "30%",
   border: { type: "line", fg: "cyan" },

@@ -11,9 +11,9 @@ import _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { ResultAsync } from "neverthrow"
 import newrelic from "newrelic"
+import { Asset } from "node-volatility-mfiv"
 import { Exchange, OptionSummary, StreamNormalizedOptions } from "tardis-dev"
 import configuration from "../src/configuration"
-import { BaseCurrency } from "./../src/lib/types"
 
 export default class IngestService extends Service {
   private latestMessage?: OptionSummary
@@ -41,7 +41,7 @@ export default class IngestService extends Service {
           exchange: process.env.INGEST_EXCHANGE || "deribit",
           asset: process.env.INGEST_BASE_CURRENCY,
           type: process.env.INGEST_TYPE || "option",
-          timePeriod: process.env.INGEST_TIME_PERIOD || "14d",
+          timePeriod: process.env.INGEST_TIME_PERIOD || "14D",
           contractType: parseContractType(process.env.INGEST_CONTRACT_TYPE)
         }
       },
@@ -100,7 +100,7 @@ export default class IngestService extends Service {
 
       // Service methods
       started(this: IngestService) {
-        const { asset } = this.settings.instrumentInfoDefaults as { asset: BaseCurrency }
+        const { asset } = this.settings.instrumentInfoDefaults as { asset: Asset }
         initTardis()
         return new Promise((resolve, reject) => {
           this.ingest({ asset }, resolve, reject)
@@ -111,12 +111,16 @@ export default class IngestService extends Service {
 
   ingest(
     this: IngestService,
-    { asset }: { asset: BaseCurrency },
+    { asset }: { asset: Asset },
     resolve: (value: void | Promise<void>) => void,
     reject: (reason?: unknown) => void
   ) {
     // Construct the parameters necessary to get the instrument's ids for the call to streamNormalized
-    const expiries = mfivDates(new Date(), "14d", MethodologyExpiryEnum.FridayT08)
+    const expiries = mfivDates(
+      new Date(),
+      this.settings.instrumentInfoDefaults.timePeriod,
+      MethodologyExpiryEnum.FridayT08
+    )
 
     return void ResultAsync.fromPromise(this.fetchInstruments(expiries, { asset }), handleError)
       .map(streamNormalizedOptions({ exchange: configuration.tardis.exchange }))
@@ -147,7 +151,7 @@ export default class IngestService extends Service {
       // Save to cache
       await this.cacheMessage(message)
 
-      // this.broker.broadcast("mfiv.14d.eth.expiry", message, ["ws"]).catch(handleAsMoleculerError)
+      // this.broker.broadcast("MFIV.14D.ETH.expiry", message, ["ws"]).catch(handleAsMoleculerError)
     }
 
     return true
@@ -287,7 +291,7 @@ export default class IngestService extends Service {
 
   private async fetchInstruments(
     expiries: { nearExpiration: string; nextExpiration: string },
-    { asset }: { asset: BaseCurrency }
+    { asset }: { asset: Asset }
   ): Promise<string[]> {
     const expirationDates = [expiries.nearExpiration, expiries.nextExpiration]
     this.logger.info("Fetching instruments with expiries", expirationDates)

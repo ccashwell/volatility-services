@@ -1,12 +1,12 @@
+import CronService from "@services/cron.service"
 import { ServiceBroker } from "moleculer"
-import TestService from "@services/cron.service"
 
 describe("Test 'cron' service", () => {
   let broker: ServiceBroker
-  let service: TestService
+  let service: CronService
   try {
     broker = new ServiceBroker({ logger: true })
-    service = broker.createService(TestService)
+    service = broker.createService(CronService)
     service.ipfs = jest.fn()
   } catch (err) {
     console.error(err)

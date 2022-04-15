@@ -37,21 +37,7 @@ export default class WSService extends Service {
 
     this.parseServiceSchema({
       name: "ws",
-      mixins: [
-        ApiGateway
-        // Passport
-        // PassportMixin({
-        //   routePath: "/auth",
-        //   localAuthAlias: "v1.accounts.login",
-        //   successRedirect: "/",
-        //   providers: {
-        //     google: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
-        //     facebook: process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET,
-        //     github: process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET,
-        //     twitter: false
-        //   }
-        // })
-      ],
+      mixins: [ApiGateway],
       settings: {
         logRequestParams: "info",
 
@@ -332,7 +318,7 @@ export default class WSService extends Service {
       },
 
       events: {
-        "mfiv.14d.eth.expiry": {
+        "MFIV.14D.ETH.expiry": {
           handler(context: Context<OptionSummary>) {
             // await this.actions.announce(context.params)
             const payload = { topic: "mfiv/expiry", data: context.params }
@@ -366,16 +352,16 @@ export default class WSService extends Service {
           }
         },
 
-        "mfiv.14d.ETH.index.created": {
+        "MFIV.14D.ETH.index.created": {
           handler(this: WSService, context: Context<MfivEvidence>) {
             const result = context.params.result
-            const { dVol, invdVol, currency, value } = result
+            const { dVol, invdVol, asset, value } = result
             const methodology = context.params.context.methodology.toUpperCase()
-            const timePeriod = context.params.context.windowInterval.toUpperCase()
+            const timePeriod = context.params.context.timePeriod.toUpperCase()
             const serverMsg = {
               channel: "MFIV/14D/ETH",
               data: {
-                id: `${methodology}.${timePeriod}.${currency}`,
+                id: `${methodology}.${timePeriod}.${asset}`,
                 type: "index",
                 dVol,
                 invdVol,
@@ -383,7 +369,7 @@ export default class WSService extends Service {
                 underlying: context.params.params.underlyingPrice,
                 methodology,
                 timePeriod,
-                asset: currency,
+                asset,
                 risklessRate: context.params.context.risklessRate,
                 risklessRateAt: context.params.context.risklessRateAt,
                 risklessRateSource: context.params.context.risklessRateSource,
@@ -400,16 +386,16 @@ export default class WSService extends Service {
             // await this.server.publish("MFIV/14D/ETH", message, false)
           }
         },
-        "mfiv.14d.BTC.index.created": {
+        "MFIV.14D.BTC.index.created": {
           handler(this: WSService, context: Context<MfivEvidence>) {
             const result = context.params.result
-            const { dVol, invdVol, currency, value } = result
+            const { dVol, invdVol, asset, value } = result
             const methodology = context.params.context.methodology.toUpperCase()
-            const timePeriod = context.params.context.windowInterval.toUpperCase()
+            const timePeriod = context.params.context.timePeriod.toUpperCase()
             const serverMsg = {
               channel: "MFIV/14D/BTC",
               data: {
-                id: `${methodology}.${timePeriod}.${currency}`,
+                id: `${methodology}.${timePeriod}.${asset}`,
                 type: "index",
                 dVol,
                 invdVol,
@@ -417,7 +403,7 @@ export default class WSService extends Service {
                 underlying: context.params.params.underlyingPrice,
                 methodology,
                 timePeriod,
-                asset: currency,
+                asset,
                 risklessRate: context.params.context.risklessRate,
                 risklessRateAt: context.params.context.risklessRateAt,
                 risklessRateSource: context.params.context.risklessRateSource,

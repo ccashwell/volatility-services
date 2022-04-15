@@ -3,8 +3,8 @@ import C from "./constants"
 
 export const mfivDates = (now: Date, timePeriod: string, expiryType = MethodologyExpiryEnum.FridayT08) => {
   // TODO: Remove guard once we need to support other time ranges.
-  if (timePeriod !== "14d") {
-    throw Error(`An time period of ${timePeriod} is not allowed. Only '14d' is currently supported.`)
+  if (timePeriod !== "14D") {
+    throw Error(`An time period of ${timePeriod} is not allowed. Only '14D' is currently supported.`)
   }
 
   const nextExpirationDate = nextExpiration(now.valueOf(), timePeriod, expiryType)

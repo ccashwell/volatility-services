@@ -43,7 +43,7 @@ describe.skip("ws.service", () => {
       }).then(index => {
         return expect(index).toEqual(
           expect.objectContaining({
-            type: "mfiv.14d.eth",
+            type: "MFIV.14D.ETH",
             at: expect.any(String),
             dVol: expect.any(Number),
             invdVol: expect.any(Number),

@@ -27,7 +27,7 @@ ws.on("open", () => {
     console.log(index.data)
     // JSON.parse(decoder.decode(message.data))
 
-    if (index.topic === "mfiv/14d/eth") {
+    if (index.topic === "MFIV/14D/ETH") {
       const payload = index.data as {
         type: string
         at: string
@@ -37,7 +37,7 @@ ws.on("open", () => {
         value: string
       }
       const { at, dVol, invdVol } = payload
-    } else if (index.topic === "mfiv/expiry") {
+    } else if (index.topic === "MFIV/expiry") {
       console.log("** index **", index)
     }
 

@@ -70,9 +70,9 @@ export default class IndexService extends Service {
           params: {
             at: { type: "string" },
             exchange: { type: "enum", values: ["deribit"], default: "deribit" },
-            methodology: { type: "enum", values: ["mfiv"], default: "mfiv" },
+            methodology: { type: "enum", values: ["MFIV"], default: "MFIV" },
             asset: { type: "enum", values: ["ETH", "BTC"] },
-            timePeriod: { type: "enum", values: ["14d"], default: "14d" },
+            timePeriod: { type: "enum", values: ["14D"], default: "14D" },
             symbolType: { type: "enum", values: ["option"], default: "option" },
             expiryType: { type: "string", default: "FridayT08:00:00Z" },
             contractType: { type: "array", items: "string", enum: ["call_option", "put_option"] }
@@ -123,8 +123,6 @@ export default class IndexService extends Service {
 
     const mfivContext: MfivContext = {
       ...params,
-      windowInterval: params.timePeriod,
-      currency: params.asset,
       ...risklessRate
     }
 
@@ -209,10 +207,10 @@ export default class IndexService extends Service {
     const index = AppDataSource.manager.create(MethodologyIndex, {
       symbolType: SymbolTypeEnum.Option,
       timestamp: new Date(evidence.params.at),
-      asset: ctx.currency as BaseCurrencyEnum,
+      asset: ctx.asset as BaseCurrencyEnum,
       exchange: ctx.exchange as MethodologyExchangeEnum,
       methodology: ctx.methodology as MethodologyEnum,
-      timePeriod: ctx.windowInterval as MethodologyWindowEnum,
+      timePeriod: ctx.timePeriod as MethodologyWindowEnum,
       value: evidence.result.dVol?.toString() ?? "undefined",
       extra
     })
@@ -230,10 +228,10 @@ export default class IndexService extends Service {
      * */
     //    index.timestamp = new Date(evidence.params.at)
     // index.value = evidence.result.dVol?.toString() ?? "undefined"
-    // index.asset = ctx.currency as BaseCurrencyEnum
+    // index.asset = ctx.asset as BaseCurrencyEnum
     // index.exchange = ctx.exchange as MethodologyExchangeEnum
     // index.methodology = ctx.methodology as MethodologyEnum
-    // index.timePeriod = ctx.windowInterval as MethodologyWindowEnum
+    // index.timePeriod = ctx.timePeriod as MethodologyWindowEnum
     // index.symbolType = SymbolTypeEnum.Option
     // index.extra = extra
     // await this.adapter.repository.save(index)
@@ -242,7 +240,7 @@ export default class IndexService extends Service {
   private async announce(evidence: { version: string; context: MfivContext; params: MfivParams; result: MfivResult }) {
     this.logger.debug("compute(mfiv)", JSON.stringify(evidence))
     const ctx = evidence.context
-    const event = `${ctx.methodology}.${ctx.windowInterval}.${ctx.currency}.index.created`
+    const event = `${ctx.methodology}.${ctx.timePeriod}.${ctx.asset}.index.created`
     await this.broker.broadcast(event, evidence, ["ws"])
   }
 }

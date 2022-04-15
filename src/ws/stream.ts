@@ -50,7 +50,7 @@ export async function streamNormalizedWS(ws: WebSocket, req: HttpRequest) {
     messages = messagesIterables[0] as AsyncIterableIterator<unknown>
 
     const message = {
-      id: "mfiv.14d.ETH",
+      id: "MFIV.14D.ETH",
       symbols: ["ETHUSDT"],
       timestamp: new Date(),
       localTimestamp: new Date()

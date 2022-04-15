@@ -1,20 +1,20 @@
 export default {
   version: "2022-01-01",
   metadata: {
-    "uma.priceId": "mf4.ETH.14d",
+    "uma.priceId": "MF4.ETH.14D",
     uri: "/indices/methodology=mfiv/timePeriod=14d/asset=ETH/exchange=deribit/instrument=option/ts=2021-01-03T07:02:00.543Z/evidence.json"
   },
   eventType: "mfiv.eth.14d.index.created",
   // topic: "com.volatility.indices.estimate.mfiv.14d.eth.option",
   // metric: "com.volatility.events.index.mfiv.14d.estimate.deribit.eth.option",
   context: {
-    methodology: "mfiv",
+    methodology: "MFIV",
     at: "2021-10-03T07:05:00Z",
     nearDate: "2022-01-28T08:00:00.000Z",
     nextDate: "2022-02-02T08:00:00.000Z",
-    currency: "ETH",
+    asset: "ETH",
     exchange: "deribit",
-    windowInterval: "14d",
+    timePeriod: "14D",
     instrument: "option",
     risklessRate: 0.0056,
     risklessRateAt: "2021-10-01T07:02:00.000Z",

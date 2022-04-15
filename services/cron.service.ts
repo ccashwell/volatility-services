@@ -43,7 +43,7 @@ export default class CronService extends Service {
         //   name: "mfiv.14d.ETH.estimate",
         //   cronTime: process.env.MFIV_14D_ETH_CRONTIME,
         //   onTick: () => {
-        //     this.logger.info("Cron Job", "MFIV.14d.ETH")
+        //     this.logger.info("Cron Job", "MFIV.14D.ETH")
         //     const provider = paramsProvider({
         //       requestId: this.broker.generateUid(),
         //       settingsEstimate: this.settings.estimate as Omit<IIndex.EstimateParams, "at">
@@ -67,7 +67,7 @@ export default class CronService extends Service {
               at: new Date(),
               asset: BaseCurrencyEnum.ETH,
               ...settingsEstimate
-            }).mapErr(err => this.logger.error(err))
+            }).mapErr((err: Error) => this.logger.error(err))
           },
           timeZone: "UTC"
         },
@@ -81,32 +81,35 @@ export default class CronService extends Service {
               at: new Date(),
               asset: BaseCurrencyEnum.BTC,
               ...settingsEstimate
-            }).mapErr(err => this.logger.error(err))
+            }).mapErr((err: Error) => this.logger.error(err))
           },
           timeZone: "UTC"
         }
-      ]
-    })
-  }
+      ],
 
-  /**
-   * Compute an index value based on settingsEstimate and write it to the DB and IPFS
-   * @param settingsEstimate
-   * @returns stringified JSON for sending to IPFS
-   */
-  private computeAndStoreEstimate(settingsEstimate: IIndex.EstimateParams) {
-    //const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "asset" | "at">
-    const provider = paramsProvider({
-      requestId: this.broker.generateUid(),
-      settingsEstimate: { ...settingsEstimate, asset: BaseCurrencyEnum.ETH }
-    })
-    // Patch when we report `at` since this isn't dependent on IPFS
-    provider.estimate = {
-      params: () => settingsEstimate
-    }
+      methods: {
+        /**
+         * Compute an index value based on settingsEstimate and write it to the DB and IPFS
+         * @param settingsEstimate
+         * @returns stringified JSON for sending to IPFS
+         */
+        computeAndStoreEstimate(settingsEstimate: IIndex.EstimateParams) {
+          //const settingsEstimate = this.settings.estimate as Omit<IIndex.EstimateParams, "asset" | "at">
+          const provider = paramsProvider({
+            requestId: this.broker.generateUid(),
+            settingsEstimate: { ...settingsEstimate, asset: BaseCurrencyEnum.ETH }
+          })
+          // Patch when we report `at` since this isn't dependent on IPFS
+          provider.estimate = {
+            params: () => settingsEstimate
+          }
 
-    const createIdx = (): Promise<IIndex.EstimateResponse> => IndexHelper.estimate(this, provider.estimate.params())
-    return ResultAsync.fromPromise(createIdx(), handleError).map(JSON.stringify)
+          const createIdx = (): Promise<IIndex.EstimateResponse> =>
+            IndexHelper.estimate(this, provider.estimate.params())
+          return ResultAsync.fromPromise(createIdx(), handleError).map(JSON.stringify)
+        }
+      }
+    })
   }
 }
 
@@ -175,5 +178,5 @@ const paramsProvider = ({
 //   ...mfivConfig
 // })
 // const ipfsResult = await this.broker.call("ipfs.store")
-// return await this.broker.emit("mfiv.14d.ETH.estimate")
-// await this.actions.ipfs("mfiv.14d.ETH.estimate")
+// return await this.broker.emit("MFIV.14D.ETH.estimate")
+// await this.actions.ipfs("MFIV.14D.ETH.estimate")

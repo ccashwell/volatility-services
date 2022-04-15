@@ -1,14 +1,14 @@
 export default {
   version: "2022-01-1",
-  type: "mfiv.14d.eth",
+  type: "MFIV.14D.ETH",
   context: {
-    methodology: "mfiv",
+    methodology: "MFIV",
     at: "2021-10-03T07:05:00Z",
     nearDate: "2022-01-28T08:00:00.000Z",
     nextDate: "2022-02-02T08:00:00.000Z",
-    currency: "ETH",
+    asset: "ETH",
     exchange: "deribit",
-    windowInterval: "14d",
+    timePeriod: "14D",
     instrument: "option",
     risklessRate: 0.0056,
     risklessRateAt: "2021-10-01T07:02:00.000Z",
