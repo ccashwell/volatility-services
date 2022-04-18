@@ -82,10 +82,8 @@ export default class TradePairService extends Service {
         /**
          * This promise will be used to resolve the `started` event in moleculer.service
          */
-        let deferredResolve: () => void
-        return new Promise<void>(resolve => {
-          deferredResolve = resolve
-          return waitForDatasourceReady()
+        return new Promise<void>((resolve, reject) => {
+          return waitForDatasourceReady().then(resolve).catch(reject)
         })
           .then(() => {
             const realTimeStreams = exchangePairs.map(options =>
@@ -97,8 +95,6 @@ export default class TradePairService extends Service {
             /**
              * When this promise resolves, it signals that the service is started.
              */
-            deferredResolve()
-
             this.processMessages(/*computedMessages*/ combinedMessageStream)
               .then(() => this.logger.info("Finished"))
               .catch((err: unknown) => this.onStreamError(err as Error))
@@ -118,17 +114,18 @@ export default class TradePairService extends Service {
   }
 
   async processMessages(messages: AsyncIterableIterator<Trade | TradeBucket>) {
-    const onTypeOrmError = this.onTypeOrmError
+    // const onTypeOrmError = this.onTypeOrmError
 
     // this.cancellable = this.createCancellable(messages)
 
+    this.logger.info("start processMessages")
     for await (const message of messages) {
       if (message.type === "trade_bucket") {
         await ResultAsync.fromPromise(this.captureMessage(message), handleTypeOrmError).mapErr(
           (err: DataSourceError) => {
-            newrelic.incrementMetric("/TradePair/executeInsert#QueryFailedError")
             this.logger.warn("ignoring insert for", message)
             this.logger.error("captureMessage Error", err)
+            newrelic.incrementMetric("/TradePair/executeInsert#QueryFailedError")
           }
         )
       }
@@ -152,7 +149,7 @@ export default class TradePairService extends Service {
   //   return cancellable
   // }
 
-  private async captureMessage(message: Trade | TradeBucket): Promise<InsertResult> {
+  private captureMessage(message: Trade | TradeBucket): Promise<InsertResult> {
     const { timestamp, exchange, symbol, id, price, localTimestamp } = message
     // this.logger.info(message)
     this.lastMessage = message
