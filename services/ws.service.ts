@@ -97,8 +97,8 @@ export default class WSService extends Service {
             let authToken = ""
 
             try {
-              reqWithHeaders = req as { headers: Record<string, string> }
-              authHeader = reqWithHeaders.headers.authorization
+              // reqWithHeaders = req as { headers: Record<string, string> }
+              // authHeader = reqWithHeaders.headers.authorization
 
               // Browsers don't support setting the Authentication header so check query params
               // if (!authHeader) {
@@ -110,8 +110,10 @@ export default class WSService extends Service {
               //     authToken = maybeApiKey
               //   }
               // } else {
-              if (authHeader && authHeader.startsWith("Bearer ")) {
-                authToken = authHeader.slice("Bearer ".length)
+              if (true || (authHeader && authHeader.startsWith("Bearer "))) {
+                // authToken = authHeader.slice("Bearer ".length)
+                // TODO: Remove test token
+                authToken = "d79401a4b79748c3489822c117f8e380e285719d9b0053e78edce9314f72d2db"
               }
               // }
             } catch (err) {
