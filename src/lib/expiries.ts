@@ -1,7 +1,20 @@
 import { MethodologyExpiryEnum } from "@entities"
+import { Asset } from "node-volatility-mfiv"
 import C from "./constants"
 
-export const mfivDates = (now: Date, timePeriod: string, expiryType = MethodologyExpiryEnum.FridayT08) => {
+export interface MfivExpiry {
+  nearExpiration: string
+  nextExpiration: string
+  rollover: string
+  asset?: Asset
+}
+
+export const mfivDates = (
+  now: Date,
+  timePeriod: string,
+  expiryType = MethodologyExpiryEnum.FridayT08,
+  asset?: Asset
+): MfivExpiry => {
   // TODO: Remove guard once we need to support other time ranges.
   if (timePeriod !== "14D") {
     throw Error(`An time period of ${timePeriod} is not allowed. Only '14D' is currently supported.`)
@@ -14,7 +27,8 @@ export const mfivDates = (now: Date, timePeriod: string, expiryType = Methodolog
   return {
     nearExpiration: nearExpirationDate.toISOString(),
     nextExpiration: nextExpirationDate.toISOString(),
-    rollover: rollover.toISOString()
+    rollover: rollover.toISOString(),
+    asset
   }
 }
 

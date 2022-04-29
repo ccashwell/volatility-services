@@ -1,7 +1,8 @@
+import { computeOptionBucket } from "@computables/option_bucket"
 import { NormalizedExchange } from "@lib/types"
 import {
+  compute,
   Exchange,
-  MapperFactory,
   normalizeOptionsSummary,
   replayNormalized,
   ReplayNormalizedOptions,
@@ -42,7 +43,7 @@ export const stream = <T extends Exchange & NormalizedExchange>({
  */
 export const historical = <
   T extends Exchange & NormalizedExchange,
-  U extends MapperFactory<T, any>[],
+  // U extends MapperFactory<T, any>[],
   Z extends boolean = false
 >({
   exchange,
@@ -51,13 +52,17 @@ export const historical = <
   to,
   waitWhenDataNotYetAvailable = configuration.tardis.waitWhenDataNotYetAvailable
 }: ReplayNormalizedOptions<T, Z>) =>
-  replayNormalized(
-    {
-      exchange,
-      symbols,
-      from,
-      to,
-      waitWhenDataNotYetAvailable
-    },
-    normalizeOptionsSummary
+  compute(
+    replayNormalized(
+      {
+        exchange,
+        symbols,
+        from,
+        to,
+        withDisconnectMessages: false,
+        waitWhenDataNotYetAvailable
+      },
+      normalizeOptionsSummary
+    ),
+    computeOptionBucket({ kind: "time", interval: 1000 })
   )

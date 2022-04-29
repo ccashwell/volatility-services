@@ -1,4 +1,10 @@
 /* eslint-disable camelcase */
+import { OptionBucket } from "@computables/option_bucket"
+import { IIngest, IInstrumentInfo } from "@interfaces"
+import { insufficientDataError } from "@lib/errors"
+import { mfivDates, MfivExpiry } from "@lib/expiries"
+import { handleError } from "@lib/handlers/errors"
+import { instrumentInfos } from "@service_helpers/instrument_info_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
 import {
   default as ApiGateway,
@@ -8,9 +14,32 @@ import {
   us_socket_context_t,
   WebSocket
 } from "moleculer-web-uws"
-import { MfivEvidence, OptionSummary } from "node-volatility-mfiv"
+import { combine, Result, ResultAsync } from "neverthrow"
+import newrelic from "newrelic"
+import {
+  Asset,
+  compute,
+  MfivContext,
+  MfivEvidence,
+  MfivParams,
+  MfivResult,
+  OptionSummary as MfivOptionSummary
+} from "node-volatility-mfiv"
+import { Exchange, OptionSummary, ReplayNormalizedOptions } from "tardis-dev"
+import { chainFrom } from "transducist"
 import { TextDecoder, TextEncoder } from "util"
 import { streamNormalizedWS } from "../src/ws/stream"
+import { initTardis } from "./../src/datasources/tardis"
+import { historical } from "./../src/datasources/tardis_deribit_streams"
+import {
+  BaseCurrencyEnum,
+  MethodologyEnum,
+  MethodologyExchangeEnum,
+  MethodologyExpiryEnum,
+  MethodologyWindowEnum,
+  SymbolTypeEnum
+} from "./../src/entities/types"
+import { EstimateParams } from "./../src/interfaces/services/index/iindex.d"
 
 const MESSAGE_ENUM = Object.freeze({
   SUBSCRIBE: "SUBSCRIBE",
@@ -24,6 +53,15 @@ const MESSAGE_ENUM = Object.freeze({
  * Compute index values from data produced by the ingest service
  */
 export default class WSService extends Service {
+  private latestMessage?: OptionSummary
+
+  /**
+   * Keep a grouping of expiry dates => symbols so we can request a set of OptionSummary objects
+   *
+   * @private
+   */
+  private expiryMap = new Map<string, Set<string>>()
+
   encoder = new TextEncoder()
   decoder = new TextDecoder()
   server!: TemplatedApp
@@ -202,9 +240,20 @@ export default class WSService extends Service {
                   body: clientMsg.body
                 }
 
+                const replayFrom = clientMsg.replayFrom
+                const replayTo = clientMsg.replayTo
+
                 if (channel === "MFIV/14D/ETH" || channel === "MFIV/14D/BTC") {
                   this.logger.info("Subscribed", channel)
-                  socket.subscribe(channel)
+                  if (replayFrom === undefined && replayTo == undefined) {
+                    socket.subscribe(channel)
+                  } else {
+                    const exchange = MethodologyExchangeEnum.Deribit
+                    const [methodology, timePeriod, asset] = channel.split("/")
+                    const expiryType = MethodologyExpiryEnum.FridayT08
+
+                    this.replay(socket, { replayFrom, replayTo, exchange, timePeriod, asset, expiryType })
+                  }
                 } else {
                   socket.send(
                     JSON.stringify({ error: "topic_not_found", message: `Topic ${topic} not found`, code: 400 })
@@ -422,14 +471,227 @@ export default class WSService extends Service {
             // await this.server.publish("MFIV/14D/ETH", message, false)
           }
         }
-      }
+      },
 
-      // started(this: WSService) {
-      //   return Promise.resolve()
-      // }
+      started(this: WSService) {
+        return new Promise(resolve => {
+          initTardis()
+          resolve()
+        })
+      }
     })
   }
 
+  private async replay(
+    ws: WebSocket,
+    { replayFrom, replayTo, timePeriod, exchange, asset, expiryType }: ReplayOptions
+  ) {
+    const expiries = mfivDates(new Date(replayFrom), timePeriod, expiryType, asset)
+
+    return void ResultAsync.fromPromise(
+      this.fetchInstruments(expiries, { asset: asset, timestamp: replayFrom }),
+      handleError
+    )
+      .map(
+        replayNormalizedOptions({
+          exchange,
+          withDisconnectMessages: false,
+          from: replayFrom,
+          to: replayTo,
+          waitWhenDataNotYetAvailable: true
+        })
+      )
+      .map(historical)
+      .mapErr(err => {
+        this.logger.fatal(err)
+        // reject(err)
+        return err
+      })
+      .map(messages => {
+        // resolve() // Let the service know we can start
+        return this.process(ws, messages, [expiries], {
+          methodology: MethodologyEnum.MFIV,
+          timePeriod,
+          asset,
+          exchange,
+          symbolType: SymbolTypeEnum.Option,
+          contractType: ["call_option", "put_option"],
+          expiryType: MethodologyExpiryEnum.FridayT08
+        })
+      })
+      .mapErr(err => {
+        this.logger.fatal(err)
+        if (err instanceof Error) {
+          newrelic.noticeError(err, { serviceName: this.name, expiries: JSON.stringify(expiries) })
+        }
+        return err
+      })
+  }
+
+  private async process(
+    ws: WebSocket,
+    messages: AsyncIterableIterator<OptionSummary | OptionBucket>,
+    expiries: MfivExpiry[],
+    estimateParams: Omit<EstimateParams, "at">
+  ): Promise<boolean> {
+    this.logger.info("Start process.")
+    for await (const message of messages) {
+      if (message.type === "option_summary") {
+        // Track the latest message
+        this.latestMessage = message
+
+        // Save to cache
+        await this.cacheMessage(message)
+      }
+
+      if (message.type === "option_bucket") {
+        // 1. Get near and far expiries
+        const expiry = expiries.at(0)
+
+        /**
+         * Complete processing if no more expiries to process
+         */
+        if (expiry === undefined) {
+          break
+        }
+
+        const nearExpiries = (
+          await this.fetchOptionSummaries({
+            expiry: expiry.nearExpiration,
+            asset: expiry.asset as Asset
+          })
+        ).unwrapOr([])
+
+        const nextExpiries = (
+          await this.fetchOptionSummaries({
+            expiry: expiry.nextExpiration,
+            asset: expiry.asset as Asset
+          })
+        ).unwrapOr([])
+
+        //const nearExpiries.unwrapOr([])
+
+        // 2. get riskless rate
+        const risklessRate = this.getInterestRate()
+        // 3. Use this as 'most recent' underlying price
+        const underlyingPrice = message.price
+        // 4. Build mfiv params
+        const mfivContext: MfivContext = {
+          ...estimateParams,
+          ...risklessRate
+        }
+
+        const mfivParams: MfivParams = {
+          at: message.timestamp.toISOString(),
+          nearDate: expiry.nearExpiration,
+          nextDate: expiry.nextExpiration,
+          options: [...nearExpiries, ...nextExpiries] as MfivOptionSummary[],
+          underlyingPrice
+        }
+
+        // 5. Compute mfiv
+        const maybeMfivResult = Result.fromThrowable(
+          () => compute(mfivContext, mfivParams),
+          err => {
+            // this.logger.error("compute(mfivContext, mfivParams)", {
+            //   mfivContext,
+            //   mfivParams: JSON.stringify(mfivParams)
+            // })
+            // newrelic.noticeError(err as Error)
+            return new Error("No index")
+          }
+        )()
+
+        if (maybeMfivResult.isErr()) {
+          continue
+        }
+
+        const mfivResult: MfivResult = maybeMfivResult.value
+        const { intermediates, metrics, ...rest } = mfivResult
+        const index = { underlyingPrice, ...rest, ...risklessRate }
+
+        this.logger.info("mfiv", index)
+        // this.logger.info("mfiv", { timestamp: mfivResult.estimatedFor, dVol: mfivResult.dVol })
+        // const { dVol, invdVol, estimatedFor } = mfivResult
+
+        ws.send(JSON.stringify(mfivResult))
+      }
+
+      // this.broker.broadcast("MFIV.14D.ETH.expiry", message, ["ws"]).catch(handleAsMoleculerError)
+    }
+
+    this.logger.info("Finish process.")
+    return true
+  }
+
+  private async fetchOptionSummaries(params: IIngest.OptionSummariesParams) {
+    const cacher = this.broker.cacher
+    if (cacher === undefined) {
+      throw new Error("Cache should not be disabled")
+    }
+
+    const symbolList = this.expiryMap.get(params.expiry)
+    if (!symbolList) {
+      throw insufficientDataError("Expiry is missing from expiry map.", [
+        `The requested expiry '${params.expiry}' has not been seen yet`,
+        "Check that the expiry date matches an existing intrument's expirationDate."
+      ])
+    } else {
+      return await combine(
+        chainFrom(Array.from(symbolList.values()))
+          .map(sym => ResultAsync.fromPromise(cacher.get(sym) as Promise<OptionSummary>, handleError))
+          .toArray()
+      )
+    }
+  }
+
+  /**
+   * Keep a cached list of option prices. This is a sideband operation
+   * that does not await the promise.
+   *
+   * @remark TODO: Use ioredis mset
+   *
+   * @param o - OptionSummary to cache
+   */
+  private async cacheMessage(o: OptionSummary): Promise<void> {
+    const expiryKey = o.expirationDate.toISOString()
+    if (!this.expiryMap.has(expiryKey)) {
+      this.logger.info("Cache Miss", expiryKey)
+      // TODO: Should probably be ingesting into a Red-Black Tree
+      this.expiryMap.set(expiryKey, new Set<string>())
+    }
+    const expirySet = this.expiryMap.get(expiryKey)
+    expirySet?.add(o.symbol)
+    if (this.broker.cacher) {
+      await this.broker.cacher.set(
+        o.symbol,
+        summaryWithDefaults(o, { bestAskPrice: 0, bestBidPrice: 0, underlyingPrice: 0 })
+      )
+    }
+  }
+
+  private async fetchInstruments(
+    expiries: { nearExpiration: string; nextExpiration: string },
+    { asset, timestamp }: { asset: Asset; timestamp?: string }
+  ): Promise<IInstrumentInfo.InstrumentInfoResponse> {
+    const expirationDates = [expiries.nearExpiration, expiries.nextExpiration]
+    this.logger.info("Fetching instruments with expiries", expirationDates)
+
+    return instrumentInfos(this, {
+      expirationDates,
+      timestamp: timestamp ?? new Date().toISOString(),
+      ...this.settings.instrumentInfoDefaults,
+      asset
+    })
+  }
+
+  private getInterestRate() {
+    return {
+      risklessRate: 0.0056,
+      risklessRateAt: "2022-03-17T17:17:00.702Z",
+      risklessRateSource: "AAVE"
+    }
+  }
   // authenticate(ctx: Context<unknown>) {
   //   debugger
   //   console.log("***** HERE 10", ctx)
@@ -448,4 +710,56 @@ export default class WSService extends Service {
   //     console.error("err", err)
   //   }
   // }
+}
+
+function replayNormalizedOptions<E extends Exchange>({
+  exchange,
+  withDisconnectMessages,
+  from,
+  to
+}: ReplayNormalizedOptions<E>) {
+  return (symbols: IInstrumentInfo.InstrumentInfoResponse) => {
+    return {
+      exchange: exchange as "deribit",
+      symbols,
+      withDisconnectMessages,
+      from,
+      to
+    }
+  }
+}
+
+/**
+ * OptionSummary data can have undefined price values. When this happens,
+ * set price to defaults.
+ *
+ * @private
+ *
+ * @param o - option summary to override with defaults
+ * @param { vals } - default values to be set in OptionSummary
+ * @returns OptionSummary w/required price values
+ */
+const summaryWithDefaults = (
+  o: OptionSummary,
+  { bestAskPrice, bestBidPrice, underlyingPrice }: DefaultOptionSummary
+) => ({
+  ...o,
+  bestAskPrice: o.bestAskPrice ?? bestAskPrice,
+  bestBidPrice: o.bestBidPrice ?? bestBidPrice,
+  underlyingPrice: o.underlyingPrice ?? underlyingPrice
+})
+
+type ReplayOptions = {
+  replayFrom: string
+  replayTo: string
+  exchange: MethodologyExchangeEnum
+  timePeriod: MethodologyWindowEnum
+  asset: BaseCurrencyEnum
+  expiryType: MethodologyExpiryEnum
+}
+
+interface DefaultOptionSummary {
+  bestAskPrice: number
+  bestBidPrice: number
+  underlyingPrice: number
 }
