@@ -614,7 +614,7 @@ export default class WSService extends Service {
         // this.logger.info("mfiv", { timestamp: mfivResult.estimatedFor, dVol: mfivResult.dVol })
         // const { dVol, invdVol, estimatedFor } = mfivResult
 
-        ws.send(JSON.stringify(mfivResult))
+        ws.send(JSON.stringify(index))
       }
 
       // this.broker.broadcast("MFIV.14D.ETH.expiry", message, ["ws"]).catch(handleAsMoleculerError)
