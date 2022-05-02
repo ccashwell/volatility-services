@@ -77,6 +77,14 @@ export default class WSService extends Service {
       name: "ws",
       mixins: [ApiGateway],
       settings: {
+        instrumentInfoDefaults: {
+          exchange: process.env.INGEST_EXCHANGE || "deribit",
+          type: process.env.INGEST_TYPE || "option",
+          timePeriod: process.env.INGEST_TIME_PERIOD || "14D",
+          contractType: ["call_option", "put_option"],
+          active: false
+        },
+
         logRequestParams: "info",
 
         port: 3000,
@@ -610,7 +618,7 @@ export default class WSService extends Service {
         const { intermediates, metrics, ...rest } = mfivResult
         const index = { underlyingPrice, ...rest, ...risklessRate }
 
-        this.logger.info("mfiv", index)
+        // this.logger.info("mfiv", index)
         // this.logger.info("mfiv", { timestamp: mfivResult.estimatedFor, dVol: mfivResult.dVol })
         // const { dVol, invdVol, estimatedFor } = mfivResult
 
@@ -682,6 +690,10 @@ export default class WSService extends Service {
       timestamp: timestamp ?? new Date().toISOString(),
       ...this.settings.instrumentInfoDefaults,
       asset
+    }).then(values => {
+      this.logger.info("infos", values)
+      this.logger.info("infos.length", values.length)
+      return values
     })
   }
 
@@ -719,9 +731,10 @@ function replayNormalizedOptions<E extends Exchange>({
   to
 }: ReplayNormalizedOptions<E>) {
   return (symbols: IInstrumentInfo.InstrumentInfoResponse) => {
+    console.log("Number of symbols", symbols.length)
     return {
       exchange: exchange as "deribit",
-      symbols,
+      symbols: symbols.sort(),
       withDisconnectMessages,
       from,
       to

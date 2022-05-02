@@ -31,8 +31,8 @@ export default class InstrumentInfoService extends Service {
             "put_option"
           ]),
           expirationDates: [],
-          timestamp: undefined,
-          active: true
+          timestamp: undefined
+          // active: false
         } as IInstrumentInfo.InstrumentInfoParams
       },
       // Metadata
@@ -207,7 +207,6 @@ export default class InstrumentInfoService extends Service {
     const tardisParams: TardisInstrumentInfoFilter = {
       exchange: params.exchange,
       baseCurrency: params.asset,
-      active: true,
       contractType: ["call_option", "put_option"],
       type: "option"
     }

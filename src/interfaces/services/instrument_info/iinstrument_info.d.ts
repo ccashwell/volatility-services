@@ -26,6 +26,7 @@ export type RefreshResponse = PartialInstrumentInfo[]
 export interface AvailableParams {
   exchange: Exchange
   asset: BaseCurrency
+  active: boolean
 }
 
 export type AvailableResponse = string[]
