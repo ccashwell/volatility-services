@@ -4,6 +4,7 @@ import { IIngest, IInstrumentInfo } from "@interfaces"
 import { insufficientDataError } from "@lib/errors"
 import { mfivDates, MfivExpiry } from "@lib/expiries"
 import { handleError } from "@lib/handlers/errors"
+import { VixCalculator } from "@lib/vix_calculator"
 import { instrumentInfos } from "@service_helpers/instrument_info_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
 import {
@@ -222,7 +223,7 @@ export default class WSService extends Service {
             // }
           },
 
-          message: (
+          message: async (
             app: { publish: (topic: string, data: any) => void },
             socket: WebSocket,
             message: any,
@@ -260,7 +261,21 @@ export default class WSService extends Service {
                     const [methodology, timePeriod, asset] = channel.split("/")
                     const expiryType = MethodologyExpiryEnum.FridayT08
 
-                    this.replay(socket, { replayFrom, replayTo, exchange, timePeriod, asset, expiryType })
+                    const result = await new VixCalculator({
+                      rolloverFrequency: "weekly",
+                      replayFrom,
+                      replayTo,
+                      // referenceDate: replayFrom as string,
+                      // maxDuration: 60 * 60 * 1000,
+                      asset: asset,
+                      onCompute: index => {
+                        this.logger.trace("mfiv", index)
+                        socket.send(JSON.stringify(index))
+                      }
+                    }).fetchIndex()
+
+                    // this.logger.info("index result", result)
+                    // this.replay(socket, { replayFrom, replayTo, exchange, timePeriod, asset, expiryType })
                   }
                 } else {
                   socket.send(
