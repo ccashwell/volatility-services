@@ -30,6 +30,8 @@ export type VixConfig = {
   rolloverFrequency: "weekly" | "semiweekly"
   asset: Asset
   onCompute?: (index: Index) => void
+  onComplete?: () => void
+  onError?: (err: unknown) => void
 }
 
 // export type Index = {
@@ -69,11 +71,15 @@ export class VixCalculator {
   nextOptionList: string[] = []
 
   index: number | null = null
+  invdVol: number | undefined
+
   log: Map<string, number> = new Map<string, number>()
   midBook: Map<string, number> = new Map<string, number>()
   summary: Map<string, OptionSummary> = new Map<string, OptionSummary>()
 
   onCompute: (index: Index) => void
+  onComplete: () => void
+  onError: (err: unknown) => void
 
   constructor(config: VixConfig) {
     this.refDate = dayjs.utc(config.replayFrom).startOf("minute")
@@ -85,6 +91,8 @@ export class VixCalculator {
       .diff(this.refDate) /* config.maxDuration ?? dayjs.duration(10, "seconds").asMilliseconds() */
     this.asset = config.asset
     this.onCompute = config.onCompute ?? (() => false)
+    this.onComplete = config.onComplete ?? (() => false)
+    this.onError = config.onError ?? ((err: unknown) => false)
     this.reportFrequency = config.reportFrequency ?? dayjs.duration(5, "seconds").asMilliseconds()
 
     this.setupRollover()
@@ -124,7 +132,8 @@ export class VixCalculator {
           symbols,
           from: dayjs.utc(this.refDate).toISOString(),
           to: (maxRef.isAfter(this.rolloverAt) ? this.rolloverAt : maxRef).toISOString(),
-          waitWhenDataNotYetAvailable: true
+          waitWhenDataNotYetAvailable: true,
+          autoCleanup: true
         },
         normalizeOptionsSummary
       )
@@ -157,7 +166,7 @@ export class VixCalculator {
           this.log.set(ts.toISOString(), _index)
         }
       } catch (err) {
-        // console.debug("Failed to calculate index @ %s", ts.toISOString(), err);
+        console.debug("Failed to calculate index @ %s", ts.toISOString(), err)
         // "burn in"
       }
 
@@ -168,7 +177,7 @@ export class VixCalculator {
           ...getInterestRate(),
           value: this.index ?? 0,
           dVol: this.index ?? 0,
-          invdVol: this.index ?? 0,
+          invdVol: this.invdVol ?? 0,
           timestamp: ts.toISOString(),
           asset: this.asset,
           methodology: MethodologyEnum.MFIV
@@ -194,6 +203,8 @@ export class VixCalculator {
         return await this.summaryStream()
       }
     }
+
+    this.onComplete()
 
     return this.index ?? 0
   }
@@ -229,7 +240,10 @@ export class VixCalculator {
     const B = (N14 - NT1) / (NT2 - NT1)
     const C = N365 / N14
 
-    this.index = 100 * Math.sqrt((modSigmaSquared_1 * A + modSigmaSquared_2 * B) * C)
+    const dVol = Math.sqrt((modSigmaSquared_1 * A + modSigmaSquared_2 * B) * C)
+
+    this.index = 100 * dVol
+    this.invdVol = 100.0 * (1.0 / dVol)
 
     return this.index
   }

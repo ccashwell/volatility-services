@@ -271,6 +271,14 @@ export default class WSService extends Service {
                       onCompute: index => {
                         this.logger.trace("mfiv", index)
                         socket.send(JSON.stringify(index))
+                      },
+                      onComplete: () => {
+                        this.logger.trace("socket complete. closing.")
+                        socket.close()
+                      },
+                      onError: (err: unknown) => {
+                        this.logger.error("socket error. closing socket.", err as Error)
+                        socket.close()
                       }
                     }).fetchIndex()
 
