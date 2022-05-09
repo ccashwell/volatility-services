@@ -610,7 +610,7 @@ export default class WSService extends Service {
         // 2. get riskless rate
         const risklessRate = this.getInterestRate()
         // 3. Use this as 'most recent' underlying price
-        const underlyingPrice = message.price
+        const underlyingPrice = message.underlyingPrice
         // 4. Build mfiv params
         const mfivContext: MfivContext = {
           ...estimateParams,
