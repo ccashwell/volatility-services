@@ -35,6 +35,6 @@ export class TradeOption {
   @Column({ nullable: false, type: "timestamptz" })
   expirationDate!: Date
 
-  @Column({ nullable: false, type: "timestamptz" })
+  @Column({ nullable: true, type: "timestamptz" })
   localTimestamp!: Date
 }

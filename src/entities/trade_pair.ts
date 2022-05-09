@@ -25,6 +25,6 @@ export class TradePair {
   @Column({ nullable: true, name: "transactionId" })
   id?: string
 
-  @Column({ nullable: false, type: "timestamptz" })
+  @Column({ nullable: true, type: "timestamptz" })
   localTimestamp!: Date
 }
