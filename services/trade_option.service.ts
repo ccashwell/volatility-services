@@ -139,7 +139,7 @@ export default class TradeOptionService extends Service {
     this.logger.info("start processMessages")
     for await (const message of messages) {
       if (message.type === "option_bucket") {
-        this.logger.info(message)
+        this.logger.debug(message)
         await ResultAsync.fromPromise(this.captureMessage(message), handleTypeOrmError).mapErr(
           (err: DataSourceError) => {
             this.logger.warn("ignoring insert for", message)
