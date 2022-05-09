@@ -14,8 +14,7 @@ export const AppDataSource = new DataSource({
   password: process.env.POSTGRESQL_PASSWORD || "supersecretpassword",
   logging: (process.env.TYPEORM_LOGGING || false) as LoggerOptions,
   database: process.env.POSTGRESQL_DATABASE || `volatility_${nodeEnv}`,
-  synchronize: true,
-  //synchronize: process.env.NODE_ENV === "production" || process.env.TYPEORM_SYNCRONIZE === "false" ? false : true,
+  synchronize: process.env.NODE_ENV === "production" || process.env.TYPEORM_SYNCRONIZE === "false" ? false : true,
   entities: [TradeOption, TradePair, Rate, MethodologyIndex, AuthToken, FleekTransaction],
   migrations: [],
   subscribers: []
