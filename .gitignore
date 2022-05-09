@@ -87,3 +87,6 @@ node-volatility-mfiv-internal
 
 # Place to stash things you don't want added
 private
+
+# tardis dataset location
+datasets/
