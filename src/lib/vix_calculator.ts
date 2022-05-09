@@ -46,6 +46,7 @@ export type Index = {
   methodology: MethodologyEnum
   asset: Asset
   timestamp: dayjs.Dayjs | string
+  underlyingPrice: number
 } & ReturnType<typeof getInterestRate>
 
 export type VixResult = {
@@ -163,10 +164,10 @@ export class VixCalculator {
 
         if (_index) {
           this.index = _index
-          this.log.set(ts.toISOString(), _index)
+          // this.log.set(ts.toISOString(), _index)
         }
       } catch (err) {
-        console.debug("Failed to calculate index @ %s", ts.toISOString(), err)
+        // console.debug("Failed to calculate index @ %s", ts.toISOString(), err)
         // "burn in"
       }
 
@@ -180,7 +181,8 @@ export class VixCalculator {
           invdVol: this.invdVol ?? 0,
           timestamp: ts.toISOString(),
           asset: this.asset,
-          methodology: MethodologyEnum.MFIV
+          methodology: MethodologyEnum.MFIV,
+          underlyingPrice: message.underlyingPrice ?? 0
         })
       }
 

@@ -1,10 +1,11 @@
 /* eslint-disable camelcase */
+//import { VixCalculator } from '@lib/vix_calculator';
 import { OptionBucket } from "@computables/option_bucket"
 import { IIngest, IInstrumentInfo } from "@interfaces"
 import { insufficientDataError } from "@lib/errors"
 import { mfivDates, MfivExpiry } from "@lib/expiries"
 import { handleError } from "@lib/handlers/errors"
-import { VixCalculator } from "@lib/vix_calculator"
+import { VixCalculatorV2 as VixCalculator } from "@lib/vix_calculator_v2"
 import { instrumentInfos } from "@service_helpers/instrument_info_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
 import {
@@ -261,7 +262,7 @@ export default class WSService extends Service {
                     const [methodology, timePeriod, asset] = channel.split("/")
                     const expiryType = MethodologyExpiryEnum.FridayT08
 
-                    const result = await new VixCalculator({
+                    await new VixCalculator({
                       rolloverFrequency: "weekly",
                       replayFrom,
                       replayTo,
@@ -280,7 +281,11 @@ export default class WSService extends Service {
                         this.logger.error("socket error. closing socket.", err as Error)
                         socket.close()
                       }
-                    }).fetchIndex()
+                    })
+                      .fetchIndex()
+                      .catch((err: unknown) => {
+                        this.logger.error("fetchIndex error", err)
+                      })
 
                     // this.logger.info("index result", result)
                     // this.replay(socket, { replayFrom, replayTo, exchange, timePeriod, asset, expiryType })
