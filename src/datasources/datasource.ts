@@ -1,4 +1,5 @@
 import { AuthToken, FleekTransaction, MethodologyIndex, Rate, TradePair } from "@entities"
+import { TradeOption } from "@entities/trade_option"
 import { DataSource, LoggerOptions } from "typeorm"
 
 const nodeEnv = process.env.NODE_ENV ?? "test"
@@ -13,8 +14,9 @@ export const AppDataSource = new DataSource({
   password: process.env.POSTGRESQL_PASSWORD || "supersecretpassword",
   logging: (process.env.TYPEORM_LOGGING || false) as LoggerOptions,
   database: process.env.POSTGRESQL_DATABASE || `volatility_${nodeEnv}`,
-  synchronize: process.env.NODE_ENV === "production" ? false : true,
-  entities: [TradePair, Rate, MethodologyIndex, AuthToken, FleekTransaction],
+  synchronize: true,
+  //synchronize: process.env.NODE_ENV === "production" || process.env.TYPEORM_SYNCRONIZE === "false" ? false : true,
+  entities: [TradeOption, TradePair, Rate, MethodologyIndex, AuthToken, FleekTransaction],
   migrations: [],
   subscribers: []
 })
