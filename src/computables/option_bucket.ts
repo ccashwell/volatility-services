@@ -12,10 +12,11 @@ export type OptionBucket = {
   readonly summaries: number
   readonly openTimestamp: Date
   readonly closeTimestamp: Date
-  readonly price: number
+  readonly underlyingPrice: number
   readonly lastPrice: number
   readonly strikePrice: number
   readonly expirationDate: Date
+  readonly optionType: "call" | "put"
 
   readonly timestamp: Date
   readonly localTimestamp: Date
@@ -118,13 +119,14 @@ export class OptionBucketComputable implements Computable<OptionBucket> {
     }
 
     inProgress.id = option.symbol
-    inProgress.price = option.underlyingPrice ?? 0
+    inProgress.underlyingPrice = option.underlyingPrice ?? 0
     inProgress.lastPrice = option.lastPrice ?? 0
     inProgress.strikePrice = option.strikePrice
     inProgress.timestamp = option.timestamp
     inProgress.closeTimestamp = option.timestamp
     inProgress.localTimestamp = option.localTimestamp
     inProgress.expirationDate = option.expirationDate
+    inProgress.optionType = option.optionType
 
     inProgress.summaries += 1
   }
@@ -137,8 +139,9 @@ export class OptionBucketComputable implements Computable<OptionBucket> {
     bucketToReset.name = this._name
     bucketToReset.interval = this._interval
     bucketToReset.kind = this._kind
-    bucketToReset.price = 0
+    bucketToReset.underlyingPrice = 0
     bucketToReset.lastPrice = 0
+    bucketToReset.underlyingPrice = 0
     bucketToReset.strikePrice = 0
     bucketToReset.id = undefined
     bucketToReset.summaries = 0

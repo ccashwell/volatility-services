@@ -16,6 +16,19 @@
       }
     },
     {
+      "name": "trade_option debug",
+      "request": "launch",
+      "runtimeArgs": ["run", "dev:trade_option"],
+      "runtimeExecutable": "npm",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node",
+      "env": {
+        "NODE_ENV": "production",
+        "TRADE_OPTION_ASSET": "ETH",
+        "TYPEORM_SYNCRONIZE": "true"
+      }
+    },
+    {
       "name": "Graph Demo",
       "program": "${workspaceFolder}/src/graph.ts",
       "type": "node",

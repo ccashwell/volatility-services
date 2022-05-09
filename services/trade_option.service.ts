@@ -22,6 +22,7 @@ import {
   streamNormalized
 } from "tardis-dev"
 import { InsertResult } from "typeorm"
+import { OptionTypeEnum } from "./../src/entities/types"
 
 export default class TradeOptionService extends Service {
   //state: ProcessingStateEnum = ProcessingStateEnum.Idle
@@ -181,7 +182,9 @@ export default class TradeOptionService extends Service {
         localTimestamp,
         strikePrice: message.strikePrice,
         expirationDate: message.expirationDate,
-        price: message.lastPrice?.toString() ?? "0"
+        price: message.lastPrice?.toString() ?? "0",
+        underlyingPrice: message.underlyingPrice?.toString() ?? "0",
+        optionType: message.optionType as OptionTypeEnum
       })
     } else if (message.type === "option_bucket") {
       return this.executeInsert({
@@ -192,7 +195,9 @@ export default class TradeOptionService extends Service {
         localTimestamp,
         strikePrice: message.strikePrice,
         expirationDate: message.expirationDate,
-        price: message.price?.toString() ?? "0"
+        price: message.lastPrice?.toString() ?? "0",
+        underlyingPrice: message.underlyingPrice?.toString() ?? "0",
+        optionType: message.optionType as OptionTypeEnum
       })
     }
 

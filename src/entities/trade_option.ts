@@ -1,4 +1,4 @@
-import { BaseCurrencyEnum } from "@entities/types"
+import { BaseCurrencyEnum, OptionTypeEnum } from "@entities/types"
 import { Exchange, EXCHANGES } from "tardis-dev"
 import { Column, Entity, Index, PrimaryColumn } from "typeorm"
 
@@ -21,16 +21,21 @@ export class TradeOption {
   symbol!: string
 
   @Column({ nullable: false, type: "decimal" })
-  price!: string
+  underlyingPrice!: string
 
   @Column({ nullable: false, type: "integer" })
   strikePrice!: number
+
+  @Column({ nullable: false, type: "decimal" })
+  price!: string
 
   // @Column({ nullable: false, type: "decimal" })
   // amount!: string
 
   // @Column({ nullable: true, name: "transactionId" })
   // id?: string
+  @Column({ nullable: false, enum: OptionTypeEnum })
+  optionType!: OptionTypeEnum
 
   @Column({ nullable: false, type: "timestamptz" })
   expirationDate!: Date

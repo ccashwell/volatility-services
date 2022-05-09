@@ -26,3 +26,8 @@ export enum MethodologyExpiryEnum {
 export enum RateSourceEnum {
   Aave = "AAVE"
 }
+
+export enum OptionTypeEnum {
+  Call = "call",
+  Put = "put"
+}
