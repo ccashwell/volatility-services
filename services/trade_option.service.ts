@@ -13,14 +13,7 @@ import { waitForDatasourceReady } from "@lib/utils/helpers"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { ResultAsync } from "neverthrow"
 import newrelic from "newrelic"
-import {
-  compute,
-  Exchange,
-  getInstrumentInfo,
-  normalizeOptionsSummary,
-  OptionSummary,
-  streamNormalized
-} from "tardis-dev"
+import { compute, getInstrumentInfo, normalizeOptionsSummary, OptionSummary, streamNormalized } from "tardis-dev"
 import { InsertResult } from "typeorm"
 import { OptionTypeEnum } from "./../src/entities/types"
 
@@ -235,23 +228,4 @@ export default class TradeOptionService extends Service {
 
     return optionList
   }
-}
-
-const tradePairAssets: Record<"BTC" | "ETH", { exchange: Exchange; symbols: TradePairSymbol[] }[]> = {
-  ETH: [
-    { exchange: "binance", symbols: ["ETHUSDT"] },
-    { exchange: "bitstamp", symbols: ["ETHUSD"] },
-    { exchange: "coinbase", symbols: ["ETH-USD"] },
-    { exchange: "ftx", symbols: ["ETH-USD"] },
-    { exchange: "gemini", symbols: ["ETHUSD"] },
-    { exchange: "kraken", symbols: ["ETH/USD"] }
-  ],
-  BTC: [
-    { exchange: "binance", symbols: ["BTCUSDT"] },
-    { exchange: "bitstamp", symbols: ["BTCUSD"] },
-    { exchange: "coinbase", symbols: ["BTC-USD"] },
-    { exchange: "ftx", symbols: ["BTC-USD"] },
-    { exchange: "gemini", symbols: ["BTCUSD"] },
-    { exchange: "kraken", symbols: ["BTC/USD"] }
-  ]
 }
