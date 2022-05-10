@@ -17,6 +17,8 @@ export type OptionBucket = {
   readonly strikePrice: number
   readonly expirationDate: Date
   readonly optionType: "call" | "put"
+  readonly delta: number
+  readonly markIV: number
 
   readonly timestamp: Date
   readonly localTimestamp: Date
@@ -127,6 +129,8 @@ export class OptionBucketComputable implements Computable<OptionBucket> {
     inProgress.localTimestamp = option.localTimestamp
     inProgress.expirationDate = option.expirationDate
     inProgress.optionType = option.optionType
+    inProgress.delta = option.delta ?? 0
+    inProgress.markIV = option.markIV ?? 0
 
     inProgress.summaries += 1
   }
@@ -143,6 +147,8 @@ export class OptionBucketComputable implements Computable<OptionBucket> {
     bucketToReset.lastPrice = 0
     bucketToReset.underlyingPrice = 0
     bucketToReset.strikePrice = 0
+    bucketToReset.delta = 0
+    bucketToReset.markIV = 0
     bucketToReset.id = undefined
     bucketToReset.summaries = 0
     bucketToReset.openTimestamp = DATE_MIN

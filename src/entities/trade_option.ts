@@ -37,6 +37,12 @@ export class TradeOption {
   @Column({ nullable: false, enum: OptionTypeEnum })
   optionType!: OptionTypeEnum
 
+  @Column({ nullable: true, type: "decimal" })
+  markIV!: string
+
+  @Column({ nullable: true, type: "decimal" })
+  delta!: string
+
   @Column({ nullable: false, type: "timestamptz" })
   expirationDate!: Date
 

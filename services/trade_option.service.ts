@@ -177,7 +177,9 @@ export default class TradeOptionService extends Service {
         expirationDate: message.expirationDate,
         price: message.lastPrice?.toString() ?? "0",
         underlyingPrice: message.underlyingPrice?.toString() ?? "0",
-        optionType: message.optionType as OptionTypeEnum
+        optionType: message.optionType as OptionTypeEnum,
+        markIV: message.markIV?.toString() ?? "0",
+        delta: message.delta?.toString() ?? "0"
       })
     } else if (message.type === "option_bucket") {
       return this.executeInsert({
@@ -190,7 +192,9 @@ export default class TradeOptionService extends Service {
         expirationDate: message.expirationDate,
         price: message.lastPrice?.toString() ?? "0",
         underlyingPrice: message.underlyingPrice?.toString() ?? "0",
-        optionType: message.optionType as OptionTypeEnum
+        optionType: message.optionType as OptionTypeEnum,
+        markIV: message.markIV?.toString() ?? "0",
+        delta: message.delta?.toString() ?? "0"
       })
     }
 

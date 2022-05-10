@@ -1,12 +1,13 @@
-import { AuthToken, FleekTransaction, MethodologyIndex, Rate, TradePair } from "@entities"
-import { TradeOption } from "@entities/trade_option"
+import "dotenv"
+import "tsconfig-paths/register"
 import { DataSource, LoggerOptions } from "typeorm"
+import { AuthToken, FleekTransaction, MethodologyIndex, Rate, TradeOption, TradePair } from "../entities"
 
 const nodeEnv = process.env.NODE_ENV ?? "test"
 const host = process.env.POSTGRESQL_HOST || process.env.POSTGRES_HOST || process.env.PG_HOST || "localhost"
 // const type = process.env.DATASOURCE_TYPE || (host.includes("amazonaws.com") ? "postgres" : "postgres")
 
-export const AppDataSource = new DataSource({
+export const AppDataSource: DataSource = new DataSource({
   type: "postgres",
   host,
   port: +(process.env.POSTGRESQL_PORT || 5432),
@@ -16,6 +17,6 @@ export const AppDataSource = new DataSource({
   database: process.env.POSTGRESQL_DATABASE || `volatility_${nodeEnv}`,
   synchronize: process.env.NODE_ENV === "production" || process.env.TYPEORM_SYNCRONIZE === "false" ? false : true,
   entities: [TradeOption, TradePair, Rate, MethodologyIndex, AuthToken, FleekTransaction],
-  migrations: [],
+  migrations: ["src/migrations/*.ts"],
   subscribers: []
 })
