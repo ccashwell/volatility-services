@@ -97,7 +97,7 @@ export default class TradePairService extends Service {
              */
             this.processMessages(/*computedMessages*/ combinedMessageStream)
               .then(() => this.logger.info("Finished"))
-              .catch((err: unknown) => this.onStreamError(err as Error))
+              .catch(onError)
           })
           .catch(onError)
       },
@@ -108,7 +108,7 @@ export default class TradePairService extends Service {
     })
   }
 
-  onStreamError(err: Error) {
+  onStreamError(err: Error): void {
     newrelic.noticeError(err, { service: this.name })
     this.logger.error("onStreamError", err)
   }
@@ -149,7 +149,7 @@ export default class TradePairService extends Service {
   //   return cancellable
   // }
 
-  private captureMessage(message: Trade | TradeBucket): Promise<InsertResult> {
+  private captureMessage(message: Trade | TradeBucket): Promise<InsertResult | void> {
     const { timestamp, exchange, symbol, id, price, localTimestamp } = message
     // this.logger.info(message)
     this.lastMessage = message
@@ -161,7 +161,7 @@ export default class TradePairService extends Service {
       id,
       price: price.toString(),
       localTimestamp
-    })
+    }).catch(err => this.onStreamError(err))
     // .catch(err => {
     //   if (err instanceof QueryFailedError) {
     //     if (err.message === "duplicate key value violates unique constraint") {

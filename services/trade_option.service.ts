@@ -100,7 +100,7 @@ export default class TradeOptionService extends Service {
 
             this.processMessages(/*computedMessages*/ realTimeStreams)
               .then(() => this.logger.info("Finished"))
-              .catch((err: unknown) => this.onStreamError(err as Error))
+              .catch(onError)
 
             // const combinedMessageStream = combine(...realTimeStreams)
 
@@ -120,7 +120,7 @@ export default class TradeOptionService extends Service {
     })
   }
 
-  onStreamError(err: Error) {
+  onStreamError(err: Error): void {
     newrelic.noticeError(err, { service: this.name })
     this.logger.error("onStreamError", err)
   }
@@ -162,7 +162,7 @@ export default class TradeOptionService extends Service {
   //   return cancellable
   // }
 
-  private captureMessage(message: OptionSummary | OptionBucket): Promise<InsertResult | undefined> {
+  private captureMessage(message: OptionSummary | OptionBucket): Promise<InsertResult | void> {
     const { timestamp, exchange, symbol, localTimestamp } = message
     this.lastMessage = message
 
@@ -180,7 +180,7 @@ export default class TradeOptionService extends Service {
         optionType: message.optionType as OptionTypeEnum,
         markIV: message.markIV?.toString() ?? "0",
         delta: message.delta?.toString() ?? "0"
-      })
+      }).catch(err => this.onStreamError(err))
     } else if (message.type === "option_bucket") {
       return this.executeInsert({
         asset: this.settings.tradeOptionAsset,
@@ -195,7 +195,7 @@ export default class TradeOptionService extends Service {
         optionType: message.optionType as OptionTypeEnum,
         markIV: message.markIV?.toString() ?? "0",
         delta: message.delta?.toString() ?? "0"
-      })
+      }).catch(err => this.onStreamError(err))
     }
 
     return Promise.resolve(undefined)
