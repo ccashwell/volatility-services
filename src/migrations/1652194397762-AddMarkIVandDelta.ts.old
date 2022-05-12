@@ -1,0 +1,20 @@
+import { MigrationInterface, QueryRunner, TableColumn } from "typeorm"
+
+export class AddMarkIVandDelta1652194397762 implements MigrationInterface {
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.addColumns("trade_options", [
+      new TableColumn({
+        type: "decimal",
+        name: "delta"
+      }),
+      new TableColumn({
+        type: "decimal",
+        name: "delta"
+      })
+    ])
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    queryRunner.dropColumns("trade_options", ["markIV", "delta"])
+  }
+}
