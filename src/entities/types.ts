@@ -15,10 +15,6 @@ export enum MethodologyEnum {
   MFIV = "MFIV"
 }
 
-export enum MethodologyWindowEnum {
-  Day14 = "14D"
-}
-
 export enum MethodologyExpiryEnum {
   FridayT08 = "FridayT08:00:00Z"
 }

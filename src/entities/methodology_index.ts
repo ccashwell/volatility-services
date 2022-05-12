@@ -1,11 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, Unique } from "typeorm"
-import {
-  BaseCurrencyEnum,
-  MethodologyEnum,
-  MethodologyExchangeEnum,
-  MethodologyWindowEnum,
-  SymbolTypeEnum
-} from "./types"
+import { BaseCurrencyEnum, MethodologyEnum, MethodologyExchangeEnum, SymbolTypeEnum } from "./types"
 
 @Entity("methodology_indices")
 @Index(["methodology", "timePeriod", "asset", "exchange", "symbolType"])
@@ -26,9 +20,9 @@ export class MethodologyIndex {
   @PrimaryColumn()
   methodology!: MethodologyEnum
 
-  @Column({ nullable: false, type: "enum", enum: MethodologyWindowEnum })
+  @Column({ nullable: false })
   @PrimaryColumn()
-  timePeriod!: MethodologyWindowEnum
+  timePeriod!: string
 
   @Column({ nullable: false, type: "enum", enum: BaseCurrencyEnum })
   @PrimaryColumn()

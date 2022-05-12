@@ -1,4 +1,5 @@
 import { MethodologyExpiryEnum } from "@entities"
+import { timePeriodToInteger } from "@lib/utils/time_period"
 import { Asset } from "node-volatility-mfiv"
 import C from "./constants"
 
@@ -16,11 +17,8 @@ export const mfivDates = (
   asset?: Asset
 ): MfivExpiry => {
   // TODO: Remove guard once we need to support other time ranges.
-  if (timePeriod !== "14D") {
-    throw Error(`An time period of ${timePeriod} is not allowed. Only '14D' is currently supported.`)
-  }
-
-  const nextExpirationDate = nextExpiration(now.valueOf(), timePeriod, expiryType)
+  const tp = timePeriodToInteger(timePeriod)
+  const nextExpirationDate = nextExpiration(now.valueOf(), tp, expiryType)
   const nearExpirationDate = new Date(nextExpirationDate.valueOf() - 7 * C.MILLISECONDS_PER_DAY)
   const rollover = new Date(nextExpirationDate.valueOf() - 14 * C.MILLISECONDS_PER_DAY)
 
@@ -32,9 +30,9 @@ export const mfivDates = (
   }
 }
 
-const nextExpiration = (dateMs: number, timePeriod: string, expiryType: string) => {
+const nextExpiration = (dateMs: number, timePeriod: number, expiryType: string) => {
   const expiryMatch = expiryTypeToOrdinals(expiryType)
-  const targetDate = new Date(dateMs + C.MILLISECONDS_PER_DAY * parseInt(timePeriod, 10))
+  const targetDate = new Date(dateMs + C.MILLISECONDS_PER_DAY * timePeriod)
   const targetDay = targetDate.getUTCDay()
   const targetHour = targetDate.getUTCHours()
   let nextDate: Date

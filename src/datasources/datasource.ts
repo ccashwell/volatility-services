@@ -1,4 +1,3 @@
-import "dotenv"
 import "tsconfig-paths/register"
 import { DataSource, LoggerOptions } from "typeorm"
 import { AuthToken, FleekTransaction, MethodologyIndex, Rate, TradeOption, TradePair } from "../entities"

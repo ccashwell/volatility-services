@@ -1,3 +1,4 @@
+import { timePeriodToInteger } from "@lib/utils/time_period"
 import dayjs from "dayjs"
 import duration from "dayjs/plugin/duration"
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter"
@@ -10,31 +11,25 @@ import {
   MfivResult,
   OptionSummary as MfivOptionSummary
 } from "node-volatility-mfiv"
-import {
-  getInstrumentInfo,
-  normalizeOptionsSummary,
-  OptionSummary,
-  replayNormalized,
-  streamNormalized
-} from "tardis-dev"
+import { Exchange, normalizeOptionsSummary, OptionSummary, replayNormalized, streamNormalized } from "tardis-dev"
 import { MethodologyEnum } from "./../entities/types"
+import { buildExpiries, Expiries } from "./utils/expiries"
 
 dayjs.extend(utc)
 dayjs.extend(duration)
 dayjs.extend(isSameOrAfter)
 
 const DERIBIT_DATE_FORMAT = "DMMMYY"
-const API_KEY = "TD.to6g6hrAi1IF-cry.LYFonb8PxeLnWRM.9IO46aP0s1m03kA.buSdKQHw6-tMWFs.BZwEKGswTrx-JqQ.INRt"
-
-type MidBook = (string | number)[][]
 
 export type VixConfig = {
+  apiKey: string
+  exchange: Exchange
   replayFrom: string
   replayTo: string
   // maxDuration?: number
   // referenceDate?: dayjs.Dayjs | string
+  timePeriod: string
   reportFrequency?: number
-  rolloverFrequency: "weekly" | "semiweekly"
   asset: Asset
   onCompute?: (index: Index) => void
   onComplete?: () => void
@@ -54,6 +49,7 @@ export type Index = {
   asset: Asset
   timestamp: dayjs.Dayjs | string
   underlyingPrice: number
+  timePeriod: string
 } & ReturnType<typeof getInterestRate>
 
 export type VixResult = {
@@ -62,36 +58,18 @@ export type VixResult = {
   log?: Index[]
 }
 
-// type RequiredOptionSummary = Required<
-//   Pick<OptionSummary, "markPrice" | "timestamp" | "expirationDate" | "name" | "strikePrice" | "optionType" | "type">
-// > & { bestBidPrice: number; bestAskPrice: number; underlyingPrice: number; markPrice: number }
-
-interface MidBookItem {
-  name: string | undefined
-  expirationDate: Date
-  symbol: string
-  underlyingPrice: number
-  bestBidPrice: number
-  bestAskPrice: number
-  markPrice: number
-  strikePrice: number
-}
-
 export class VixCalculatorV2 {
+  apiKey: string
   refDate: dayjs.Dayjs
   startDate: dayjs.Dayjs
-  rolloverAt!: dayjs.Dayjs
-  nearExpiry!: dayjs.Dayjs
-  nextExpiry!: dayjs.Dayjs
   risklessRate: number
-
+  timePeriod: number
+  timePeriodOption: string
   reportFrequency: number
-  rolloverFrequency: string
   maxDuration: number
-
+  exchange: Exchange
   asset: Asset
-  nearOptionList: string[] = []
-  nextOptionList: string[] = []
+  expiries!: Expiries
 
   index: Index | undefined
 
@@ -107,10 +85,13 @@ export class VixCalculatorV2 {
   onError: (err: unknown) => void
 
   constructor(config: VixConfig) {
+    this.apiKey = config.apiKey
+    this.exchange = config.exchange
     this.refDate = dayjs.utc(config.replayFrom).startOf("minute")
     this.startDate = dayjs.utc(config.replayFrom).startOf("minute")
-    this.rolloverFrequency = config.rolloverFrequency
     this.risklessRate = getInterestRate().risklessRate
+    this.timePeriod = timePeriodToInteger(config.timePeriod)
+    this.timePeriodOption = config.timePeriod
     this.maxDuration = dayjs
       .utc(config.replayTo)
       .diff(this.refDate) /* config.maxDuration ?? dayjs.duration(10, "seconds").asMilliseconds() */
@@ -119,12 +100,15 @@ export class VixCalculatorV2 {
     this.onComplete = config.onComplete ?? (() => false)
     this.onError = config.onError ?? ((err: unknown) => false)
     this.reportFrequency = config.reportFrequency ?? dayjs.duration(5, "seconds").asMilliseconds()
-
-    this.setupRollover()
   }
 
   async fetchIndex(): Promise<VixResult> {
-    await this.buildOptionLists()
+    this.expiries = await buildExpiries({
+      now: this.refDate.toISOString(),
+      timePeriod: this.timePeriod,
+      exchange: "deribit",
+      asset: this.asset
+    })
     await this.summaryStream()
 
     const avgIndex = Array.from(this.log.values()).reduce((out, index) => (out += index), 0) / this.log.size
@@ -137,26 +121,26 @@ export class VixCalculatorV2 {
   }
 
   private createStream(): AsyncIterableIterator<OptionSummary> {
-    const symbols = [...this.nearOptionList, ...this.nextOptionList]
     const maxRef = dayjs.utc(this.refDate).add(this.maxDuration, "ms")
 
     console.log("Starting new stream", {
       initialRef: this.startDate.toISOString(),
       currentRef: this.refDate.toISOString(),
       maxRef: maxRef.toISOString(),
-      near: this.nearExpiry.toISOString(),
-      next: this.nextExpiry.toISOString(),
-      symbolGroups: Array.from(new Set(symbols.map(s => s.split("-")[1])))
+      near: this.expiries.nearExpiry,
+      next: this.expiries.nextExpiry
     })
+
+    const symbols = [...this.expiries.nearSymbols, ...this.expiries.nextSymbols]
 
     if (this.refDate.isBefore(dayjs.utc().startOf("minute"))) {
       return replayNormalized(
         {
-          apiKey: API_KEY,
+          apiKey: process.env.TARDIS_API_KEY!,
           exchange: "deribit",
           symbols,
           from: dayjs.utc(this.refDate).toISOString(),
-          to: (maxRef.isAfter(this.rolloverAt) ? this.rolloverAt : maxRef).toISOString(),
+          to: maxRef.isAfter(this.expiries.rolloverAt) ? this.expiries.rolloverAt : maxRef.toISOString(),
           waitWhenDataNotYetAvailable: true,
           autoCleanup: true
         },
@@ -239,15 +223,18 @@ export class VixCalculatorV2 {
         break
       }
 
-      if (ts.isSameOrAfter(this.rolloverAt)) {
+      if (ts.isSameOrAfter(this.expiries.rolloverAt)) {
         console.log("Rolling over", ts.toISOString())
-        this.refDate = dayjs.utc(this.rolloverAt)
-        this.setupRollover()
-
-        // this.midBook.clear();
+        this.refDate = dayjs.utc(this.expiries.rolloverAt)
         this.summary.clear()
 
-        await this.buildOptionLists()
+        this.expiries = await buildExpiries({
+          now: this.refDate.toISOString(),
+          timePeriod: this.timePeriod,
+          exchange: "deribit",
+          asset: this.asset
+        })
+
         return await this.summaryStream()
       }
     }
@@ -262,15 +249,15 @@ export class VixCalculatorV2 {
     const interestRate = getInterestRate()
     let mfivContext: MfivContext = {
         ...interestRate,
-        timePeriod: "14D",
+        timePeriod: this.timePeriodOption,
         exchange: "deribit",
         methodology: MethodologyEnum.MFIV,
         asset: this.asset
       },
       mfivParams: MfivParams = {
         at: message.timestamp.toISOString(),
-        nearDate: this.nearExpiry.toISOString(),
-        nextDate: this.nextExpiry.toISOString(),
+        nearDate: this.expiries.nearExpiry,
+        nextDate: this.expiries.nextExpiry,
         options: Array.from(this.summary.values()) as MfivOptionSummary[],
         underlyingPrice: message.underlyingPrice ?? 0
       }
@@ -280,6 +267,7 @@ export class VixCalculatorV2 {
     const index: Index = {
       ...interestRate,
       asset,
+      timePeriod: this.timePeriodOption,
       dVol: dVol ?? 0,
       invdVol: invdVol ?? 0,
       value: value ?? 0,
@@ -288,79 +276,33 @@ export class VixCalculatorV2 {
       underlyingPrice
     }
 
-    // if (mfivResult.estimatedFor.startsWith("2021-05-26T20:09:00")) {
-    //   console.log("mfiv result", JSON.stringify(mfivResult))
-    //   console.log("input options", JSON.stringify(mfivParams.options))
-    // }
+    // if (mfivResult.estimatedFor.startsWith("2022-05-06T18:15:05")) {
+    //   fs.writeFile(
+    //     "./may26-evidence.json",
+    //     JSON.stringify({
+    //       version: "2022-03-22",
+    //       type: "mfiv.estimate.evidence",
+    //       metadata: {},
+    //       context: mfivContext,
+    //       params: mfivParams,
+    //       result: mfivResult
+    //     }),
+    //     err => {
+    //       if (err) {
+    //         console.error(err)
+    //         return
+    //       }
+    //       //file written successfully
+    //     }
+    //   )
+
+    // console.log("mfiv context", JSON.stringify(mfivContext))
+    // console.log("mfiv params", JSON.stringify(mfivParams))
+    // console.log("mfiv result", JSON.stringify(mfivResult))
+    // console.log("input options", JSON.stringify(mfivParams.options))
+    //}
 
     return index
-  }
-
-  private async buildOptionLists(): Promise<string[]> {
-    const instruments = await getInstrumentInfo("deribit", {
-      type: "option",
-      baseCurrency: this.asset
-    })
-
-    const nearExpiry = this.nearExpiry.toISOString()
-    const nextExpiry = this.nextExpiry.toISOString()
-    this.nearOptionList = []
-    this.nextOptionList = []
-
-    for (const instrument of instruments) {
-      if (instrument.expiry === undefined) {
-        continue
-      }
-
-      const { expiry } = instrument
-
-      if (expiry === nearExpiry) {
-        this.nearOptionList.push(instrument.id)
-      }
-
-      if (expiry === nextExpiry) {
-        this.nextOptionList.push(instrument.id)
-      }
-    }
-
-    return [...this.nearOptionList, ...this.nextOptionList]
-  }
-
-  private setupRollover(): void {
-    this.rolloverWeekly()
-  }
-
-  /**
-   * Rollover once per week. Targets the first Friday 14+ days out and the one before it.
-   */
-  private rolloverWeekly(): void {
-    console.log("Finding new weekly rollover", this.refDate.toISOString())
-
-    // find first Friday after target day
-    if (this.refDate.day() === 5 && this.refDate.hour() >= 8) {
-      this.nextExpiry = dayjs.utc(this.refDate).hour(8).startOf("hour").add(21, "days")
-    } else if (this.refDate.day() === 6) {
-      this.nextExpiry = dayjs.utc(this.refDate).hour(8).startOf("hour").add(20, "days")
-    } else {
-      this.nextExpiry = dayjs
-        .utc(this.refDate)
-        .hour(8)
-        .startOf("hour")
-        .add(19 - this.refDate.day(), "days")
-    }
-
-    // near is always exactly 1 week before next
-    this.nearExpiry = dayjs.utc(this.nextExpiry).subtract(7, "days")
-
-    // rollover happens 14 days before next
-    this.rolloverAt = dayjs.utc(this.nextExpiry).subtract(14, "days")
-
-    console.log(
-      "New weekly rollovers found",
-      this.rolloverAt.toISOString(),
-      this.nearExpiry.toISOString(),
-      this.nextExpiry.toISOString()
-    )
   }
 }
 

@@ -3,7 +3,6 @@ import {
   MethodologyEnum,
   MethodologyExchangeEnum,
   MethodologyExpiryEnum,
-  MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities"
 import { ContractType } from "tardis-dev"
@@ -11,7 +10,7 @@ import { ContractType } from "tardis-dev"
 export interface EstimateParams {
   at: string | Date
   methodology: MethodologyEnum
-  timePeriod: MethodologyWindowEnum
+  timePeriod: string
   asset: BaseCurrencyEnum
   exchange: MethodologyExchangeEnum
   symbolType: SymbolTypeEnum

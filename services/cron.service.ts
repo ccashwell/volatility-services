@@ -3,7 +3,6 @@ import {
   MethodologyEnum,
   MethodologyExchangeEnum,
   MethodologyExpiryEnum,
-  MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities/types"
 import { IIndex } from "@interfaces"
@@ -29,7 +28,7 @@ export default class CronService extends Service {
         estimate: {
           exchange: process.env.CRON_ESTIMATE_EXCHANGE as MethodologyExchangeEnum,
           methodology: process.env.CRON_METHODOLOGY as MethodologyEnum,
-          timePeriod: process.env.CRON_INTERVAL as MethodologyWindowEnum,
+          timePeriod: process.env.CRON_INTERVAL,
           symbolType: process.env.CRON_SYMBOL_TYPE as SymbolTypeEnum,
           expiryType: process.env.CRON_EXPIRY_TYPE as MethodologyExpiryEnum,
           contractType: ["call_option", "put_option"]

@@ -1,12 +1,5 @@
 import { AppDataSource } from "@datasources/datasource"
-import {
-  BaseCurrencyEnum,
-  MethodologyEnum,
-  MethodologyExchangeEnum,
-  MethodologyIndex,
-  MethodologyWindowEnum,
-  SymbolTypeEnum
-} from "@entities"
+import { BaseCurrencyEnum, MethodologyEnum, MethodologyExchangeEnum, MethodologyIndex, SymbolTypeEnum } from "@entities"
 import { IIndex, IRate } from "@interfaces"
 import { mfivDates } from "@lib/expiries"
 import { ensure } from "@lib/utils/ensure"
@@ -73,12 +66,15 @@ export default class IndexService extends Service {
             exchange: { type: "enum", values: ["deribit"], default: "deribit" },
             methodology: { type: "enum", values: ["MFIV"], default: "MFIV" },
             asset: { type: "enum", values: ["ETH", "BTC"] },
-            timePeriod: { type: "enum", values: ["14D"], default: "14D" },
+            timePeriod: { type: "string", pattern: /^\d+[Dd]$/, default: "14D" },
             symbolType: { type: "enum", values: ["option"], default: "option" },
             expiryType: { type: "string", default: "FridayT08:00:00Z" },
             contractType: { type: "array", items: "string", enum: ["call_option", "put_option"] }
           },
           handler(this: IndexService, ctx: Context<IIndex.EstimateParams>): Promise<IIndex.EstimateResponse> {
+            // TODO: Make sure timePeriod isn't 0
+            // TODO: Make sure timePeriod can't be too large.
+
             return this.indexOperation(ctx, ctx.params)
               .then(evidence => {
                 newrelic.incrementMetric("/Index/estimate")
@@ -164,7 +160,7 @@ export default class IndexService extends Service {
     const mfivResult = maybeMfivResult.value
 
     const evidence: MfivEvidence = {
-      version: "2022-03-22",
+      version: "2022-05-10",
       type: "MFIV.ESTIMATE.EVIDENCE",
       context: mfivContext,
       params: mfivParams,
@@ -211,7 +207,7 @@ export default class IndexService extends Service {
       asset: ctx.asset as BaseCurrencyEnum,
       exchange: ctx.exchange as MethodologyExchangeEnum,
       methodology: ctx.methodology as MethodologyEnum,
-      timePeriod: ctx.timePeriod as MethodologyWindowEnum,
+      timePeriod: ctx.timePeriod,
       value: evidence.result.dVol?.toString() ?? "undefined",
       extra
     })

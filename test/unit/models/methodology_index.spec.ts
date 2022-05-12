@@ -3,7 +3,6 @@ import {
   BaseCurrencyEnum,
   MethodologyEnum,
   MethodologyExchangeEnum,
-  MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities"
 import { MethodologyIndex } from "@entities/methodology_index"
@@ -20,7 +19,7 @@ describe("Test 'MethodologyIndex' model", () => {
       asset: BaseCurrencyEnum.ETH,
       exchange: MethodologyExchangeEnum.Deribit,
       methodology: MethodologyEnum.MFIV,
-      timePeriod: MethodologyWindowEnum.Day14,
+      timePeriod: '14D',
       symbolType: SymbolTypeEnum.Option,
       extra: { requestId: "1234" }
     }

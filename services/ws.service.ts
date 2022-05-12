@@ -5,9 +5,10 @@ import { IIngest, IInstrumentInfo } from "@interfaces"
 import { insufficientDataError } from "@lib/errors"
 import { mfivDates, MfivExpiry } from "@lib/expiries"
 import { handleError } from "@lib/handlers/errors"
+import { ensure } from "@lib/utils/ensure"
 import { VixCalculatorV2 as VixCalculator } from "@lib/vix_calculator_v2"
 import { instrumentInfos } from "@service_helpers/instrument_info_helper"
-import { Context, Service, ServiceBroker } from "moleculer"
+import { Context, Service, ServiceBroker, Validator } from "moleculer"
 import {
   default as ApiGateway,
   DISABLED,
@@ -38,7 +39,6 @@ import {
   MethodologyEnum,
   MethodologyExchangeEnum,
   MethodologyExpiryEnum,
-  MethodologyWindowEnum,
   SymbolTypeEnum
 } from "./../src/entities/types"
 import { EstimateParams } from "./../src/interfaces/services/index/iindex.d"
@@ -56,6 +56,19 @@ const MESSAGE_ENUM = Object.freeze({
  */
 export default class WSService extends Service {
   private latestMessage?: OptionSummary
+
+  /**
+   * @private
+   */
+  private subscriptionCheck = (() => {
+    const v = new Validator()
+    const schema = {
+      $$root: true,
+      type: "string",
+      pattern: /MFIV\/\d+D\/(BTC|ETH)/
+    }
+    return v.compile(schema)
+  })()
 
   /**
    * Keep a grouping of expiry dates => symbols so we can request a set of OptionSummary objects
@@ -79,6 +92,8 @@ export default class WSService extends Service {
       name: "ws",
       mixins: [ApiGateway],
       settings: {
+        apiKey: ensure("TARDIS_API_KEY"),
+
         instrumentInfoDefaults: {
           exchange: process.env.INGEST_EXCHANGE || "deribit",
           type: process.env.INGEST_TYPE || "option",
@@ -190,7 +205,7 @@ export default class WSService extends Service {
           },
 
           open: (ws: WebSocket) => {
-            // Upon connecting, subscribe the socket to MFIV/14D/ETH
+            // Upon connecting, subscribe the socket to MFIV/${timePeriod}/${asset}
             // ws.subscribe(MESSAGE_ENUM.CLIENT_CONNECTED)
             // ws.subscribe(MESSAGE_ENUM.CLIENT_DISCONNECTED)
             // ws.subscribe(MESSAGE_ENUM.CLIENT_MESSAGE)
@@ -253,33 +268,39 @@ export default class WSService extends Service {
                 const replayFrom = clientMsg.replayFrom
                 const replayTo = clientMsg.replayTo
 
-                if (channel === "MFIV/14D/ETH" || channel === "MFIV/14D/BTC") {
+                if (this.subscriptionCheck(channel)) {
                   this.logger.info("Subscribed", channel)
                   if (replayFrom === undefined && replayTo == undefined) {
                     socket.subscribe(channel)
                   } else {
                     const exchange = MethodologyExchangeEnum.Deribit
                     const [methodology, timePeriod, asset] = channel.split("/")
-                    const expiryType = MethodologyExpiryEnum.FridayT08
 
                     await new VixCalculator({
-                      rolloverFrequency: "weekly",
+                      apiKey: this.settings.apiKey,
+                      exchange,
                       replayFrom,
                       replayTo,
                       // referenceDate: replayFrom as string,
                       // maxDuration: 60 * 60 * 1000,
-                      asset: asset,
+                      asset,
+                      timePeriod,
                       onCompute: index => {
-                        this.logger.trace("mfiv", index)
+                        this.logger.debug("onCompute(index)")
+                        this.logger.trace("onCompute(index)", index)
                         socket.send(JSON.stringify(index))
+                        this.logger.debug("send(index)")
                       },
                       onComplete: () => {
+                        this.logger.debug("onComplete()")
                         this.logger.trace("socket complete. closing.")
                         socket.close()
+                        this.logger.debug("close socket")
                       },
                       onError: (err: unknown) => {
                         this.logger.error("socket error. closing socket.", err as Error)
                         socket.close()
+                        this.logger.debug("close socket")
                       }
                     })
                       .fetchIndex()
@@ -321,6 +342,12 @@ export default class WSService extends Service {
         }
       },
       actions: {
+        //: Context<{apiKey:string}>
+        async authenticate(ctx) {
+          const { req, res } = ctx.params
+          const apiKey = req.query["apiKey"]
+          throw new Error(`Could not find '${apiKey}`)
+        },
         // authorize(ctx: Context<unknown>) {
         //   console.log("***** HERE 2")
         // const { req, res } = ctx.params
@@ -405,48 +432,15 @@ export default class WSService extends Service {
       },
 
       events: {
-        "MFIV.14D.ETH.expiry": {
-          handler(context: Context<OptionSummary>) {
-            // await this.actions.announce(context.params)
-            const payload = { topic: "mfiv/expiry", data: context.params }
-            const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(payload))
-
-            /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-            this.server.publish("mfiv/expiry", message, false)
-            // wsList.forEach(ws => {
-            //   if (ws.isSubscribed("mfiv/expiry") || ws.) {
-            //     const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(context.params))
-            //     ws.send(message, false, false)
-            //   }
-            // })
-            //   ws.publish("mfiv/expiry", JSON.stringify(context.params))
-            // })
-            // const encoder = new TextEncoder()
-            // const message = encoder.encode(
-            //   JSON.stringify({
-            //     topic: "mfiv.14d.eth.expiry",
-            //     data: context.params
-            //   })
-            // )
-            // uWS.
-            // await (this as ApiGateway).server.publish("mfiv/expiry", context.params, false, false)
-            // uWS.publish
-            /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-            // await this.server.publish("mfiv.14d.eth.expiry", message, true, false)
-            // await this.actions.announce(context.params)
-            /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-            //await this.server.publish("mfiv.14d.eth.expiry", message, true, false)
-          }
-        },
-
-        "MFIV.14D.ETH.index.created": {
+        "MFIV.*.*.index.created": {
           handler(this: WSService, context: Context<MfivEvidence>) {
             const result = context.params.result
             const { dVol, invdVol, asset, value } = result
             const methodology = context.params.context.methodology.toUpperCase()
             const timePeriod = context.params.context.timePeriod.toUpperCase()
+            const channel = `${methodology}/${timePeriod}/${asset}`
             const serverMsg = {
-              channel: "MFIV/14D/ETH",
+              channel,
               data: {
                 id: `${methodology}.${timePeriod}.${asset}`,
                 type: "index",
@@ -465,46 +459,7 @@ export default class WSService extends Service {
             }
 
             this.logger.info("Sending MFIV")
-            this.server.publish("MFIV/14D/ETH", this.encoder.encode(JSON.stringify(serverMsg)), false)
-            // this.logger.info("index.created", index)
-            // const payload = { topic: "MFIV/14D/ETH", message: index }
-            // const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(payload))
-            // /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-            // await this.server.publish("MFIV/14D/ETH", message, false)
-          }
-        },
-        "MFIV.14D.BTC.index.created": {
-          handler(this: WSService, context: Context<MfivEvidence>) {
-            const result = context.params.result
-            const { dVol, invdVol, asset, value } = result
-            const methodology = context.params.context.methodology.toUpperCase()
-            const timePeriod = context.params.context.timePeriod.toUpperCase()
-            const serverMsg = {
-              channel: "MFIV/14D/BTC",
-              data: {
-                id: `${methodology}.${timePeriod}.${asset}`,
-                type: "index",
-                dVol,
-                invdVol,
-                value,
-                underlying: context.params.params.underlyingPrice,
-                methodology,
-                timePeriod,
-                asset,
-                risklessRate: context.params.context.risklessRate,
-                risklessRateAt: context.params.context.risklessRateAt,
-                risklessRateSource: context.params.context.risklessRateSource,
-                timestamp: context.params.params.at
-              }
-            }
-
-            this.logger.info("Sending MFIV")
-            this.server.publish("MFIV/14D/BTC", this.encoder.encode(JSON.stringify(serverMsg)), false)
-            // this.logger.info("index.created", index)
-            // const payload = { topic: "MFIV/14D/ETH", message: index }
-            // const message = (this.settings.encoder as TextEncoder).encode(JSON.stringify(payload))
-            // /* eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-            // await this.server.publish("MFIV/14D/ETH", message, false)
+            this.server.publish(channel, this.encoder.encode(JSON.stringify(serverMsg)), false)
           }
         }
       },
@@ -517,6 +472,16 @@ export default class WSService extends Service {
       }
     })
   }
+
+  // @ts-ignore
+  // private async authenticate(req, res) {
+  //   console.log("args", arguments)
+  //   // @ts-ignore
+  //   const { req, res } = ctx.params
+  //   const apiKey = req.query["apiKey"]
+  //   console.log("apiKey", apiKey)
+  //   throw new Error(`Could not find '${apiKey}`)
+  // }
 
   private async replay(
     ws: WebSocket,
@@ -794,7 +759,7 @@ type ReplayOptions = {
   replayFrom: string
   replayTo: string
   exchange: MethodologyExchangeEnum
-  timePeriod: MethodologyWindowEnum
+  timePeriod: string
   asset: BaseCurrencyEnum
   expiryType: MethodologyExpiryEnum
 }

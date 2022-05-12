@@ -4,7 +4,6 @@ import {
   MethodologyEnum,
   MethodologyExchangeEnum,
   MethodologyExpiryEnum,
-  MethodologyWindowEnum,
   SymbolTypeEnum
 } from "@entities"
 import { IIndex } from "@interfaces/services/index"
@@ -49,7 +48,7 @@ describe("index.service api", () => {
         exchange: MethodologyExchangeEnum.Deribit,
         contractType: ["call_option", "put_option"],
         symbolType: SymbolTypeEnum.Option,
-        timePeriod: MethodologyWindowEnum.Day14,
+        timePeriod: "14D",
         asset: BaseCurrencyEnum.ETH,
         expiryType: MethodologyExpiryEnum.FridayT08
       }
@@ -77,7 +76,7 @@ describe("index.service api", () => {
         exchange: MethodologyExchangeEnum.Deribit,
         contractType: ["call_option", "put_option"],
         symbolType: SymbolTypeEnum.Option,
-        timePeriod: MethodologyWindowEnum.Day14,
+        timePeriod: "14D",
         asset: BaseCurrencyEnum.ETH,
         expiryType: MethodologyExpiryEnum.FridayT08
       }
