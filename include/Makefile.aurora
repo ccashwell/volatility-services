@@ -5,6 +5,7 @@ PASSWD := VbeGd95Fmejj6RvAttunvr06rvaGHTmO
 DATABASE := postgres
 USER := harper
 PGPASSWORD := VbeGd95Fmejj6RvAttunvr06rvaGHTmO
+SSM_INSTANCE_ID := i-018b9a8cf7ddb2157
 
 CONNECTION = -h $(HOST) -U $(USER) -d $(DATABASE)
 
@@ -20,10 +21,10 @@ create-token:
 	PGPASSWORD=${PGPASSWORD} psql ${CONNECTION} < create-token.sql
 
 postgres-proxy:
-	aws ssm start-session --target i-0d347ce82d958676a --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["5432"], "localPortNumber":["5432"]}'
+	aws ssm start-session --target $(SSM_INSTANCE_ID) --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["5432"], "localPortNumber":["5432"]}'
 
 nats-proxy:
-	aws ssm start-session --target i-0d347ce82d958676a --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["4222"], "localPortNumber":["4222"]}'
+	aws ssm start-session --target $(SSM_INSTANCE_ID) --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["4222"], "localPortNumber":["4222"]}'
 
 connect-proxy:
 	PGPASSWORD=$(PGPASSWORD) psql $(CONNECTION)
