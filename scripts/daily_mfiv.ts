@@ -38,9 +38,10 @@ const fetchIndex = async (replayFrom: dayjs.Dayjs, replayTo: dayjs.Dayjs) => {
       ws.send(
         JSON.stringify({
           type: "SUBSCRIBE",
-          channel: `MFIV/7D/ETH`,
+          channel: `MFIV/14D/ETH`,
           replayFrom: replayFrom.toISOString(),
-          replayTo: replayTo.toISOString()
+          replayTo: replayTo.toISOString(),
+          __record__: true
           // replayFrom: "2021-10-01T07:00:00.000Z",
           // replayTo: "2021-10-01T07:02:00.000Z"
         })
@@ -70,8 +71,8 @@ const fetchIndex = async (replayFrom: dayjs.Dayjs, replayTo: dayjs.Dayjs) => {
 }
 
 async function main() {
-  const startAt = "2022-05-06T00:00:00.000Z"
-  const endAt = "2022-05-06T18:16:00.000Z"
+  const startAt = "2022-01-01T00:00:00.000Z"
+  const endAt = "2022-01-03T00:00:00.000Z"
 
   // const startAt = "2021-05-26T18:15:00.000Z"
   // const endAt = "2021-05-26T18:16:00.000Z"
@@ -82,9 +83,9 @@ async function main() {
   let $end = dayjs.utc(endAt)
 
   while ($replayFrom < $end) {
-    let $replayTo = $replayFrom.add(18 * 60 + 16, "minutes")
+    // let $replayTo = $replayFrom.add(18 * 60 + 16, "minutes")
     // console.log("args", { start: $replayFrom.toISOString(), end: $replayTo.toISOString() })
-
+    let $replayTo = $replayFrom.add(1, "days")
     await fetchIndex($replayFrom, $replayTo)
     // console.log("daily", dailyValues)
     console.log("processed", $replayFrom.toISOString())
@@ -96,8 +97,8 @@ async function main() {
     // .catch(err => {
     //   console.error("[catch]", err)
     // })
-
-    $replayFrom = $replayFrom.add(1, "days")
+    $replayFrom = $replayTo
+    // $replayFrom = $replayFrom.add(1, "days")
   }
 }
 
@@ -108,41 +109,3 @@ async function main() {
   console.log(dailyValues)
   console.log("finish", new Date())
 })()
-// <html>
-// 	<head>
-// 		<script>
-//       let ws;
-
-//       function main() {
-//         /* Connect to the server */
-//         // ws = new WebSocket('ws://localhost:3000/ws');
-//         ws = new WebSocket('wss://ws.stage.volatility.com/ws')
-
-//         ws.onopen = () => {
-//           ws.send(JSON.stringify({
-//             type: "SUBSCRIBE",
-//             channel: `MFIV/14D/ETH`,
-//             replayFrom: "2021-10-01T07:00:00.000Z",
-//             replayTo: "2021-10-01T08:00:00.000Z"
-//           }))
-//         };
-
-//         /* For every message we receive */
-//         ws.onmessage = (message) => {
-//           console.info(">>>>", message)
-//         };
-
-//         ws.onclose = () => {
-//           console.info(">>> closing")
-//         };
-
-//         ws.onerror = (err) => {
-//           console.error("&&&", err)
-//         };
-
-//       }
-// 		</script>
-// 	</head>
-//   <body onload="main()" style="margin: 0; height: 100vh; width: 100vw">
-//   </body>
-// </html>

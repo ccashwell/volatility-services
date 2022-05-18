@@ -1,0 +1,38 @@
+<html>
+	<head>
+		<script>
+      let ws;
+
+      function main() {
+        /* Connect to the server */
+        // ws = new WebSocket('ws://localhost:3000/ws');
+        ws = new WebSocket('wss://ws.stage.volatility.com/ws')
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({
+            type: "SUBSCRIBE",
+            channel: `MFIV/14D/ETH`,
+            replayFrom: "2021-10-01T07:00:00.000Z",
+            replayTo: "2021-10-01T08:00:00.000Z"
+          }))
+        };
+
+        /* For every message we receive */
+        ws.onmessage = (message) => {
+          console.info(">>>>", message)
+        };
+
+        ws.onclose = () => {
+          console.info(">>> closing")
+        };
+
+        ws.onerror = (err) => {
+          console.error("&&&", err)
+        };
+
+      }
+		</script>
+	</head>
+  <body onload="main()" style="margin: 0; height: 100vh; width: 100vw">
+  </body>
+</html>
