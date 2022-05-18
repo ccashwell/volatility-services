@@ -376,7 +376,7 @@ export default class WSService extends Service {
         },
 
         mfiv: {
-          rest: "GET mfiv",
+          rest: "GET /mfiv",
           visibility: "public",
           params: {
             interval: { type: "string", enum: ["5M", "15M", "1H", "1D"], default: "15M" },
@@ -386,6 +386,7 @@ export default class WSService extends Service {
             asset: { type: "string", enum: ["ETH", "BTC"] }
           },
           handler(ctx: Context<ApiMfivParams>) {
+            this.logger.info("mfiv()", ctx)
             return { data: [], prev: null, next: null }
           }
         }
