@@ -1,9 +1,9 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, Unique } from "typeorm"
-import { BaseCurrencyEnum, MethodologyEnum, MethodologyExchangeEnum, SymbolTypeEnum } from "."
+import { BaseCurrencyEnum, MethodologyExchangeEnum } from "."
 
 @Entity("mfiv_indices")
-@Index(["methodology", "timePeriod", "asset", "exchange", "symbolType"])
-@Unique(["timestamp", "methodology", "interval", "asset", "symbolType"])
+@Index(["timestamp", "asset", "exchange", "timePeriod"])
+@Unique(["timestamp", "asset", "exchange", "timePeriod"])
 export class MfivIndex {
   @Column({ nullable: false })
   @Index()
@@ -14,11 +14,7 @@ export class MfivIndex {
   value!: string
 
   @Column({ nullable: false, type: "decimal" })
-  ivalue!: string
-
-  @Column({ nullable: false, type: "enum", enum: MethodologyEnum })
-  @PrimaryColumn()
-  methodology!: MethodologyEnum
+  invValue!: string
 
   @Column({ nullable: false })
   @PrimaryColumn()
@@ -29,13 +25,8 @@ export class MfivIndex {
   asset!: BaseCurrencyEnum
 
   @Column({ nullable: false, type: "enum", enum: MethodologyExchangeEnum })
+  @PrimaryColumn()
   exchange!: MethodologyExchangeEnum
-
-  @Column({ nullable: false, type: "enum", enum: SymbolTypeEnum })
-  symbolType!: SymbolTypeEnum
-
-  @Column({ nullable: false, type: "timestamp with time zone" })
-  at!: Date
 
   @Column({ nullable: false, type: "timestamp with time zone" })
   nearExpiry!: Date
