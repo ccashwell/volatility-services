@@ -343,11 +343,11 @@ export default class WSService extends Service {
       },
       actions: {
         //: Context<{apiKey:string}>
-        async authenticate(ctx) {
-          const { req, res } = ctx.params
-          const apiKey = req.query["apiKey"]
-          throw new Error(`Could not find '${apiKey}`)
-        },
+        // async authenticate(ctx) {
+        //   const { req, res } = ctx.params
+        //   const apiKey = req.query["apiKey"]
+        //   throw new Error(`Could not find '${apiKey}`)
+        // },
         // authorize(ctx: Context<unknown>) {
         //   console.log("***** HERE 2")
         // const { req, res } = ctx.params
@@ -372,6 +372,21 @@ export default class WSService extends Service {
 
           handler() {
             return { status: "OK" }
+          }
+        },
+
+        mfiv: {
+          rest: "GET mfiv",
+          visibility: "public",
+          params: {
+            interval: { type: "string", enum: ["5M", "15M", "1H", "1D"], default: "15M" },
+            dateFrom: { type: "date", convert: true, default: new Date("2022-01-01T00:00:00.000Z") },
+            dateTo: { type: "date", convert: true, default: () => new Date() },
+            timePeriod: { type: "string" },
+            asset: { type: "string", enum: ["ETH", "BTC"] }
+          },
+          handler(ctx: Context<ApiMfivParams>) {
+            return { data: [], prev: null, next: null }
           }
         }
 
@@ -768,4 +783,12 @@ interface DefaultOptionSummary {
   bestAskPrice: number
   bestBidPrice: number
   underlyingPrice: number
+}
+
+interface ApiMfivParams {
+  interval: string
+  dateFrom: Date
+  dateTo: Date
+  timePeriod: string
+  asset: Asset
 }
