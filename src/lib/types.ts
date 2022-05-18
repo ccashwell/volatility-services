@@ -388,3 +388,9 @@ const BTC_SYMBOLS = ["BTCUSDT", "BTCUSD", "BTC/USD", "BTC/USDC", "BTC/USDT", "BT
 export const SYMBOLS = [...ETH_SYMBOLS, ...BTC_SYMBOLS] as const
 
 export type TradePairSymbol = typeof SYMBOLS[number]
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  prev: string | null
+  next: string | null
+}

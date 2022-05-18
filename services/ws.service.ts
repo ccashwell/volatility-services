@@ -1,13 +1,17 @@
 /* eslint-disable camelcase */
 //import { VixCalculator } from '@lib/vix_calculator';
 import { OptionBucket } from "@computables/option_bucket"
+import { AppDataSource } from "@datasources/datasource"
+import { MfivIndex } from "@entities/mfiv_index"
 import { IIngest, IInstrumentInfo } from "@interfaces"
 import { insufficientDataError } from "@lib/errors"
 import { mfivDates, MfivExpiry } from "@lib/expiries"
 import { handleError } from "@lib/handlers/errors"
+import { PaginatedResponse } from "@lib/types"
 import { ensure } from "@lib/utils/ensure"
 import { VixCalculatorV2 as VixCalculator } from "@lib/vix_calculator_v2"
 import { instrumentInfos } from "@service_helpers/instrument_info_helper"
+import dayjs from "dayjs"
 import { Context, Service, ServiceBroker, Validator } from "moleculer"
 import {
   default as ApiGateway,
@@ -30,6 +34,7 @@ import {
 } from "node-volatility-mfiv"
 import { Exchange, OptionSummary, ReplayNormalizedOptions } from "tardis-dev"
 import { chainFrom } from "transducist"
+import { InsertResult } from "typeorm"
 import { TextDecoder, TextEncoder } from "util"
 import { streamNormalizedWS } from "../src/ws/stream"
 import { initTardis } from "./../src/datasources/tardis"
@@ -267,6 +272,7 @@ export default class WSService extends Service {
 
                 const replayFrom = clientMsg.replayFrom
                 const replayTo = clientMsg.replayTo
+                const record = clientMsg.__record__ === true
 
                 if (this.subscriptionCheck(channel)) {
                   this.logger.info("Subscribed", channel)
@@ -275,14 +281,14 @@ export default class WSService extends Service {
                   } else {
                     const exchange = MethodologyExchangeEnum.Deribit
                     const [methodology, timePeriod, asset] = channel.split("/")
+                    const reportFrequency = record ? 5 : undefined
 
                     await new VixCalculator({
                       apiKey: this.settings.apiKey,
                       exchange,
                       replayFrom,
                       replayTo,
-                      // referenceDate: replayFrom as string,
-                      // maxDuration: 60 * 60 * 1000,
+                      reportFrequency,
                       asset,
                       timePeriod,
                       onCompute: index => {
@@ -290,6 +296,29 @@ export default class WSService extends Service {
                         this.logger.trace("onCompute(index)", index)
                         socket.send(JSON.stringify(index))
                         this.logger.debug("send(index)")
+
+                        if (record) {
+                          executeMfivInsert({
+                            timestamp: dayjs.utc(index.timestamp as string).toDate(),
+                            dVol: index.dVol.toString(),
+                            invdVol: index.invdVol.toString(),
+                            timePeriod: index.timePeriod,
+                            exchange: MethodologyExchangeEnum.Deribit,
+                            asset: index.asset as BaseCurrencyEnum,
+                            underlyingPrice: index.underlyingPrice.toString(),
+                            nearExpiry: dayjs.utc(index.nearExpiry).toDate(),
+                            nextExpiry: dayjs.utc(index.nextExpiry).toDate(),
+                            extra: {
+                              type: "idx",
+                              rate: {
+                                src: index.risklessRateSource,
+                                val: index.risklessRate,
+                                ts: dayjs.utc(index.risklessRateAt).toDate()
+                              }
+                            },
+                            createdAt: dayjs.utc().toDate()
+                          }).catch((err: Error) => this.logger.error("executeMfivInsert error", err))
+                        }
                       },
                       onComplete: () => {
                         this.logger.debug("onComplete()")
@@ -385,9 +414,45 @@ export default class WSService extends Service {
             timePeriod: { type: "string" },
             asset: { type: "string", enum: ["ETH", "BTC"] }
           },
-          handler(ctx: Context<ApiMfivParams>) {
+          async handler(ctx: Context<ApiMfivParams>): Promise<PaginatedResponse<MfivIndex>> {
             this.logger.info("mfiv()", ctx)
-            return { data: [], prev: null, next: null }
+            const interval = ctx.params.interval
+            let counter = 0
+            const filterMap: Record<string, number> = {
+              "5M": 1,
+              "15M": 3,
+              "1H": 11,
+              "1D": 287
+            }
+
+            if (filterMap[interval] === undefined) {
+              return {
+                data: [],
+                prev: null,
+                next: null
+              }
+            }
+
+            return await queryMfiv(ctx.params)
+              .then((arr: MfivIndex[]) => {
+                return chainFrom(arr).takeNth(filterMap[interval]).toArray()
+              })
+              .then((arr: MfivIndex[]) => {
+                return {
+                  data: arr,
+                  prev: null,
+                  next: null
+                }
+              })
+              .catch((err: Error) => {
+                this.logger.error("queryMfiv error", err)
+                return {
+                  data: [],
+                  prev: null,
+                  next: null
+                }
+              })
+            //            return { data: await queryMfiv(ctx.params), prev: null, next: null }
           }
         }
 
@@ -749,6 +814,37 @@ function replayNormalizedOptions<E extends Exchange>({
       to
     }
   }
+}
+
+async function executeMfivInsert(mfivIndex: MfivIndex): Promise<InsertResult> {
+  return await AppDataSource.manager.createQueryBuilder().insert().into(MfivIndex).values([mfivIndex]).execute()
+}
+
+async function queryMfiv(params: ApiMfivParams): Promise<MfivIndex[]> {
+  const { dateFrom, dateTo, timePeriod, asset } = params
+  return (
+    AppDataSource.manager
+      .createQueryBuilder()
+      .select([
+        "index.timestamp",
+        "index.timePeriod",
+        "index.asset",
+        "index.dVol",
+        "index.invdVol",
+        "index.underlyingPrice"
+        // "index.extra"
+        // "\"index.extra\"->'rate'->>'ts' AS \"risklessRateAt\""
+      ])
+      // .select(
+      //   'index.timestamp, "index.timePeriod", index.asset, index.value, "index.invValue", "index.underlyingPrice", "index.extra"->\'rate\'->>\'ts\' AS "risklessRateAt", , "index.extra"->\'rate\'->>\'src\' AS "risklessRateSource", , "index.extra"->\'rate\'->>\'val\' AS "risklessRate"'
+      // )
+      .from(MfivIndex, "index")
+      .where("index.timestamp >= :dateFrom", { dateFrom })
+      .andWhere("index.timestamp < :dateTo", { dateTo })
+      .andWhere('"timePeriod" = :timePeriod', { timePeriod })
+      .andWhere("index.asset = :asset", { asset })
+      .getMany()
+  )
 }
 
 /**

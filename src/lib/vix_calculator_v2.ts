@@ -50,6 +50,8 @@ export type Index = {
   timestamp: dayjs.Dayjs | string
   underlyingPrice: number
   timePeriod: string
+  nearExpiry: string
+  nextExpiry: string
 } & ReturnType<typeof getInterestRate>
 
 export type VixResult = {
@@ -99,7 +101,8 @@ export class VixCalculatorV2 {
     this.onCompute = config.onCompute ?? (() => false)
     this.onComplete = config.onComplete ?? (() => false)
     this.onError = config.onError ?? ((err: unknown) => false)
-    this.reportFrequency = config.reportFrequency ?? dayjs.duration(5, "seconds").asMilliseconds()
+    // this.reportFrequency = config.reportFrequency ?? dayjs.duration(5, "seconds").asMilliseconds()
+    this.reportFrequency = dayjs.duration(config.reportFrequency || 15, "minutes").asMilliseconds()
   }
 
   async fetchIndex(): Promise<VixResult> {
@@ -201,10 +204,13 @@ export class VixCalculatorV2 {
           const _index = this.calculateIndex(message)
 
           if (_index) {
+            // console.log(">>>", message.timestamp)
             this.index = _index
             // this.log.set(ts.toISOString(), _index)
           }
         } catch (err) {
+          // console.log("---", message.timestamp)
+          this.index = undefined
           // console.debug("Failed to calculate index @ %s", ts.toISOString(), err)
           // "burn in"
         }
@@ -273,7 +279,9 @@ export class VixCalculatorV2 {
       value: value ?? 0,
       methodology: methodology as MethodologyEnum,
       timestamp: estimatedFor,
-      underlyingPrice
+      underlyingPrice,
+      nearExpiry: this.expiries.nearExpiry,
+      nextExpiry: this.expiries.nextExpiry
     }
 
     // if (mfivResult.estimatedFor.startsWith("2022-05-06T18:15:05")) {

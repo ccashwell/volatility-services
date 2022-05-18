@@ -1,20 +1,22 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, Unique } from "typeorm"
 import { BaseCurrencyEnum, MethodologyExchangeEnum } from "."
 
+export interface MfivIndexExtra {
+  type: "idx"
+  rate: { src: string; ts: Date; val: number }
+}
+
 @Entity("mfiv_indices")
-@Index(["timestamp", "asset", "exchange", "timePeriod"])
-@Unique(["timestamp", "asset", "exchange", "timePeriod"])
+@Index(["timestamp", "exchange", "timePeriod", "asset"])
+@Unique(["timestamp", "exchange", "timePeriod", "asset"])
 export class MfivIndex {
   @Column({ nullable: false })
-  @Index()
-  @PrimaryColumn()
+  @PrimaryColumn({ nullable: false, type: "timestamptz" })
   timestamp!: Date
 
-  @Column({ nullable: false, type: "decimal" })
-  value!: string
-
-  @Column({ nullable: false, type: "decimal" })
-  invValue!: string
+  @Column({ nullable: false, type: "enum", enum: MethodologyExchangeEnum })
+  @PrimaryColumn()
+  exchange!: MethodologyExchangeEnum
 
   @Column({ nullable: false })
   @PrimaryColumn()
@@ -24,18 +26,23 @@ export class MfivIndex {
   @PrimaryColumn()
   asset!: BaseCurrencyEnum
 
-  @Column({ nullable: false, type: "enum", enum: MethodologyExchangeEnum })
-  @PrimaryColumn()
-  exchange!: MethodologyExchangeEnum
+  @Column({ nullable: false, type: "decimal", name: "value" })
+  dVol!: string
 
-  @Column({ nullable: false, type: "timestamp with time zone" })
+  @Column({ nullable: false, type: "decimal", name: "invValue" })
+  invdVol!: string
+
+  @Column({ nullable: false, type: "decimal" })
+  underlyingPrice!: string
+
+  @Column({ nullable: false, type: "timestamptz" })
   nearExpiry!: Date
 
-  @Column({ nullable: false, type: "timestamp with time zone" })
+  @Column({ nullable: false, type: "timestamptz" })
   nextExpiry!: Date
 
   @Column({ nullable: true, type: "jsonb" })
-  extra!: Record<string, unknown>
+  extra!: MfivIndexExtra
 
   @CreateDateColumn()
   createdAt!: Date
