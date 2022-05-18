@@ -72,7 +72,7 @@ export const buildExpiries = async ({
        * If time delta is negative, then select it as the near expiry IFF it's the smallest diff
        * If time delta is positive, then select it as the next expiry IFF it's the smallest diff
        */
-      if (delta < 0 && delta < prev.nearDiff) {
+      if (delta < 0 && delta > prev.nearDiff) {
         prev.nearDiff = delta
         prev.nearExpiry = curr
       } else if (delta > 0 && delta < prev.nextDiff) {
@@ -82,7 +82,7 @@ export const buildExpiries = async ({
 
       return prev
     },
-    { nearDiff: Infinity, nextDiff: Infinity, nearExpiry: "", nextExpiry: "" }
+    { nearDiff: -Infinity, nextDiff: Infinity, nearExpiry: "", nextExpiry: "" }
   )
 
   const { nearExpiry, nextExpiry } = result
