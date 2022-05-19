@@ -843,6 +843,7 @@ async function queryMfiv(params: ApiMfivParams): Promise<MfivIndex[]> {
       .andWhere("index.timestamp < :dateTo", { dateTo })
       .andWhere('"timePeriod" = :timePeriod', { timePeriod })
       .andWhere("index.asset = :asset", { asset })
+      .orderBy("index.timestamp", "ASC")
       .getMany()
   )
 }
