@@ -13,6 +13,7 @@ import { waitForDatasourceReady } from "@lib/utils/helpers"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { ResultAsync } from "neverthrow"
 import newrelic from "newrelic"
+import { Asset } from "node-volatility-mfiv"
 import { combine, compute, Exchange, normalizeTrades, streamNormalized, Trade } from "tardis-dev"
 import { InsertResult } from "typeorm"
 
@@ -191,11 +192,11 @@ export default class TradePairService extends Service {
 
   private selectTradePairs() {
     this.logger.info("assets", this.settings.tradePairAssets)
-    return tradePairAssets[this.settings.tradePairAssets as "BTC" | "ETH"]
+    return tradePairAssets[this.settings.tradePairAssets as Asset]
   }
 }
 
-const tradePairAssets: Record<"BTC" | "ETH", { exchange: Exchange; symbols: TradePairSymbol[] }[]> = {
+const tradePairAssets: Record<"BTC" | "ETH" | "SOL", { exchange: Exchange; symbols: TradePairSymbol[] }[]> = {
   ETH: [
     { exchange: "binance", symbols: ["ETHUSDT"] },
     { exchange: "bitstamp", symbols: ["ETHUSD"] },
@@ -211,5 +212,13 @@ const tradePairAssets: Record<"BTC" | "ETH", { exchange: Exchange; symbols: Trad
     { exchange: "ftx", symbols: ["BTC-USD"] },
     { exchange: "gemini", symbols: ["BTCUSD"] },
     { exchange: "kraken", symbols: ["BTC/USD"] }
+  ],
+  SOL: [
+    { exchange: "binance", symbols: ["SOLUSDT"] },
+    { exchange: "bitstamp", symbols: ["SOLUSD"] },
+    { exchange: "coinbase", symbols: ["SOL-USD"] },
+    { exchange: "ftx", symbols: ["SOL-USD"] },
+    { exchange: "gemini", symbols: ["SOLUSD"] },
+    { exchange: "kraken", symbols: ["SOL/USD"] }
   ]
 }

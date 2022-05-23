@@ -5,6 +5,7 @@ import { ensure } from "@lib/utils/ensure"
 import { parseContractType } from "@lib/utils/helpers"
 import * as _ from "lodash"
 import { Context, Service, ServiceBroker } from "moleculer"
+import { MFIV_ASSETS } from "node-volatility-mfiv"
 // import * as Cron from "moleculer-cron"
 import { InstrumentInfo } from "tardis-dev"
 import { chainFrom } from "transducist"
@@ -62,7 +63,7 @@ export default class InstrumentInfoService extends Service {
           visibility: "public",
           params: {
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
-            asset: { type: "string", enum: ["ETH", "BTC"] },
+            asset: { type: "string", enum: MFIV_ASSETS },
             type: { type: "string", enum: ["option"], default: "option" },
             contractType: { type: "array", items: "string", default: ["call_option", "put_option"] }
           },
@@ -84,7 +85,7 @@ export default class InstrumentInfoService extends Service {
           params: {
             timestamp: { type: "string" },
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
-            asset: { type: "string", enum: ["ETH", "BTC"] },
+            asset: { type: "string", enum: MFIV_ASSETS },
             type: { type: "string", enum: ["option"], default: "option" },
             contractType: { type: "array", items: "string", default: ["call_option", "put_option"] },
             active: { type: "boolean", default: true },
@@ -107,7 +108,7 @@ export default class InstrumentInfoService extends Service {
           },
           params: {
             exchange: { type: "string", enum: ["deribit"], default: "deribit" },
-            asset: { type: "string", enum: ["ETH", "BTC"] }
+            asset: { type: "string", enum: MFIV_ASSETS }
           },
           handler(
             this: InstrumentInfoService,

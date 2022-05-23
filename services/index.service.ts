@@ -8,7 +8,7 @@ import { optionSummariesLists } from "@service_helpers/ingest_helper"
 import { Context, Service, ServiceBroker } from "moleculer"
 import { Result } from "neverthrow"
 import newrelic from "newrelic"
-import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult } from "node-volatility-mfiv"
+import { compute, MfivContext, MfivEvidence, MfivParams, MfivResult, MFIV_ASSETS } from "node-volatility-mfiv"
 import { OptionSummary } from "tardis-dev"
 import { chainFrom } from "transducist"
 
@@ -65,7 +65,7 @@ export default class IndexService extends Service {
             at: { type: "string" },
             exchange: { type: "enum", values: ["deribit"], default: "deribit" },
             methodology: { type: "enum", values: ["MFIV"], default: "MFIV" },
-            asset: { type: "enum", values: ["ETH", "BTC"] },
+            asset: { type: "enum", values: MFIV_ASSETS },
             timePeriod: { type: "string", pattern: /^\d+[Dd]$/, default: "14D" },
             symbolType: { type: "enum", values: ["option"], default: "option" },
             expiryType: { type: "string", default: "FridayT08:00:00Z" },

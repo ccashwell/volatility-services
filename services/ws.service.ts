@@ -30,6 +30,7 @@ import {
   MfivEvidence,
   MfivParams,
   MfivResult,
+  MFIV_ASSETS,
   OptionSummary as MfivOptionSummary
 } from "node-volatility-mfiv"
 import { Exchange, OptionSummary, ReplayNormalizedOptions } from "tardis-dev"
@@ -70,7 +71,7 @@ export default class WSService extends Service {
     const schema = {
       $$root: true,
       type: "string",
-      pattern: /MFIV\/\d+D\/(BTC|ETH)/
+      pattern: /MFIV\/\d+D\/(BTC|ETH|SOL)/
     }
     return v.compile(schema)
   })()
@@ -412,7 +413,7 @@ export default class WSService extends Service {
             dateFrom: { type: "date", convert: true, default: new Date("2022-01-01T00:00:00.000Z") },
             dateTo: { type: "date", convert: true, default: () => new Date() },
             timePeriod: { type: "string" },
-            asset: { type: "string", enum: ["ETH", "BTC"] }
+            asset: { type: "string", enum: MFIV_ASSETS }
           },
           async handler(ctx: Context<ApiMfivParams>): Promise<PaginatedResponse<MfivIndex>> {
             this.logger.info("mfiv()", ctx)

@@ -385,7 +385,8 @@ export type PartialInstrumentInfo = Pick<
 
 const ETH_SYMBOLS = ["ETHUSDT", "ETHUSD", "ETH/USD", "ETH/USDC", "ETH/USDT", "ETH-USD"] as const
 const BTC_SYMBOLS = ["BTCUSDT", "BTCUSD", "BTC/USD", "BTC/USDC", "BTC/USDT", "BTC-USD"] as const
-export const SYMBOLS = [...ETH_SYMBOLS, ...BTC_SYMBOLS] as const
+const SOL_SYMBOLS = ["SOLUSDT", "SOLUSD", "SOL/USD", "SOL/USDC", "SOL/USDT", "SOL-USD"] as const
+export const SYMBOLS = [...ETH_SYMBOLS, ...BTC_SYMBOLS, ...SOL_SYMBOLS] as const
 
 export type TradePairSymbol = typeof SYMBOLS[number]
 

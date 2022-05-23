@@ -1,6 +1,8 @@
+import { Asset } from "node-volatility-mfiv"
+
 export interface OptionSummariesParams {
   expiry: string
-  asset: "BTC" | "ETH"
+  asset: Asset
 }
 
 export type OptionSummariesResponse = OptionSummary[]
