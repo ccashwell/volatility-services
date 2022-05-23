@@ -24,6 +24,7 @@ export default class TradeOptionService extends Service {
   batchedOffset = 0
   batchedRecords: TradeOption[] = new Array(this.BATCH_SIZE)
   private lastMessage?: OptionSummary | OptionBucket
+  private latest: Map<string, TradeOption> = new Map<string, TradeOption>()
 
   // @ts-ignore
   public constructor(public broker: ServiceBroker) {
@@ -58,13 +59,26 @@ export default class TradeOptionService extends Service {
           handler(this: TradeOptionService, ctx: Context) {
             return Promise.resolve(this.lastMessage)
           }
+        },
+
+        latest: {
+          visibility: "public",
+          rest: "GET /latest",
+          // rest: `GET /${ensure("TRADE_OPTION_ASSET").toLowerCase()
+          handler(this: TradeOptionService, ctx: Context) {
+            return Promise.resolve(this.getLatest())
+          }
         }
       },
 
       /**
        * Methods
        */
-      methods: {},
+      methods: {
+        getLatest: () => {
+          return Array.from(this.latest.values())
+        }
+      },
 
       /**
        * Service created lifecycle event handler
@@ -182,7 +196,7 @@ export default class TradeOptionService extends Service {
         delta: message.delta?.toString() ?? "0"
       }).catch(err => this.onStreamError(err))
     } else if (message.type === "option_bucket") {
-      return this.executeInsert({
+      const data = {
         asset: this.settings.tradeOptionAsset,
         timestamp,
         exchange,
@@ -195,7 +209,11 @@ export default class TradeOptionService extends Service {
         optionType: message.optionType as OptionTypeEnum,
         markIV: message.markIV?.toString() ?? "0",
         delta: message.delta?.toString() ?? "0"
-      }).catch(err => this.onStreamError(err))
+      }
+
+      this.latest.set(symbol, data)
+
+      return this.executeInsert(data).catch(err => this.onStreamError(err))
     }
 
     return Promise.resolve(undefined)
