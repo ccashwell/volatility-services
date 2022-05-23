@@ -1,6 +1,6 @@
 {
   "name": "volatility-services",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "services to emit mfiv",
   "repository": "github:VolatilityGroup/volatility-services.git",
   "bugs": "https://github.com/VolatilityGroup/volatility-services/issues",
