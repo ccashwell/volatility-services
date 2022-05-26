@@ -13,14 +13,7 @@ import { VixCalculatorV2 as VixCalculator } from "@lib/vix_calculator_v2"
 import { instrumentInfos } from "@service_helpers/instrument_info_helper"
 import dayjs from "dayjs"
 import { Context, Service, ServiceBroker, Validator } from "moleculer"
-import {
-  default as ApiGateway,
-  DISABLED,
-  HttpResponse,
-  TemplatedApp,
-  us_socket_context_t,
-  WebSocket
-} from "moleculer-web-uws"
+import { default as ApiGateway, DISABLED, TemplatedApp, WebSocket } from "moleculer-web-uws"
 import { combine, Result, ResultAsync } from "neverthrow"
 import newrelic from "newrelic"
 import {
@@ -48,7 +41,7 @@ import {
   SymbolTypeEnum
 } from "./../src/entities/types"
 import { EstimateParams } from "./../src/interfaces/services/index/iindex.d"
-
+const Errors = require("moleculer-web-uws").Errors
 const MESSAGE_ENUM = Object.freeze({
   SUBSCRIBE: "SUBSCRIBE",
   SELF_CONNECTED: "SELF_CONNECTED",
@@ -125,26 +118,7 @@ export default class WSService extends Service {
 
           closeOnBackpressureLimit: true,
 
-          // authenticate: true,
-
-          // authorize(ctx: Context) {
-          //   console.log("***** HERE 1")
-          //   // const { req, res } = ctx.params
-          //   // let accessToken = req.query["api_key"]
-
-          //   // if (accessToken) {
-          //   //   if (accessToken === "12345") {
-          //   //     // valid credentials. It will be set to `ctx.meta.auth`
-          //   //     return { id: 1, username: "john.doe", name: "John Doe" }
-          //   //   }
-
-          //   //   // invalid credentials
-          //   //   throw new Error("Could not login user!")
-          //   // } else {
-          //   //   // anonymous user
-          //   //   return null
-          //   // }
-          // },
+          authorize: true,
 
           // keepAlive: {
           //   // Amount of seconds after which a PING message is sent to the client
@@ -157,58 +131,6 @@ export default class WSService extends Service {
           //   // Can be a Uint8Array or integer(Will be converted to TypedArray)
           //   pong: new Uint8Array([65])
           // },
-
-          upgrade: async (res: HttpResponse, req: unknown /*HttpRequest*/, context: us_socket_context_t) => {
-            this.logger.info("upgrade")
-
-            let authHeader = ""
-            let reqWithHeaders: { headers: Record<string, string> }
-            let authToken = ""
-
-            try {
-              // reqWithHeaders = req as { headers: Record<string, string> }
-              // authHeader = reqWithHeaders.headers.authorization
-
-              // Browsers don't support setting the Authentication header so check query params
-              // if (!authHeader) {
-              //   const httpReq = req as HttpRequest
-              //   const queryObject = url.parse(httpReq.getUrl(), true).query
-              //   const maybeApiKey = queryObject.api_key as string | undefined
-
-              //   if (maybeApiKey) {
-              //     authToken = maybeApiKey
-              //   }
-              // } else {
-              if (true || (authHeader && authHeader.startsWith("Bearer "))) {
-                // authToken = authHeader.slice("Bearer ".length)
-                // TODO: Remove test token
-                authToken = "d79401a4b79748c3489822c117f8e380e285719d9b0053e78edce9314f72d2db"
-              }
-              // }
-            } catch (err) {
-              this.logger.error("error:", err)
-              throw err
-            }
-
-            const tokenCheck = await this.broker.call("tokens.check", {
-              token: authToken,
-              type: "api-key"
-            })
-
-            if (!tokenCheck) {
-              this.logger.debug("Authorization failed")
-              return res.writeStatus("401 Forbidden")
-            }
-
-            // const reqHttp = req as HttpRequest
-            // res.upgrade(
-            //   { req },
-            //   reqHttp.getHeader("sec-websocket-key"),
-            //   reqHttp.getHeader("sec-websocket-protocol"),
-            //   reqHttp.getHeader("sec-websocket-extensions"),
-            //   context
-            // )
-          },
 
           open: (ws: WebSocket) => {
             // Upon connecting, subscribe the socket to MFIV/${timePeriod}/${asset}
@@ -374,6 +296,33 @@ export default class WSService extends Service {
         }
       },
       actions: {
+        // @ts-ignore
+        async authorize(this: WSService, ctx: Context) {
+          try {
+            // @ts-ignore
+            const { req, res } = ctx.params
+            const authHeader = req.headers.authorization || ""
+            let apiKey = ""
+
+            if (authHeader.startsWith("Bearer ")) {
+              apiKey = authHeader.slice("Bearer ".length)
+            }
+
+            const tokenCheck = await this.broker.call("tokens.check", {
+              token: apiKey,
+              type: "api-key"
+            })
+
+            if (!tokenCheck) {
+              this.logger.debug("Authorization failed")
+              throw new Errors.UnAuthorizedError("Token Id not detected")
+            }
+
+            return tokenCheck
+          } catch (err) {
+            console.error("err", err)
+          }
+        },
         //: Context<{apiKey:string}>
         // async authenticate(ctx) {
         //   const { req, res } = ctx.params
@@ -408,7 +357,10 @@ export default class WSService extends Service {
         },
 
         mfiv: {
-          rest: "GET /mfiv",
+          rest: {
+            path: "GET /mfiv",
+            authorize: true
+          },
           visibility: "public",
           params: {
             interval: { type: "string", enum: ["5M", "15M", "1H", "1D"], default: "15M" },
@@ -557,16 +509,6 @@ export default class WSService extends Service {
     })
   }
 
-  // @ts-ignore
-  // private async authenticate(req, res) {
-  //   console.log("args", arguments)
-  //   // @ts-ignore
-  //   const { req, res } = ctx.params
-  //   const apiKey = req.query["apiKey"]
-  //   console.log("apiKey", apiKey)
-  //   throw new Error(`Could not find '${apiKey}`)
-  // }
-
   private async replay(
     ws: WebSocket,
     { replayFrom, replayTo, timePeriod, exchange, asset, expiryType }: ReplayOptions
@@ -621,6 +563,12 @@ export default class WSService extends Service {
   ): Promise<boolean> {
     this.logger.info("Start process.")
     for await (const message of messages) {
+      // if (dayjs.utc(message.timestamp).isSameOrAfter("2022-01-01T05:33:55.249Z")) {
+      //   this.logger.debug(">>>", message)
+      // } else {
+      //   this.logger.info("---", message.timestamp)
+      // }
+
       if (message.type === "option_summary") {
         // Track the latest message
         this.latestMessage = message
@@ -781,24 +729,57 @@ export default class WSService extends Service {
       risklessRateSource: "AAVE"
     }
   }
-  // authenticate(ctx: Context<unknown>) {
-  //   debugger
-  //   console.log("***** HERE 10", ctx)
-  // }
 
   // @ts-ignore
-  // authorize(ctx) {
-  //   console.log("***** ", ctx)
+  // private async authenticate(req, res) {
+  //   console.log("args", arguments)
   //   // @ts-ignore
-  //   try {
-  //     // @ts-ignoreHERE 4
-  //     const { req, res } = ctx.params
-  //     console.log("query", req.query)
-  //     const apiKey = req.query["api_key"]
-  //   } catch (err) {
-  //     console.error("err", err)
-  //   }
+  //   const { req, res } = ctx.params
+  //   const apiKey = req.query["apiKey"]
+  //   console.log("apiKey", apiKey)
+  //   throw new Error(`Could not find '${apiKey}`)
   // }
+
+  // // @ts-ignore
+  async authorize(this: WSService, req, res) {
+    try {
+      const authHeader = req.headers.authorization || ""
+      let apiKey = ""
+
+      /**
+       * Check the Authorization header, if that's not set check the query param `apiKey`
+       * This is because browser WebSocket cannot set http headers :(
+       * This also requires the forked version of moleculer-web-uws
+       */
+      if (authHeader.length > 0) {
+        if (authHeader.startsWith("Bearer ")) {
+          apiKey = authHeader.slice("Bearer ".length)
+        }
+      } else {
+        const queryParams = this.parseQueryString(req.query)
+        apiKey = queryParams.apiKey || ""
+      }
+
+      if (apiKey.length === 0) {
+        throw new Errors.UnAuthorizedError("No authorization method found")
+      }
+
+      const tokenCheck = await this.broker.call("tokens.check", {
+        token: apiKey,
+        type: "api-key"
+      })
+
+      if (!tokenCheck) {
+        this.logger.debug("Authorization failed")
+        throw new Errors.UnAuthorizedError("401 Forbidden")
+      }
+
+      return tokenCheck
+    } catch (err) {
+      this.logger.error("Authorization error", err)
+      throw new Errors.UnAuthorizedError("401 Forbidden")
+    }
+  }
 }
 
 function replayNormalizedOptions<E extends Exchange>({

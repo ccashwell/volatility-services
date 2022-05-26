@@ -140,7 +140,7 @@
     "moleculer-repl": "^0.7.0",
     "moleculer-service-ts": "^1.0.14",
     "moleculer-web": "^0.10.4",
-    "moleculer-web-uws": "^0.1.1",
+    "moleculer-web-uws": "npm:@volatility-group/moleculer-web-uws-internal@^0.1.2",
     "nats": "^2.6.1",
     "neverthrow": "^4.3.1",
     "newrelic": "^8.9.1",
