@@ -3,6 +3,7 @@ import dayjs from "dayjs"
 import duration from "dayjs/plugin/duration"
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter"
 import utc from "dayjs/plugin/utc"
+import Moleculer from "moleculer"
 import {
   Asset,
   compute,
@@ -12,6 +13,7 @@ import {
   OptionSummary as MfivOptionSummary
 } from "node-volatility-mfiv"
 import { Exchange, normalizeOptionsSummary, OptionSummary, replayNormalized, streamNormalized } from "tardis-dev"
+import { chainFrom } from "transducist"
 import { MethodologyEnum } from "./../entities/types"
 import { buildExpiries, Expiries } from "./utils/expiries"
 
@@ -34,6 +36,7 @@ export type VixConfig = {
   onCompute?: (index: Index) => void
   onComplete?: () => void
   onError?: (err: unknown) => void
+  logger?: Moleculer.LoggerInstance
 }
 
 // export type Index = {
@@ -72,15 +75,11 @@ export class VixCalculatorV2 {
   exchange: Exchange
   asset: Asset
   expiries!: Expiries
-
   index: Index | undefined
+  logger?: Moleculer.LoggerInstance
 
   log: Map<string, number> = new Map<string, number>()
-  // key = id, value = OptionSummary
-  midBook: Map<string, number> = new Map<string, number>()
-  // midBook: Map<string, RequiredOptionSummary> = new Map<string
-  // summary: Map<string, OptionSummary> = new Map<string, OptionSummary>()
-  summary: Map<string, OptionSummary> = new Map<string, OptionSummary>()
+  midBook: Map<string, OptionSummary> = new Map<string, OptionSummary>()
 
   onCompute: (index: Index) => void
   onComplete: () => void
@@ -103,6 +102,7 @@ export class VixCalculatorV2 {
     this.onError = config.onError ?? ((err: unknown) => false)
     // this.reportFrequency = config.reportFrequency ?? dayjs.duration(5, "seconds").asMilliseconds()
     this.reportFrequency = dayjs.duration(config.reportFrequency || 15, "minutes").asMilliseconds()
+    this.logger = config.logger
   }
 
   async fetchIndex(): Promise<VixResult> {
@@ -134,7 +134,11 @@ export class VixCalculatorV2 {
       next: this.expiries.nextExpiry
     })
 
-    const symbols = [...this.expiries.nearSymbols, ...this.expiries.nextSymbols]
+    const sortFn = (a: string, b: string) => {
+      return b === a ? 0 : b < a ? 1 : -1
+    }
+
+    const symbols = [...this.expiries.nearSymbols.sort(sortFn), ...this.expiries.nextSymbols.sort(sortFn)]
 
     if (this.refDate.isBefore(dayjs.utc().startOf("minute"))) {
       return replayNormalized(
@@ -190,26 +194,34 @@ export class VixCalculatorV2 {
 
   private async summaryStream(breakOnFirstSuccess = false): Promise<Index | undefined> {
     let lastReport = dayjs(this.refDate).subtract(1, "minute")
+    let breakOnData = false
 
     for await (const message of this.createStream()) {
+      // if (dayjs.utc(message.timestamp).isSameOrAfter("2022-01-01T05:33:55.249Z")) {
+      //   breakOnData = true
+      //   const { symbol, timestamp } = message
+      //   this.logger?.info(">>>", { symbol, timestamp })
+      // }
+
       let ts = dayjs.utc(message.timestamp).startOf("second")
       ts = ts.add(5 - (ts.second() % 5), "seconds")
 
-      // this.cacheMessage(message)
-      // this.midBookChange(message)
-      this.summary.set(message.symbol, message)
+      this.midBook.set(message.symbol, message)
 
       if (ts.diff(lastReport, "ms") >= this.reportFrequency) {
         try {
+          // this.logger?.debug("midBook.stats", { entries: this.midBook.size })
+          // if (breakOnData) {
+          //   debugger
+          // }
+
           const _index = this.calculateIndex(message)
 
           if (_index) {
-            // console.log(">>>", message.timestamp)
             this.index = _index
             // this.log.set(ts.toISOString(), _index)
           }
         } catch (err) {
-          // console.log("---", message.timestamp)
           this.index = undefined
           // console.debug("Failed to calculate index @ %s", ts.toISOString(), err)
           // "burn in"
@@ -232,7 +244,9 @@ export class VixCalculatorV2 {
       if (ts.isSameOrAfter(this.expiries.rolloverAt)) {
         console.log("Rolling over", ts.toISOString())
         this.refDate = dayjs.utc(this.expiries.rolloverAt)
-        this.summary.clear()
+        // this.midBook.clear()
+
+        this.deleteNearEntries()
 
         this.expiries = await buildExpiries({
           now: this.refDate.toISOString(),
@@ -264,7 +278,7 @@ export class VixCalculatorV2 {
         at: message.timestamp.toISOString(),
         nearDate: this.expiries.nearExpiry,
         nextDate: this.expiries.nextExpiry,
-        options: Array.from(this.summary.values()) as MfivOptionSummary[],
+        options: Array.from(this.midBook.values()) as MfivOptionSummary[],
         underlyingPrice: message.underlyingPrice ?? 0
       }
 
@@ -311,6 +325,13 @@ export class VixCalculatorV2 {
     //}
 
     return index
+  }
+
+  private deleteNearEntries() {
+    const $near = dayjs.utc(this.expiries.nearExpiry)
+    chainFrom(Array.from(this.midBook.values()))
+      .filter((o: OptionSummary) => $near.isSame(o.expirationDate))
+      .forEach((o: OptionSummary) => this.midBook.delete(o.symbol))
   }
 }
 

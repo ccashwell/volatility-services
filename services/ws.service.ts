@@ -331,11 +331,13 @@ export default class WSService extends Service {
                         this.logger.error("socket error. closing socket.", err as Error)
                         socket.close()
                         this.logger.debug("close socket")
-                      }
+                      },
+                      logger: this.logger
                     })
                       .fetchIndex()
                       .catch((err: unknown) => {
                         this.logger.error("fetchIndex error", err)
+                        // TODO: When err is HTTPError: Response code 503 (Service Temporarily Unavailable) we should retry
                       })
 
                     // this.logger.info("index result", result)
