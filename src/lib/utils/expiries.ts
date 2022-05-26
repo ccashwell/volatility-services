@@ -56,7 +56,7 @@ export const buildExpiries = async ({
   asset
 }: BuildOptionsListOptions): Promise<Expiries> => {
   const available = (o: InstrumentInfoWithListing) => {
-    return o.listing <= now && now <= o.expiry
+    return o.listing <= now && now < o.expiry
   }
   const expiries = await fetchInstruments(exchange, asset)
   const expiryMap = chainFrom(expiries as InstrumentInfoWithListing[])
@@ -69,10 +69,10 @@ export const buildExpiries = async ({
       const delta = dayjs.utc(curr).diff($tp)
 
       /**
-       * If time delta is negative, then select it as the near expiry IFF it's the smallest diff
+       * If time delta is negative or zero, then select it as the near expiry IFF it's the smallest diff
        * If time delta is positive, then select it as the next expiry IFF it's the smallest diff
        */
-      if (delta < 0 && delta > prev.nearDiff) {
+      if (delta <= 0 && delta > prev.nearDiff) {
         prev.nearDiff = delta
         prev.nearExpiry = curr
       } else if (delta > 0 && delta < prev.nextDiff) {
