@@ -200,7 +200,6 @@ export default class TokenService extends Service {
        * Service created lifecycle event handler
        */
       created(this: TokenService) {
-        this.logger.info("Create token")
         if (!process.env.TOKEN_SALT) {
           if (TESTING || process.env.TEST_E2E) {
             process.env.TOKEN_SALT = crypto.randomBytes(32).toString("hex")
@@ -209,10 +208,6 @@ export default class TokenService extends Service {
           }
         }
       }
-
-      // async stopped(this: TokenService) {
-      //   // return await this.adapter.connection.close()
-      // }
     })
   }
 
