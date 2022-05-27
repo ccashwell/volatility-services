@@ -12,8 +12,8 @@ import { ensure } from "@lib/utils/ensure"
 import { VixCalculatorV2 as VixCalculator } from "@lib/vix_calculator_v2"
 import { instrumentInfos } from "@service_helpers/instrument_info_helper"
 import dayjs from "dayjs"
-import { Context, Service, ServiceBroker, Validator } from "moleculer"
-import { default as ApiGateway, DISABLED, TemplatedApp, WebSocket } from "moleculer-web-uws"
+import { Context, Errors, Service, ServiceBroker, Validator } from "moleculer"
+import { default as ApiGateway, DISABLED, HttpResponse, TemplatedApp, WebSocket } from "moleculer-web-uws"
 import { combine, Result, ResultAsync } from "neverthrow"
 import newrelic from "newrelic"
 import {
@@ -295,34 +295,49 @@ export default class WSService extends Service {
           }
         }
       },
-      actions: {
-        // @ts-ignore
-        async authorize(this: WSService, ctx: Context) {
-          try {
-            // @ts-ignore
-            const { req, res } = ctx.params
-            const authHeader = req.headers.authorization || ""
-            let apiKey = ""
 
+      actions: {
+        async authorize(ctx) {
+          const { req } = ctx.params
+          // try {
+          const authHeader = req.headers.authorization || ""
+          let apiKey = ""
+
+          /**
+           * Check the Authorization header, if that's not set check the query param `apiKey`
+           * This is because browser WebSocket cannot set http headers :(
+           * This also requires the forked version of moleculer-web-uws
+           */
+          if (authHeader.length > 0) {
             if (authHeader.startsWith("Bearer ")) {
               apiKey = authHeader.slice("Bearer ".length)
             }
+          } else {
+            const queryParams = this.parseQueryString(req.query)
+            apiKey = queryParams.apiKey || ""
+          }
 
-            const tokenCheck = await this.broker.call("tokens.check", {
+          if (apiKey.length === 0) {
+            throw new Errors.UnAuthorizedError("No authorization method found")
+          }
+
+          const tokenCheck = await this.broker.call(
+            "tokens.check",
+            {
               token: apiKey,
               type: "api-key"
-            })
+            },
+            { tracking: false, parentCtx: ctx }
+          )
 
-            if (!tokenCheck) {
-              this.logger.debug("Authorization failed")
-              throw new Errors.UnAuthorizedError("Token Id not detected")
-            }
-
-            return tokenCheck
-          } catch (err) {
-            console.error("err", err)
+          if (!tokenCheck) {
+            this.logger.debug("Authorization failed")
+            throw new Errors.UnAuthorizedError("401 Forbidden")
           }
+
+          return Promise.resolve(ctx)
         },
+
         //: Context<{apiKey:string}>
         // async authenticate(ctx) {
         //   const { req, res } = ctx.params
@@ -357,20 +372,27 @@ export default class WSService extends Service {
         },
 
         mfiv: {
+          tracing: false,
           rest: {
             path: "GET /mfiv",
-            authorize: true
+            authorize: false
           },
-          visibility: "public",
+          // visibility: "published",
           params: {
+            apiKey: { type: "string" },
             interval: { type: "string", enum: ["5M", "15M", "1H", "1D"], default: "15M" },
             dateFrom: { type: "date", convert: true, default: new Date("2022-01-01T00:00:00.000Z") },
             dateTo: { type: "date", convert: true, default: () => new Date() },
             timePeriod: { type: "string" },
             asset: { type: "string", enum: MFIV_ASSETS }
           },
-          async handler(ctx: Context<ApiMfivParams>): Promise<PaginatedResponse<MfivIndex>> {
-            this.logger.info("mfiv()", ctx)
+          async handler(this: WSService, ctx: Context<ApiMfivParams>): Promise<PaginatedResponse<MfivIndex>> {
+            try {
+              await this.handleAuthorize2(ctx)
+            } catch (err) {
+              return Promise.reject(err)
+            }
+
             const interval = ctx.params.interval
             let counter = 0
             const filterMap: Record<string, number> = {
@@ -730,18 +752,20 @@ export default class WSService extends Service {
     }
   }
 
-  // @ts-ignore
   // private async authenticate(req, res) {
   //   console.log("args", arguments)
-  //   // @ts-ignore
   //   const { req, res } = ctx.params
   //   const apiKey = req.query["apiKey"]
   //   console.log("apiKey", apiKey)
   //   throw new Error(`Could not find '${apiKey}`)
   // }
 
-  // // @ts-ignore
-  async authorize(this: WSService, req, res) {
+  //
+  async authorize(this: WSService, req: FauxHttpRequest, res: HttpResponse) {
+    return this.handleAuthorize(req, res)
+  }
+
+  private async handleAuthorize(req: FauxHttpRequest, res: HttpResponse) {
     try {
       const authHeader = req.headers.authorization || ""
       let apiKey = ""
@@ -774,11 +798,25 @@ export default class WSService extends Service {
         throw new Errors.UnAuthorizedError("401 Forbidden")
       }
 
-      return tokenCheck
+      return { success: tokenCheck }
     } catch (err) {
       this.logger.error("Authorization error", err)
       throw new Errors.UnAuthorizedError("401 Forbidden")
     }
+  }
+
+  private async handleAuthorize2(ctx: Context<ApiMfivParams>) {
+    const tokenCheck = await ctx.call("tokens.check", {
+      token: ctx.params.apiKey,
+      type: "api-key"
+    })
+
+    if (!tokenCheck) {
+      this.logger.debug("Authorization failed")
+      return Promise.reject(new Errors.UnAuthorizedError("401 Forbidden"))
+    }
+
+    return { success: tokenCheck }
   }
 }
 
@@ -868,9 +906,16 @@ interface DefaultOptionSummary {
 }
 
 interface ApiMfivParams {
+  apiKey: string
   interval: string
   dateFrom: Date
   dateTo: Date
   timePeriod: string
   asset: Asset
+}
+
+interface FauxHttpRequest {
+  headers: Record<string, string>
+  remoteAddress: string
+  query: string
 }
