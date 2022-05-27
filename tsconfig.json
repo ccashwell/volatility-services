@@ -1,4 +1,5 @@
 {
+  "extends": "@tsconfig/recommended/tsconfig.json",
   "compilerOptions": {
     "declaration": true,
     "incremental": true,
@@ -19,7 +20,6 @@
     "target": "esnext",
     "outDir": "dist",
     "moduleResolution": "node",
-    "lib": ["es5", "es6"],
     "importHelpers": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
