@@ -185,42 +185,42 @@ const brokerConfig: BrokerOptions = {
   // Enable action & event parameter validation. More info: https://moleculer.services/docs/0.14/validating.html
   validator: true,
 
-  errorHandler: (err: Error, info: unknown) => {
-    const message = "Unhandled exception in volatility-services/moleculer.config"
-    const type = "mol:unhandled_exception"
+  // errorHandler: (err: Error, info: unknown) => {
+  //   const message = "Unhandled exception in volatility-services/moleculer.config"
+  //   const type = "mol:unhandled_exception"
 
-    // Emit a structured error so it can be easily ingested
-    const payload = {
-      type,
-      message,
-      error: {
-        name: err.name,
-        message: err.message,
-        details: err.stack
-      }
-      // info
-      // info,
-      // git: pkg.repository as string
-    }
+  //   // Emit a structured error so it can be easily ingested
+  //   const payload = {
+  //     type,
+  //     message,
+  //     error: {
+  //       name: err.name,
+  //       message: err.message,
+  //       details: err.stack
+  //     }
+  //     // info
+  //     // info,
+  //     // git: pkg.repository as string
+  //   }
 
-    console.error("unhandled exception", payload)
-    if (info) {
-      console.error("extra info:", info)
-    }
+  //   console.error("unhandled exception", payload)
+  //   if (info) {
+  //     console.error("extra info:", info)
+  //   }
 
-    // noticeError(err, { message, type })
+  //   // noticeError(err, { message, type })
 
-    // console.error(payload)
-    // console.error(JSON.stringify(payload, null, 2))
-    // console.error(`*** NOTICE ***: ${err.name} ***\n`, err.stack)
-    // console.error(`*** message: ${err.message}`)
-    // if (info !== undefined) {
-    //   console.error(">>> info:")
-    //   console.error(info)
-    // }
-    // console.error(`*** END: ${err.name} ***`)
-    // throw err
-  }, //moleculerErrorHandler(this.logger),
+  //   // console.error(payload)
+  //   // console.error(JSON.stringify(payload, null, 2))
+  //   // console.error(`*** NOTICE ***: ${err.name} ***\n`, err.stack)
+  //   // console.error(`*** message: ${err.message}`)
+  //   // if (info !== undefined) {
+  //   //   console.error(">>> info:")
+  //   //   console.error(info)
+  //   // }
+  //   // console.error(`*** END: ${err.name} ***`)
+  //   // throw err
+  // }, //moleculerErrorHandler(this.logger),
 
   // Enable/disable built-in metrics function. More info: https://moleculer.services/docs/0.14/metrics.html
   metrics: {
