@@ -126,7 +126,7 @@ export class VixCalculatorV2 {
   private createStream(): AsyncIterableIterator<OptionSummary> {
     const maxRef = dayjs.utc(this.refDate).add(this.maxDuration, "ms")
 
-    console.log("Starting new stream", {
+    this.logger?.info("Starting new stream", {
       initialRef: this.startDate.toISOString(),
       currentRef: this.refDate.toISOString(),
       maxRef: maxRef.toISOString(),
@@ -148,8 +148,8 @@ export class VixCalculatorV2 {
           symbols,
           from: dayjs.utc(this.refDate).toISOString(),
           to: maxRef.isAfter(this.expiries.rolloverAt) ? this.expiries.rolloverAt : maxRef.toISOString(),
-          waitWhenDataNotYetAvailable: true,
-          autoCleanup: true
+          waitWhenDataNotYetAvailable: true
+          /* autoCleanup: true */
         },
         normalizeOptionsSummary
       )
@@ -222,9 +222,9 @@ export class VixCalculatorV2 {
             // this.log.set(ts.toISOString(), _index)
           }
         } catch (err) {
-          this.index = undefined
-          // console.debug("Failed to calculate index @ %s", ts.toISOString(), err)
           // "burn in"
+          this.index = undefined
+          this.logger?.debug(`Failed to calculate index @ ${ts.toISOString()}`, err)
         }
 
         lastReport = ts
@@ -237,12 +237,12 @@ export class VixCalculatorV2 {
       if (breakOnFirstSuccess && this.index) break
 
       if (ts.diff(this.startDate, "ms") >= this.maxDuration) {
-        console.log("Got messages outside of query period, done streaming.")
+        this.logger?.info("Got messages outside of query period, done streaming.")
         break
       }
 
       if (ts.isSameOrAfter(this.expiries.rolloverAt)) {
-        console.log("Rolling over", ts.toISOString())
+        this.logger?.info("Rolling over", ts.toISOString())
         this.refDate = dayjs.utc(this.expiries.rolloverAt)
         // this.midBook.clear()
 
