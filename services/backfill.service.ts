@@ -58,7 +58,7 @@ export default class BackfillService extends Service {
               onCompute: index => {
                 this.logger.debug("onCompute()", index)
 
-                if (this.settings.skipDb) {
+                if (!this.settings.skipDb) {
                   executeMfivInsert({
                     timestamp: dayjs.utc(index.timestamp as string).toDate(),
                     dVol: index.dVol.toString(),
