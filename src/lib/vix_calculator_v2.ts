@@ -21,8 +21,6 @@ dayjs.extend(utc)
 dayjs.extend(duration)
 dayjs.extend(isSameOrAfter)
 
-const DERIBIT_DATE_FORMAT = "DMMMYY"
-
 export type VixConfig = {
   apiKey: string
   exchange: Exchange
@@ -80,6 +78,7 @@ export class VixCalculatorV2 {
 
   log: Map<string, number> = new Map<string, number>()
   midBook: Map<string, OptionSummary> = new Map<string, OptionSummary>()
+  options: Map<string, OptionSummary> = new Map<string, OptionSummary>()
 
   onCompute: (index: Index) => void
   onComplete: () => void
@@ -125,29 +124,39 @@ export class VixCalculatorV2 {
 
   private createStream(): AsyncIterableIterator<OptionSummary> {
     const maxRef = dayjs.utc(this.refDate).add(this.maxDuration, "ms")
+    const replayTo = maxRef.isAfter(this.expiries.rolloverAt) ? this.expiries.rolloverAt : maxRef.toISOString()
 
-    this.logger?.info("Starting new stream", {
+    this.logger?.info("createStream()", {
       initialRef: this.startDate.toISOString(),
       currentRef: this.refDate.toISOString(),
       maxRef: maxRef.toISOString(),
       near: this.expiries.nearExpiry,
-      next: this.expiries.nextExpiry
+      next: this.expiries.nextExpiry,
+      active: this.expiries.expiryList,
+      total: this.expiries.expiryList.length,
+      rolloverAt: this.expiries.rolloverAt,
+      replayFrom: dayjs.utc(this.refDate).toISOString(),
+      replayTo
     })
 
     const sortFn = (a: string, b: string) => {
       return b === a ? 0 : b < a ? 1 : -1
     }
 
-    const symbols = [...this.expiries.nearSymbols.sort(sortFn), ...this.expiries.nextSymbols.sort(sortFn)]
+    const symbols = [
+      ...this.expiries.nearSymbols.sort(sortFn),
+      ...this.expiries.nextSymbols.sort(sortFn),
+      ...(this.expiries.expiryMap.get(this.expiries.expiryList[0]) ?? [])
+    ]
 
     if (this.refDate.isBefore(dayjs.utc().startOf("minute"))) {
       return replayNormalized(
         {
-          apiKey: process.env.TARDIS_API_KEY!,
-          exchange: "deribit",
+          apiKey: this.apiKey,
+          exchange: this.exchange as "deribit" | "binance-options" | "okex-options",
           symbols,
           from: dayjs.utc(this.refDate).toISOString(),
-          to: maxRef.isAfter(this.expiries.rolloverAt) ? this.expiries.rolloverAt : maxRef.toISOString(),
+          to: replayTo,
           waitWhenDataNotYetAvailable: true
           /* autoCleanup: true */
         },
@@ -156,7 +165,7 @@ export class VixCalculatorV2 {
     } else {
       return streamNormalized(
         {
-          exchange: "deribit",
+          exchange: this.exchange as "deribit" | "binance-options" | "okex-options",
           symbols
         },
         normalizeOptionsSummary
@@ -164,62 +173,40 @@ export class VixCalculatorV2 {
     }
   }
 
-  // private async cacheMessage(o: OptionSummary): Promise<void> {
-  //   const expiryKey = o.expirationDate.toISOString()
-  //   if (!this.expiryMap.has(expiryKey)) {
-  //     this.logger.info("Cache Miss", expiryKey)
-  //     // TODO: Should probably be ingesting into a Red-Black Tree
-  //     this.expiryMap.set(expiryKey, new Set<string>())
-  //   }
-  //   const expirySet = this.expiryMap.get(expiryKey)
-  //   expirySet?.add(o.symbol)
-  //   if (this.broker.cacher) {
-  //     await this.broker.cacher.set(
-  //       o.symbol,
-  //       summaryWithDefaults(o, { bestAskPrice: 0, bestBidPrice: 0, underlyingPrice: 0 })
-  //     )
-  //   }
-  // }
-
-  // private ensureMessage(o: OptionSummary): RequiredOptionSummary {
-  //   return {
-  //     ...o,
-  //     bestAskPrice: o.bestAskPrice ?? 0,
-  //     bestBidPrice: o.bestBidPrice ?? 0,
-  //     markPrice: o.markPrice ?? 0,
-  //     underlyingPrice: o.underlyingPrice ?? 0,
-  //     name: o.name ?? "unknown"
-  //   }
-  // }
-
   private async summaryStream(breakOnFirstSuccess = false): Promise<Index | undefined> {
     let lastReport = dayjs(this.refDate).subtract(1, "minute")
     let breakOnData = false
 
+    const $nearExpiry = dayjs.utc(this.expiries.nearExpiry)
+    const $nextExpiry = dayjs.utc(this.expiries.nextExpiry)
+    // const marker = dayjs.utc().valueOf()
+
     for await (const message of this.createStream()) {
-      // if (dayjs.utc(message.timestamp).isSameOrAfter("2022-01-01T05:33:55.249Z")) {
-      //   breakOnData = true
-      //   const { symbol, timestamp } = message
-      //   this.logger?.info(">>>", { symbol, timestamp })
-      // }
+      /**
+       * Don't compute mfiv for options we are subscribed to but are in the future.
+       */
+      if (!$nearExpiry.isSame(message.expirationDate) && !$nextExpiry.isSame(message.expirationDate)) {
+        this.options.set(message.symbol, message)
+        continue
+      }
+
+      this.midBook.set(message.symbol, message)
 
       let ts = dayjs.utc(message.timestamp).startOf("second")
       ts = ts.add(5 - (ts.second() % 5), "seconds")
 
-      this.midBook.set(message.symbol, message)
-
-      if (ts.diff(lastReport, "ms") >= this.reportFrequency) {
+      if (ts.diff(lastReport, "ms") >= this.reportFrequency && message.expirationDate) {
         try {
-          // this.logger?.debug("midBook.stats", { entries: this.midBook.size })
-          // if (breakOnData) {
-          //   debugger
-          // }
-
+          // this.logger?.info("reporting", {
+          //   marker,
+          //   symbol: message.symbol,
+          //   timestamp: message.timestamp,
+          //   localTimestamp: message.localTimestamp
+          // })
           const _index = this.calculateIndex(message)
 
           if (_index) {
             this.index = _index
-            // this.log.set(ts.toISOString(), _index)
           }
         } catch (err) {
           // "burn in"
@@ -244,9 +231,6 @@ export class VixCalculatorV2 {
       if (ts.isSameOrAfter(this.expiries.rolloverAt)) {
         this.logger?.info("Rolling over", ts.toISOString())
         this.refDate = dayjs.utc(this.expiries.rolloverAt)
-        // this.midBook.clear()
-
-        this.deleteNearEntries()
 
         this.expiries = await buildExpiries({
           now: this.refDate.toISOString(),
@@ -254,6 +238,26 @@ export class VixCalculatorV2 {
           exchange: "deribit",
           asset: this.asset
         })
+
+        /** If we have a new near expiry, then delete the old one. */
+        if (!$nearExpiry.isSame(this.expiries.nearExpiry)) {
+          this.logger?.info("Remove old nearExpiry")
+          this.deleteEntries($nearExpiry)
+
+          /** Copy the future options we've been streaming into the midBook */
+          const $newNextExpiry = dayjs.utc(this.expiries.nextExpiry)
+
+          this.logger?.info("Copy new nextExpiry values =", $newNextExpiry.toISOString())
+          this.logger?.info("midBook current size =", this.midBook.size)
+
+          chainFrom(this.options.values())
+            .filter(o => $newNextExpiry.isSame(o.expirationDate))
+            .forEach(o => this.midBook.set(o.symbol, o))
+
+          this.logger?.info("midBook new size =", this.midBook.size)
+
+          this.options.clear()
+        }
 
         return await this.summaryStream()
       }
@@ -267,6 +271,7 @@ export class VixCalculatorV2 {
   private calculateIndex(message: OptionSummary): Index {
     const underlyingPrice = message.underlyingPrice ?? 0
     const interestRate = getInterestRate()
+    const { nearExpiry, nextExpiry } = this.expiries
     let mfivContext: MfivContext = {
         ...interestRate,
         timePeriod: this.timePeriodOption,
@@ -298,39 +303,13 @@ export class VixCalculatorV2 {
       nextExpiry: this.expiries.nextExpiry
     }
 
-    // if (mfivResult.estimatedFor.startsWith("2022-05-06T18:15:05")) {
-    //   fs.writeFile(
-    //     "./may26-evidence.json",
-    //     JSON.stringify({
-    //       version: "2022-03-22",
-    //       type: "mfiv.estimate.evidence",
-    //       metadata: {},
-    //       context: mfivContext,
-    //       params: mfivParams,
-    //       result: mfivResult
-    //     }),
-    //     err => {
-    //       if (err) {
-    //         console.error(err)
-    //         return
-    //       }
-    //       //file written successfully
-    //     }
-    //   )
-
-    // console.log("mfiv context", JSON.stringify(mfivContext))
-    // console.log("mfiv params", JSON.stringify(mfivParams))
-    // console.log("mfiv result", JSON.stringify(mfivResult))
-    // console.log("input options", JSON.stringify(mfivParams.options))
-    //}
-
     return index
   }
 
-  private deleteNearEntries() {
-    const $near = dayjs.utc(this.expiries.nearExpiry)
+  private deleteEntries(targetExpiration: dayjs.Dayjs) {
+    /** Remove near options from midBook */
     chainFrom(Array.from(this.midBook.values()))
-      .filter((o: OptionSummary) => $near.isSame(o.expirationDate))
+      .filter((o: OptionSummary) => targetExpiration.isSame(o.expirationDate))
       .forEach((o: OptionSummary) => this.midBook.delete(o.symbol))
   }
 }

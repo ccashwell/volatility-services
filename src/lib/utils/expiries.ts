@@ -21,6 +21,10 @@ export interface BuildOptionsListOptions {
  * Returned from {@link buildExpiries | Tardis InstrumentInfo service}
  */
 export interface Expiries {
+  /** list of near, next, and future near/next rollover expiries (iso8601 formatted) */
+  expiryList: string[]
+  /** (iso8601 date => tardis InstrumentInfo.id[]) */
+  expiryMap: Map<string, string[]>
   /** (iso8601 formatted) */
   nearExpiry: string
   /** (iso8601 formatted) */
@@ -65,6 +69,7 @@ export const buildExpiries = async ({
   const activeExpiries = Array.from(expiryMap.keys()).sort()
   const $tp = dayjs.utc(now).add(timePeriod, "days")
   let nearIdx = -1
+  let nextIdx = -1
 
   const result = activeExpiries.reduce(
     (prev, curr, cIdx) => {
@@ -79,6 +84,7 @@ export const buildExpiries = async ({
         prev.nearDiff = delta
         prev.nearExpiry = curr
       } else if (delta > 0 && delta < prev.nextDiff) {
+        nextIdx = cIdx
         prev.nextDiff = delta
         prev.nextExpiry = curr
       }
@@ -99,13 +105,23 @@ export const buildExpiries = async ({
     throw new Error(`No symbols found with nextExpiry of ${result.nextExpiry}`)
   }
 
-  const rolloverAt = activeExpiries[Math.max(0, nearIdx - 1)]
-  // const rolloverAt = nearExpiry
-  // // const rolloverAt = dayjs.utc(nextExpiry).subtract(timePeriod, "days").toISOString()
-  // console.log("Previous rolloverAt", dayjs.utc(nextExpiry).subtract(timePeriod, "days").toISOString())
-  // console.log("Corrected rolloverAt", rolloverAt)
+  const rolloverAt = activeExpiries.at(0) as string /*activeExpiries[Math.max(0, nearIdx - 1)]*/
+  const pruneList = activeExpiries.slice(0, nextIdx)
+  const expiryList = activeExpiries.slice(nextIdx + 1)
+  pruneList.forEach(expirationDate => expiryMap.delete(expirationDate))
+  const futureOptions: Map<string, string[]> = new Map()
+
+  /** Create a map of future expiries to their symbols */
+  for (const [expiry, info] of expiryMap.entries()) {
+    futureOptions.set(
+      expiry,
+      info.map(i => i.id)
+    )
+  }
 
   return {
+    expiryList,
+    expiryMap: futureOptions,
     nearExpiry,
     nextExpiry,
     nearSymbols,

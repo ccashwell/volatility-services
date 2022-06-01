@@ -225,6 +225,7 @@ export default class WSService extends Service {
                             timestamp: dayjs.utc(index.timestamp as string).toDate(),
                             dVol: index.dVol.toString(),
                             invdVol: index.invdVol.toString(),
+
                             timePeriod: index.timePeriod,
                             exchange: MethodologyExchangeEnum.Deribit,
                             asset: index.asset as BaseCurrencyEnum,
