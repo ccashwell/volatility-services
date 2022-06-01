@@ -64,8 +64,10 @@ export const buildExpiries = async ({
     .toMapGroupBy(o => o.expiry)
   const activeExpiries = Array.from(expiryMap.keys()).sort()
   const $tp = dayjs.utc(now).add(timePeriod, "days")
+  let nearIdx = -1
+
   const result = activeExpiries.reduce(
-    (prev, curr) => {
+    (prev, curr, cIdx) => {
       const delta = dayjs.utc(curr).diff($tp)
 
       /**
@@ -73,6 +75,7 @@ export const buildExpiries = async ({
        * If time delta is positive, then select it as the next expiry IFF it's the smallest diff
        */
       if (delta <= 0 && delta > prev.nearDiff) {
+        nearIdx = cIdx
         prev.nearDiff = delta
         prev.nearExpiry = curr
       } else if (delta > 0 && delta < prev.nextDiff) {
@@ -96,7 +99,11 @@ export const buildExpiries = async ({
     throw new Error(`No symbols found with nextExpiry of ${result.nextExpiry}`)
   }
 
-  const rolloverAt = dayjs.utc(nextExpiry).subtract(timePeriod, "days").toISOString()
+  const rolloverAt = activeExpiries[Math.max(0, nearIdx - 1)]
+  // const rolloverAt = nearExpiry
+  // // const rolloverAt = dayjs.utc(nextExpiry).subtract(timePeriod, "days").toISOString()
+  // console.log("Previous rolloverAt", dayjs.utc(nextExpiry).subtract(timePeriod, "days").toISOString())
+  // console.log("Corrected rolloverAt", rolloverAt)
 
   return {
     nearExpiry,
