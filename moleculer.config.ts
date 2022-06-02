@@ -153,7 +153,7 @@ const brokerConfig: BrokerOptions = {
     // Available values: "RoundRobin", "Random", "CpuUsage", "Latency", "Shard"
     strategy: "RoundRobin",
     // Enable local action call preferring. Always call the local action instance if available.
-    preferLocal: true
+    preferLocal: false
   },
 
   // Settings of Circuit Breaker. More info: https://moleculer.services/docs/0.14/fault-tolerance.html#Circuit-Breaker
